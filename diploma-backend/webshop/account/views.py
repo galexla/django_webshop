@@ -17,7 +17,9 @@ class LoginView(APIView):
             user = serializer.validated_data
             login(self.request, user)
             return Response(None, status.HTTP_200_OK)
-        return Response(None, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            serializer.errors, status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 
 class LogoutView(APIView):
@@ -35,5 +37,6 @@ class RegistrationView(APIView):
             # Profile.objects.create(user=self.object)
             login(self.request, user)
             return Response(None, status.HTTP_200_OK)
-        print(serializer.errors)
-        return Response(None, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(
+            serializer.errors, status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

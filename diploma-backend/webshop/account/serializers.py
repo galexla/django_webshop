@@ -29,7 +29,7 @@ class UserRegistrationSerializer(ModelSerializer):
         try:
             validate_password(attrs['password'], user)
         except ValidationError as exc:
-            raise serializers.ValidationError({'password': exc.messages})
+            raise serializers.ValidationError(exc.messages)
 
         return attrs
 
