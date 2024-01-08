@@ -1,6 +1,6 @@
 import json
 
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -18,6 +18,12 @@ class LoginView(APIView):
             login(self.request, user)
             return Response(None, status.HTTP_200_OK)
         return Response(None, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class LogoutView(APIView):
+    def post(self, request: Request) -> Response:
+        logout(request)
+        return Response(None, status.HTTP_200_OK)
 
 
 class RegistrationView(APIView):
