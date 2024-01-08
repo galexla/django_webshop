@@ -20,6 +20,17 @@ class UserRegistrationSerializer(ModelSerializer):
 
     def validate(self, attrs):
         attrs['first_name'] = attrs['name']
+
+        user = User(
+            first_name=attrs['first_name'],
+            username=attrs['username'],
+        )
+
+        try:
+            validate_password(attrs['password'], user)
+        except ValidationError as exc:
+            raise serializers.ValidationError({'password': exc.messages})
+
         return attrs
 
     def create(self, validated_data):
@@ -27,12 +38,6 @@ class UserRegistrationSerializer(ModelSerializer):
             first_name=validated_data['first_name'],
             username=validated_data['username'],
         )
-
-        try:
-            validate_password(validated_data['password'], user)
-        except ValidationError as exc:
-            raise serializers.ValidationError(exc.messages)
-
         user.set_password(validated_data['password'])
         user.save()
 
