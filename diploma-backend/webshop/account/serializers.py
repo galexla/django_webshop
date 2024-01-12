@@ -4,7 +4,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.serializers import CharField, ModelSerializer, Serializer
 
-from .models import User
+from .models import Profile, User
 
 
 class UserRegistrationSerializer(ModelSerializer):
@@ -68,3 +68,16 @@ class UserLoginSerializer(Serializer):
         raise serializers.ValidationError(
             'Unable to log in with provided credentials.'
         )
+
+
+# class ProfileRetrieveSerializer(Serializer):
+#     fullName = CharField(write_only=True)
+#     email = EmailField(write_only=True)
+#     phone = RegexField(r'^\+?\d+(#\d+)?$', max_length=32, allow_blank=True)
+
+
+class AvatarUpdateSerializer(ModelSerializer):
+    class Meta:
+        model = Profile
+        fields = ['avatar']
+        extra_kwargs = {'avatar': {'write_only': True}}
