@@ -30,7 +30,7 @@ class LogoutView(APIView):
 
 class RegistrationView(APIView):
     def post(self, request: Request) -> Response:
-        data = json.loads(request.body)
+        data = json.loads(list(request.data.keys())[0])
         serializer = UserRegistrationSerializer(data=data)
         if serializer.is_valid():
             user = serializer.save()
