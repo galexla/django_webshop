@@ -35,6 +35,9 @@ class Profile(models.Model):
                 message='Phone must be in format: +123456789[#123].',
             )
         ],
+        error_messages={
+            'unique': _('Phone number belongs to another user.'),
+        },
     )
     avatar = models.ImageField(
         verbose_name=_('avatar'),
