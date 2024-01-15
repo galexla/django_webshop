@@ -9,7 +9,7 @@ ALLOWED_AVATAR_EXTENSIONS = 'png,jpg,gif'.split(',')
 class User(AbstractUser):
     email = models.EmailField(
         verbose_name=_('email address'),
-        blank=True,
+        null=True,
         unique=True,
         error_messages={
             'unique': _('Email address belongs to another user.'),
@@ -17,16 +17,19 @@ class User(AbstractUser):
     )
 
 
+def get_avatar_file_path(user_id: str, filename: str):
+    return f'users/user{user_id}/avatar/{filename}'
+
+
 def get_avatar_upload_path(instance: 'Profile', filename: str):
-    pk = instance.user.pk
-    return f'users/user{pk}/avatar/{filename}'
+    return get_avatar_file_path(instance.user.pk, filename)
 
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone = models.CharField(
         verbose_name=_('phone number'),
-        blank=True,
+        null=True,
         unique=True,
         max_length=32,
         validators=[
