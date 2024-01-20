@@ -1,9 +1,9 @@
-from django.contrib.auth import authenticate, get_user_model
+from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.serializers import CharField, ModelSerializer, Serializer
+from rest_framework.serializers import ModelSerializer, Serializer
 from rest_framework.validators import UniqueValidator
 
 from .models import Profile
@@ -11,26 +11,23 @@ from .models import Profile
 User = get_user_model()
 
 
-class UserRegistrationSerializer(ModelSerializer):
-    first_name_validators = User._meta.get_field('first_name').validators
-    name = CharField(validators=first_name_validators)
+class SignUpSerializer(ModelSerializer):
+    name = serializers.CharField(
+        validators=User._meta.get_field('first_name').validators,
+        write_only=True,
+    )
 
     class Meta:
         model = User
         fields = ['name', 'username', 'password']
         extra_kwargs = {
-            'name': {'write_only': True},
             'password': {'write_only': True},
         }
 
     def validate(self, attrs):
         attrs['first_name'] = attrs['name']
 
-        user = User(
-            first_name=attrs['first_name'],
-            username=attrs['username'],
-        )
-
+        user = User(username=attrs['username'])
         try:
             validate_password(attrs['password'], user)
         except ValidationError as exc:
@@ -50,37 +47,14 @@ class UserRegistrationSerializer(ModelSerializer):
         profile = Profile(user=user)
         profile.save()
 
-        authenticated_user = authenticate(
-            username=validated_data['username'],
-            password=validated_data['password'],
-        )
-
-        if authenticated_user and authenticated_user.is_active:
-            return authenticated_user
-
-        raise serializers.ValidationError(
-            'Unable to log in with provided credentials.'
-        )
+        return user
 
 
-class UserLoginSerializer(Serializer):
-    username = CharField(
+class SignInSerializer(Serializer):
+    username = serializers.CharField(
         validators=User._meta.get_field('username').validators
     )
-    password = CharField(write_only=True)
-
-    def validate(self, attrs):
-        user = authenticate(
-            username=attrs.get('username'),
-            password=attrs.get('password'),
-        )
-
-        if user and user.is_active:
-            return user
-
-        raise serializers.ValidationError(
-            'Unable to log in with provided credentials.'
-        )
+    password = serializers.CharField(write_only=True)
 
 
 class ProfileSerializer(Serializer):
@@ -104,7 +78,7 @@ class ProfileSerializer(Serializer):
     @transaction.atomic
     def update(self, user: User, validated_data):
         if not isinstance(user, User):
-            raise TypeError('user must be of a type User')
+            raise TypeError('user must be of type User')
 
         user.first_name = validated_data['fullName']
         user.email = validated_data['email']
@@ -117,7 +91,7 @@ class ProfileSerializer(Serializer):
 
     def to_representation(self, user: User):
         if not isinstance(user, User):
-            raise TypeError('user must be of a type User')
+            raise TypeError('user must be of type User')
 
         profile = user.profile
 

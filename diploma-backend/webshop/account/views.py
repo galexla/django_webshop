@@ -1,6 +1,6 @@
 import json
 
-from django.contrib.auth import login, logout
+from django.contrib.auth import authenticate, login, logout
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
@@ -12,40 +12,51 @@ from .models import Profile
 from .serializers import (
     AvatarUpdateSerializer,
     ProfileSerializer,
-    UserLoginSerializer,
-    UserRegistrationSerializer,
+    SignInSerializer,
+    SignUpSerializer,
 )
 
 
-class LoginView(APIView):
+class SignInView(APIView):
     def post(self, request: Request) -> Response:
         data = json.loads(request.body)
-        serializer = UserLoginSerializer(data=data)
+        serializer = SignInSerializer(data=data)
         if serializer.is_valid():
-            user = serializer.validated_data
-            login(self.request, user)
+            validated_data = serializer.validated_data
+            user = authenticate(
+                username=validated_data.get('username'),
+                password=validated_data.get('password'),
+            )
 
-            return Response(None, status.HTTP_200_OK)
+            if user and user.is_active:
+                login(self.request, user)
+                return Response(None, status.HTTP_200_OK)
 
         return Response(
             serializer.errors, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
 
-class LogoutView(APIView):
+class SignOutView(APIView):
     def post(self, request: Request) -> Response:
         logout(request)
         return Response(None, status.HTTP_200_OK)
 
 
-class RegistrationView(APIView):
+class SignUpView(APIView):
     def post(self, request: Request) -> Response:
         data = json.loads(list(request.data.keys())[0])
-        serializer = UserRegistrationSerializer(data=data)
+        serializer = SignUpSerializer(data=data)
         if serializer.is_valid():
-            user = serializer.save()
-            Profile.objects.create(user=user)
-            login(self.request, user)
+            validated_data = serializer.validated_data
+            serializer.save()
+
+            user = authenticate(
+                username=validated_data.get('username'),
+                password=validated_data.get('password'),
+            )
+            if user and user.is_active:
+                login(self.request, user)
 
             return Response(None, status.HTTP_200_OK)
 

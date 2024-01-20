@@ -1,5 +1,5 @@
 asgiref==3.7.2
-diploma-frontend @ file:///home/alexander/_dev/educ/skillbox/python_django_diploma/diploma-frontend/dist/diploma-frontend-0.6.tar.gz#sha256=48b64f3c020b7ea1a15ee543d5d3f4b111590dc7e99710186ed29cac5eed6e2b
+diploma-frontend @ file:///../diploma-frontend/dist/diploma-frontend-0.6.tar.gz#sha256=48b64f3c020b7ea1a15ee543d5d3f4b111590dc7e99710186ed29cac5eed6e2b
 Django==4.2
 django-debug-toolbar==4.2.0
 django-filter==23.5
