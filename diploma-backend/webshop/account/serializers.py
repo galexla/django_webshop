@@ -35,17 +35,13 @@ class SignUpSerializer(ModelSerializer):
 
         return attrs
 
-    @transaction.atomic
     def create(self, validated_data):
-        user = User(
+        user = User.objects.create(
             first_name=validated_data['first_name'],
             username=validated_data['username'],
         )
         user.set_password(validated_data['password'])
         user.save()
-
-        profile = Profile(user=user)
-        profile.save()
 
         return user
 
