@@ -12,11 +12,28 @@ class SubcategoryInline(admin.TabularInline):
     model = Category
 
 
+class ParentCategoryListFilter(admin.SimpleListFilter):
+    title = _('parent category')
+    parameter_name = 'parent__title'
+
+    def lookups(self, request, model_admin):
+        queryset = Category.objects.filter(parent=None)
+        result = [(category.pk, category.title) for category in queryset]
+        return result
+
+    def queryset(
+        self, request: Any, queryset: QuerySet[Any]
+    ) -> QuerySet[Any] | None:
+        if self.value() is None:
+            return queryset
+        return queryset.filter(parent=self.value())
+
+
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
     list_display = ('title', 'get_parent_title')
     search_fields = ('title', 'parent__title')
-    list_filter = ('parent__title',)
+    list_filter = (ParentCategoryListFilter,)
     sortable_by = ()
     inlines = [SubcategoryInline]
 
