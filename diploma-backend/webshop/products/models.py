@@ -83,7 +83,7 @@ class Product(models.Model):
         Category,
         null=True,
         blank=True,
-        on_delete=models.DO_NOTHING,
+        on_delete=models.SET_NULL,
         related_name='products',
     )
     count = models.PositiveIntegerField(
