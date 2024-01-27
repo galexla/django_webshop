@@ -186,7 +186,7 @@ class Product(models.Model):
     )
     rating = models.DecimalField(
         blank=True,
-        max_digits=1,
+        max_digits=2,
         decimal_places=1,
         validators=[
             MinValueValidator(1),
