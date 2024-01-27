@@ -48,6 +48,9 @@ class Category(models.Model):
             raise ValidationError('Category cannot be parent of itself')
         super().save(*args, **kwargs)
 
+    def __str__(self) -> str:
+        return self.title
+
 
 class Product(models.Model):
     title = models.CharField(
