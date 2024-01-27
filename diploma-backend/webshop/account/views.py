@@ -1,20 +1,19 @@
 import json
 
 from django.contrib.auth import authenticate, login, logout
-from rest_framework import generics, status
+from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Category, Profile
+from .models import Profile
 from .serializers import (
     AvatarUpdateSerializer,
     ProfileSerializer,
     SignInSerializer,
     SignUpSerializer,
-    TopLevelCategorySerializer,
 )
 
 
@@ -95,12 +94,3 @@ class AvatarUpdateView(APIView):
             return Response(None, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-class TopLevelCategoryListView(generics.ListAPIView):
-    serializer_class = TopLevelCategorySerializer
-
-    def get_queryset(self):
-        return Category.objects.filter(parent=None).prefetch_related(
-            'subcategories'
-        )
