@@ -24,6 +24,10 @@ def category_image_upload_path(instance: 'Category', filename: str) -> str:
 
 
 class Category(models.Model):
+    class Meta:
+        verbose_name = _('category')
+        verbose_name_plural = _('categories')
+
     title = models.CharField(
         max_length=200,
     )
