@@ -139,6 +139,7 @@ class Category(models.Model):
     )
     image_alt = models.CharField(
         max_length=200,
+        blank=True,
     )
 
 
@@ -218,6 +219,7 @@ class ProductImage(models.Model):
     )
     image_alt = models.CharField(
         max_length=200,
+        blank=True,
     )
 
 
