@@ -1,6 +1,7 @@
 from typing import Any
 
 from django.contrib.auth.models import AbstractUser, UserManager
+from django.core.exceptions import ValidationError
 from django.core.validators import (
     FileExtensionValidator,
     MaxValueValidator,
@@ -141,6 +142,11 @@ class Category(models.Model):
         max_length=200,
         blank=True,
     )
+
+    def save(self, *args, **kwargs):
+        if self == self.parent:
+            raise ValidationError('Category cannot be parent of itself')
+        super().save(*args, **kwargs)
 
 
 class Product(models.Model):
