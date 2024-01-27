@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class Tag(models.Model):
@@ -43,10 +44,20 @@ class Category(models.Model):
         blank=True,
     )
 
-    def save(self, *args, **kwargs):
-        if self == self.parent:
-            raise ValidationError('Category cannot be parent of itself')
-        super().save(*args, **kwargs)
+    def clean(self) -> None:
+        if self.parent is not None:
+            if self == self.parent:
+                raise ValidationError(_('Category cannot be parent of itself'))
+            if self.parent.parent is not None:
+                raise ValidationError(
+                    _('Category can only be subcategory of top-level category')
+                )
+            if len(self.subcategories.all()) > 0:
+                raise ValidationError(
+                    _('Maximal category structure depth is 2')
+                )
+
+        return super().clean()
 
     def __str__(self) -> str:
         return self.title

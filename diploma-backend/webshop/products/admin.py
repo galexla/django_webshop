@@ -5,11 +5,14 @@ from django.db.models.query import QuerySet
 from django.http.request import HttpRequest
 from django.utils.translation import gettext_lazy as _
 
+from .forms import CategoryAdminForm
 from .models import Category
 
 
 class SubcategoryInline(admin.TabularInline):
     model = Category
+    verbose_name = _('Subcategory')
+    verbose_name_plural = _('Subcategories')
 
 
 class ParentCategoryListFilter(admin.SimpleListFilter):
@@ -35,6 +38,7 @@ class CategoryAdmin(admin.ModelAdmin):
     search_fields = ('title', 'parent__title')
     list_filter = (ParentCategoryListFilter,)
     sortable_by = ()
+    form = CategoryAdminForm
     inlines = [SubcategoryInline]
 
     def get_queryset(self, request: HttpRequest) -> QuerySet[Any]:
