@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Category
+from .models import Category, Tag
 
 User = get_user_model()
 
@@ -43,3 +43,9 @@ class TopLevelCategorySerializer(
             'image_alt',
             'subcategories',
         )
+
+
+class TagSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Tag
+        fields = ('id', 'name')
