@@ -9,6 +9,9 @@ class Tag(models.Model):
         max_length=100,
     )
 
+    def __str__(self) -> str:
+        return self.name
+
 
 class Specification(models.Model):
     name = models.CharField(
@@ -17,6 +20,9 @@ class Specification(models.Model):
     value = models.CharField(
         max_length=200,
     )
+
+    def __str__(self) -> str:
+        return f'{self.name}: {self.value}'
 
 
 def category_image_upload_path(instance: 'Category', filename: str) -> str:
@@ -124,6 +130,9 @@ class Product(models.Model):
     archived = models.BooleanField(
         default=False,
     )
+
+    def __str__(self) -> str:
+        return self.title
 
 
 def product_image_upload_path(instance: 'ProductImage', filename: str) -> str:

@@ -6,7 +6,7 @@ from django.http.request import HttpRequest
 from django.utils.translation import gettext_lazy as _
 
 from .forms import CategoryAdminForm
-from .models import Category, Product
+from .models import Category, Product, Specification, Tag
 
 
 class SubcategoryInline(admin.TabularInline):
@@ -71,3 +71,13 @@ class ProductAdmin(admin.ModelAdmin):
         return obj.description[:20] + '...'
 
     short_description.short_description = _('Description')
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    list_display = ('name',)
+
+
+@admin.register(Specification)
+class SpecificationAdmin(admin.ModelAdmin):
+    list_display = 'name', 'value'
