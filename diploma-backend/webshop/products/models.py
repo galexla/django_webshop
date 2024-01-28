@@ -33,14 +33,14 @@ class Category(models.Model):
     )
     parent = models.ForeignKey(
         'Category',
-        null=True,
         blank=True,
+        null=True,
         on_delete=models.CASCADE,
         related_name='subcategories',
     )
     image = models.ImageField(
-        null=True,
         blank=True,
+        null=True,
         upload_to=category_image_upload_path,
     )
     image_alt = models.CharField(
@@ -81,8 +81,8 @@ class Product(models.Model):
     )
     category = models.ForeignKey(
         Category,
-        null=True,
         blank=True,
+        null=True,
         on_delete=models.SET_NULL,
         related_name='products',
     )
@@ -103,14 +103,17 @@ class Product(models.Model):
     )
     tags = models.ManyToManyField(
         Tag,
+        blank=True,
         related_name='products',
     )
     specifications = models.ManyToManyField(
         Specification,
+        blank=True,
         related_name='products',
     )
     rating = models.DecimalField(
         blank=True,
+        default=1,
         max_digits=2,
         decimal_places=1,
         validators=[
@@ -137,8 +140,8 @@ class ProductImage(models.Model):
         related_name='images',
     )
     image = models.ImageField(
-        null=True,
         blank=True,
+        null=True,
         upload_to=product_image_upload_path,
     )
     image_alt = models.CharField(

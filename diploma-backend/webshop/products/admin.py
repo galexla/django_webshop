@@ -6,7 +6,7 @@ from django.http.request import HttpRequest
 from django.utils.translation import gettext_lazy as _
 
 from .forms import CategoryAdminForm
-from .models import Category
+from .models import Category, Product
 
 
 class SubcategoryInline(admin.TabularInline):
@@ -34,8 +34,8 @@ class ParentCategoryListFilter(admin.SimpleListFilter):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ('title', 'get_parent_title')
-    search_fields = ('title', 'parent__title')
+    list_display = 'title', 'get_parent_title'
+    search_fields = 'title', 'parent__title'
     list_filter = (ParentCategoryListFilter,)
     sortable_by = ()
     form = CategoryAdminForm
@@ -51,3 +51,23 @@ class CategoryAdmin(admin.ModelAdmin):
         return obj.parent.title if obj.parent else None
 
     get_parent_title.short_description = _('Parent')
+
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    list_display = (
+        'title',
+        'price',
+        'category',
+        'count',
+        'date',
+        'short_description',
+        'free_delivery',
+        'rating',
+        'archived',
+    )
+
+    def short_description(self, obj):
+        return obj.description[:20] + '...'
+
+    short_description.short_description = _('Description')
