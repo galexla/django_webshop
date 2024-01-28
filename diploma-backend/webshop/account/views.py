@@ -9,12 +9,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Profile
-from .serializers import (
-    AvatarUpdateSerializer,
-    ProfileSerializer,
-    SignInSerializer,
-    SignUpSerializer,
-)
+from .serializers import (AvatarUpdateSerializer, ProfileSerializer,
+                          SetPasswordSerializer, SignInSerializer,
+                          SignUpSerializer)
 
 
 class SignInView(APIView):
@@ -38,6 +35,9 @@ class SignInView(APIView):
 
 
 class SignOutView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request: Request) -> Response:
         logout(request)
         return Response(None, status.HTTP_200_OK)
@@ -63,6 +63,31 @@ class SignUpView(APIView):
         return Response(
             serializer.errors, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+class SetPasswordView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        serializer = SetPasswordSerializer(data=request.data)
+
+        if serializer.is_valid():
+            user = request.user
+            if not user.check_password(
+                serializer.validated_data['currentPassword']
+            ):
+                return Response(
+                    {'currentPassword': ['Wrong password.']},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            user.set_password(serializer.validated_data['newPassword'])
+            user.save()
+
+            return Response(None, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ProfileView(APIView):

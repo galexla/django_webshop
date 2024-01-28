@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     AvatarUpdateView,
     ProfileView,
+    SetPasswordView,
     SignInView,
     SignOutView,
     SignUpView,
@@ -16,4 +17,5 @@ urlpatterns = [
     path('sign-out', SignOutView.as_view(), name='sign-out'),
     path('profile', ProfileView.as_view(), name='profile'),
     path('profile/avatar', AvatarUpdateView.as_view(), name='avatar'),
+    path('profile/password', SetPasswordView.as_view(), name='password'),
 ]

@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
+from rest_framework.request import Request
 from rest_framework.serializers import ModelSerializer, Serializer
 from rest_framework.validators import UniqueValidator
 
@@ -51,6 +53,15 @@ class SignInSerializer(Serializer):
         validators=User._meta.get_field('username').validators
     )
     password = serializers.CharField(write_only=True)
+
+
+class SetPasswordSerializer(serializers.Serializer):
+    currentPassword = serializers.CharField(required=True)
+    newPassword = serializers.CharField(required=True)
+
+    def validate_newPassword(self, value):
+        validate_password(value)
+        return value
 
 
 class ProfileSerializer(Serializer):
