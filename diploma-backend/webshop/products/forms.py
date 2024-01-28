@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Category
+from .models import Category, Product
 
 
 class CategoryAdminForm(forms.ModelForm):
@@ -13,3 +13,9 @@ class CategoryAdminForm(forms.ModelForm):
         self.fields['parent'].queryset = Category.objects.filter(
             parent__isnull=True
         ).exclude(pk=kwargs['instance'].pk)
+
+
+class ProductAdminForm(forms.ModelForm):
+    class Meta:
+        model = Product
+        exclude = ['date']

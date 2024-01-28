@@ -5,8 +5,8 @@ from django.db.models.query import QuerySet
 from django.http.request import HttpRequest
 from django.utils.translation import gettext_lazy as _
 
-from .forms import CategoryAdminForm
-from .models import Category, Product, Specification, Tag
+from .forms import CategoryAdminForm, ProductAdminForm
+from .models import Category, Product, ProductImage, Specification, Tag
 
 
 class SubcategoryInline(admin.TabularInline):
@@ -53,6 +53,11 @@ class CategoryAdmin(admin.ModelAdmin):
     get_parent_title.short_description = _('Parent')
 
 
+class ProductImagesInline(admin.TabularInline):
+    model = ProductImage
+    verbose_name = _('Image')
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     list_display = (
@@ -66,6 +71,8 @@ class ProductAdmin(admin.ModelAdmin):
         'rating',
         'archived',
     )
+    form = ProductAdminForm
+    inlines = [ProductImagesInline]
 
     def short_description(self, obj):
         return obj.description[:20] + '...'
