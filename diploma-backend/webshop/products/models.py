@@ -26,7 +26,7 @@ class Specification(models.Model):
 
 
 def category_image_upload_path(instance: 'Category', filename: str) -> str:
-    return f'categories/images/{filename}'
+    return f'categories/category{instance.pk}/image/{filename}'
 
 
 class Category(models.Model):
@@ -57,14 +57,16 @@ class Category(models.Model):
     def clean(self) -> None:
         if self.parent is not None:
             if self == self.parent:
-                raise ValidationError(_('Category cannot be parent of itself'))
+                raise ValidationError(
+                    _('Category cannot be a parent of itself')
+                )
             if self.parent.parent is not None:
                 raise ValidationError(
                     _('Category can only be subcategory of top-level category')
                 )
-            if len(self.subcategories.all()) > 0:
+            if self.pk is not None and len(self.subcategories.all()) > 0:
                 raise ValidationError(
-                    _('Maximal category structure depth is 2')
+                    _('Subcategory cannot have subcategories')
                 )
 
         return super().clean()
