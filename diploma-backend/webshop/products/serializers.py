@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Category, Tag
+from .models import Category, Product, ProductImage, Tag
 
 User = get_user_model()
 
@@ -48,4 +48,49 @@ class TopLevelCategorySerializer(
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = ('id', 'name')
+        fields = 'id', 'name'
+
+
+class ProductImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ProductImage
+        fields = 'image', 'image_alt'
+
+
+class CatalogSerializer(serializers.ModelSerializer):
+    images = ProductImageSerializer(many=True, read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Product
+        fields = (
+            'category',
+            'price',
+            'count',
+            'date',
+            'title',
+            'description',
+            'free_delivery',
+            'images',
+            'tags',
+            'reviews',
+            'rating',
+        )
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        # images = data.pop('images', [])
+        # images_new = []
+        # for image in images:
+        #     image_new = {
+        #         'src': image.image.url,
+        #         'alt': image.image_alt,
+        #     }
+        #     images_new.append(image_new)
+        # data['images'] = images_new
+
+        reviews_count = data.pop('reviews_count', 0)
+        data['reviews'] = reviews_count
+
+        return data
