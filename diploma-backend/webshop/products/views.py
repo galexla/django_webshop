@@ -7,8 +7,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Category, Product, Tag
-from .serializers import (CatalogSerializer, TagSerializer,
-                          TopLevelCategorySerializer)
+from .serializers import (
+    CatalogSerializer,
+    TagSerializer,
+    TopLevelCategorySerializer,
+)
 
 
 class TopLevelCategoryListView(APIView):
@@ -105,19 +108,16 @@ class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         'date',
     ]
 
-    # TODO: take sort & sort direction params from URL: /api/catalog/?filter[name]=&filter[minPrice]=1&filter[maxPrice]=230&filter[freeDelivery]=false&filter[available]=false&currentPage=1&sort=price&sortType=inc&limit=20
-    # def get_queryset(self):
-    ## from: https://stackoverflow.com/questions/53835232/django-custom-ordering-in-url-queries
-    #     queryset = super(DatastreamViewSet, self).get_queryset()
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        sort_field = self.request.query_params.get('sort')
+        if not sort_field or sort_field not in self.ordering_fields:
+            return queryset
 
-    #     order_by = self.request.query_params.get('order_by', '')
-    #     if order_by:
-    #         order_by_name = order_by.split(' ')[1]
-    #         order_by_sign = order_by.split(' ')[0]
-    #         order_by_sign = '' if order_by_sign == 'asc' else '-'
-    #         queryset = queryset.order_by(order_by_sign + order_by_name)
+        sort_type = self.request.query_params.get('sortType')
+        sort_sign = '-' if sort_type == 'dec' else ''
 
-    #     return queryset
+        return queryset.order_by(sort_sign + sort_field)
 
 
 # TODO: create a real basket view
