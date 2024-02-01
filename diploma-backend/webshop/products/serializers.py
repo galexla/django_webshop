@@ -56,6 +56,14 @@ class ProductImageSerializer(serializers.ModelSerializer):
         model = ProductImage
         fields = 'image', 'image_alt'
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['src'] = instance.image.url
+        data['alt'] = data.pop('image_alt', '')
+        data.pop('image', 0)
+
+        return data
+
 
 class CatalogSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
@@ -79,15 +87,6 @@ class CatalogSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
-
-        # TODO: delete stub data
-        data['images'] = [
-            {
-                'src': 'http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg',
-                'alt': 'some alt',
-            }
-        ]
-
         reviews_count = data.pop('reviews_count', 0)
         data['reviews'] = reviews_count
 
