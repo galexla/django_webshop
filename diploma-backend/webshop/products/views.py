@@ -46,10 +46,6 @@ class CatalogPagination(pagination.PageNumberPagination):
 
 
 class CatalogFilter(django_filters.FilterSet):
-    class Meta:
-        model = Product
-        fields = ['minPrice', 'maxPrice', 'freeDelivery', 'available']
-
     name = django_filters.CharFilter(
         field_name='title', lookup_expr='icontains'
     )
@@ -92,6 +88,25 @@ class CatalogFilterBackend(DjangoFilterBackend):
         return filter_kwargs
 
 
+class CatalogOrderingFilter(OrderingFilter):
+    ordering_fields = [
+        'rating',
+        'price',
+        'reviews',
+        'date',
+    ]
+
+    def filter_queryset(self, request, queryset, view):
+        sort_field = request.query_params.get('sort')
+        if not sort_field or sort_field not in self.ordering_fields:
+            return queryset
+
+        sort_type = request.query_params.get('sortType')
+        sort_sign = '-' if sort_type == 'dec' else ''
+
+        return queryset.order_by(sort_sign + sort_field)
+
+
 class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
         Product.objects.prefetch_related(
@@ -111,36 +126,12 @@ class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         .all()
     )
     serializer_class = CatalogSerializer
-    pagination_class = CatalogPagination
     filter_backends = [
         CatalogFilterBackend,
-        OrderingFilter,
+        CatalogOrderingFilter,
     ]
-    search_fields = ['name']
     filterset_class = CatalogFilter
-    filterset_fields = [
-        'minPrice',
-        'maxPrice',
-        'freeDelivery',
-        'available',
-    ]
-    ordering_fields = [
-        'rating',
-        'price',
-        'reviews',
-        'date',
-    ]
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        sort_field = self.request.query_params.get('sort')
-        if not sort_field or sort_field not in self.ordering_fields:
-            return queryset
-
-        sort_type = self.request.query_params.get('sortType')
-        sort_sign = '-' if sort_type == 'dec' else ''
-
-        return queryset.order_by(sort_sign + sort_field)
+    pagination_class = CatalogPagination
 
 
 # TODO: create a real basket view
