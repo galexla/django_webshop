@@ -1,8 +1,9 @@
 import django_filters
 from django.db.models import Case, Count, IntegerField, Prefetch, Value, When
+from django.http.request import QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, mixins, pagination, viewsets
-from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -30,19 +31,10 @@ class TagListView(APIView):
         return Response(serialzier.data)
 
 
-# class YachtTypeFilterSet(django_filters.FilterSet):
-#     type_in = django_filters.CharFilter(
-#         method='filter_guest_level', field_name='guest_level')
-
-#     def filter_type_in(self, queryset, field_name, value):
-#         if value != "":
-#             id_array = json.loads(value)
-#             if isinstance(id_array, list):
-#                 return queryset.filter(type__id__in=id_array)
-#         return queryset
-
-
 class CatalogPagination(pagination.PageNumberPagination):
+    page_query_param = 'currentPage'
+    page_size_query_param = 'limit'
+
     def get_paginated_response(self, data):
         return Response(
             {
@@ -54,18 +46,50 @@ class CatalogPagination(pagination.PageNumberPagination):
 
 
 class CatalogFilter(django_filters.FilterSet):
+    class Meta:
+        model = Product
+        fields = ['minPrice', 'maxPrice', 'freeDelivery', 'available']
+
+    name = django_filters.CharFilter(
+        field_name='title', lookup_expr='icontains'
+    )
     minPrice = django_filters.NumberFilter(
         field_name='price', lookup_expr='gte'
     )
     maxPrice = django_filters.NumberFilter(
         field_name='price', lookup_expr='lte'
     )
-    freeDelivery = django_filters.NumberFilter(
-        field_name='free_delivery', lookup_expr='eq'
+    freeDelivery = django_filters.BooleanFilter(
+        field_name='free_delivery', method='no_filtering_on_false'
     )
-    available = django_filters.NumberFilter(
-        field_name='available', lookup_expr='eq'
+    available = django_filters.BooleanFilter(
+        field_name='available', method='no_filtering_on_false'
     )
+
+    def no_filtering_on_false(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(**{name: value})
+
+
+class CatalogFilterBackend(DjangoFilterBackend):
+    def get_filterset_kwargs(self, request, queryset, view):
+        filter_kwargs = super().get_filterset_kwargs(request, queryset, view)
+        original_data = filter_kwargs.get('data', {})
+
+        if isinstance(original_data, QueryDict):
+            data = original_data.copy()
+        else:
+            data = original_data
+
+        new_data = {}
+        for key, value in data.items():
+            if key.startswith('filter[') and key.endswith(']'):
+                new_key = key[7:-1]  # Remove 'filter[' and ']'
+                new_data[new_key] = value
+
+        filter_kwargs['data'] = new_data
+        return filter_kwargs
 
 
 class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
@@ -89,8 +113,7 @@ class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     serializer_class = CatalogSerializer
     pagination_class = CatalogPagination
     filter_backends = [
-        SearchFilter,
-        DjangoFilterBackend,
+        CatalogFilterBackend,
         OrderingFilter,
     ]
     search_fields = ['name']
