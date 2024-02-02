@@ -1,6 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
 
 
@@ -33,6 +34,9 @@ class Category(models.Model):
     class Meta:
         verbose_name = _('category')
         verbose_name_plural = _('categories')
+        indexes = [
+            models.Index(fields=['parent'], name='idx_category_parent'),
+        ]
 
     title = models.CharField(
         max_length=200,
@@ -76,6 +80,21 @@ class Category(models.Model):
 
 
 class Product(models.Model):
+    class Meta:
+        indexes = [
+            models.Index(fields=['title'], name='idx_product_title'),
+            models.Index(Lower('title'), name='idx_product_title_lower'),
+            models.Index(fields=['price'], name='idx_product_price'),
+            models.Index(fields=['category'], name='idx_product_category'),
+            models.Index(fields=['count'], name='idx_product_count'),
+            models.Index(fields=['date'], name='idx_product_date'),
+            models.Index(
+                fields=['free_delivery'], name='idx_product_free_delivery'
+            ),
+            models.Index(fields=['rating'], name='idx_product_rating'),
+            models.Index(fields=['archived'], name='idx_product_archived'),
+        ]
+
     title = models.CharField(
         max_length=200,
     )

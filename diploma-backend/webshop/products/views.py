@@ -46,9 +46,7 @@ class CatalogPagination(pagination.PageNumberPagination):
 
 
 class CatalogFilter(django_filters.FilterSet):
-    name = django_filters.CharFilter(
-        field_name='title', lookup_expr='icontains'
-    )
+    name = django_filters.CharFilter(field_name='title', lookup_expr='iexact')
     minPrice = django_filters.NumberFilter(
         field_name='price', lookup_expr='gte'
     )
