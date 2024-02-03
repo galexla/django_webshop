@@ -60,6 +60,21 @@ class CatalogFilter(django_filters.FilterSet):
         field_name='available', method='no_filtering_on_false'
     )
 
+    def filter_queryset(self, queryset):
+        queryset = super().filter_queryset(queryset)
+        queryset = self.filter_by_tags_list(queryset)
+        return queryset
+
+    def filter_by_tags_list(self, queryset):
+        """
+        Filters by tag list from URL parameter 'tags[]'
+        """
+        tags = self.request.query_params.getlist('tags[]')
+        for tag_id in tags:
+            queryset = queryset.filter(tags__id=tag_id)
+
+        return queryset
+
     def no_filtering_on_false(self, queryset, name, value):
         if not value:
             return queryset
@@ -83,6 +98,7 @@ class CatalogFilterBackend(DjangoFilterBackend):
                 new_data[new_key] = value
 
         filter_kwargs['data'] = new_data
+
         return filter_kwargs
 
 
@@ -95,6 +111,9 @@ class CatalogOrderingFilter(OrderingFilter):
     ]
 
     def filter_queryset(self, request, queryset, view):
+        """
+        Adds ordering by URL parameter 'sort' and sort direction 'sortType'
+        """
         sort_field = request.query_params.get('sort')
         if not sort_field or sort_field not in self.ordering_fields:
             return queryset
