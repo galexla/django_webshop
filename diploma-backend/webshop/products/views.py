@@ -1,5 +1,13 @@
 import django_filters
-from django.db.models import Case, Count, IntegerField, Prefetch, Value, When
+from django.db.models import (
+    Case,
+    Count,
+    IntegerField,
+    Prefetch,
+    Q,
+    Value,
+    When,
+)
 from django.http.request import QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, mixins, pagination, viewsets
@@ -47,7 +55,9 @@ class CatalogPagination(pagination.PageNumberPagination):
 
 class CatalogFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(field_name='title', lookup_expr='iexact')
-    category = django_filters.NumberFilter(field_name='category')
+    category = django_filters.NumberFilter(
+        field_name='category', method='filter_by_category_or_parent'
+    )
     minPrice = django_filters.NumberFilter(
         field_name='price', lookup_expr='gte'
     )
@@ -74,6 +84,12 @@ class CatalogFilter(django_filters.FilterSet):
         for tag_id in tags:
             queryset = queryset.filter(tags__id=tag_id)
 
+        return queryset
+
+    def filter_by_category_or_parent(self, queryset, name, value):
+        queryset = queryset.filter(
+            Q(category=value) | Q(category__parent=value)
+        )
         return queryset
 
     def no_filtering_on_false(self, queryset, name, value):
