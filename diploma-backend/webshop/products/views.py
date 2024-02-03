@@ -7,7 +7,7 @@ from rest_framework.filters import OrderingFilter
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Category, Product, Tag
+from .models import Category, Product, Review, Tag
 from .serializers import (
     CatalogSerializer,
     TagSerializer,
@@ -17,8 +17,8 @@ from .serializers import (
 
 class TopLevelCategoryListView(APIView):
     def get(self, request):
-        queryset = Category.objects.filter(parent=None).prefetch_related(
-            'subcategories'
+        queryset = Category.objects.prefetch_related('subcategories').filter(
+            parent=None
         )
         serialzier = TopLevelCategorySerializer(queryset, many=True)
         return Response(serialzier.data)
@@ -47,6 +47,7 @@ class CatalogPagination(pagination.PageNumberPagination):
 
 class CatalogFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(field_name='title', lookup_expr='iexact')
+    category = django_filters.NumberFilter(field_name='category')
     minPrice = django_filters.NumberFilter(
         field_name='price', lookup_expr='gte'
     )
@@ -96,6 +97,8 @@ class CatalogFilterBackend(DjangoFilterBackend):
             if key.startswith('filter[') and key.endswith(']'):
                 new_key = key[7:-1]  # Remove 'filter[' and ']'
                 new_data[new_key] = value
+            else:
+                new_data[key] = value
 
         filter_kwargs['data'] = new_data
 
@@ -126,10 +129,11 @@ class CatalogOrderingFilter(OrderingFilter):
 
 class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
-        Product.objects.prefetch_related(
+        Product.objects.select_related('category')
+        .prefetch_related(
             'images',
             Prefetch('tags', queryset=Tag.objects.only('id', 'name')),
-            'reviews',
+            Prefetch('reviews', queryset=Review.objects.only('id')),
         )
         .annotate(reviews_count=Count('reviews'))
         .annotate(
