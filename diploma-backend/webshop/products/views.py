@@ -183,6 +183,23 @@ class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     pagination_class = CatalogPagination
 
 
+class PopularProductsListView(generics.ListAPIView):
+    queryset = (
+        Product.objects.select_related('category')
+        .prefetch_related(
+            'images',
+            'tags',
+            Prefetch('reviews', queryset=Review.objects.only('id')),
+        )
+        .annotate(reviews_count=Count('reviews'))
+        .defer('full_description')
+        .order_by('-rating')
+        .all()
+    )
+    serializer_class = CatalogSerializer
+    pagination_class = None
+
+
 # TODO: create a real basket view
 # class BasketStubViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 # class BasketStubViewSet(generics.ListAPIView):
