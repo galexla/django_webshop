@@ -82,8 +82,6 @@ class Category(models.Model):
 class Product(models.Model):
     class Meta:
         indexes = [
-            # TODO: remove 'title' index
-            models.Index(fields=['title'], name='idx_product_title'),
             models.Index(Lower('title'), name='idx_product_title_lower'),
             models.Index(fields=['price'], name='idx_product_price'),
             models.Index(fields=['category'], name='idx_product_category'),
@@ -115,6 +113,9 @@ class Product(models.Model):
         related_name='products',
     )
     count = models.PositiveIntegerField(
+        default=0,
+    )
+    purchases = models.PositiveIntegerField(
         default=0,
     )
     date = models.DateTimeField(

@@ -193,8 +193,8 @@ class PopularProductsListView(generics.ListAPIView):
         )
         .annotate(reviews_count=Count('reviews'))
         .defer('full_description')
-        .order_by('-rating')
-        .all()
+        .order_by('-rating', '-purchases')
+        .all()[:8]
     )
     serializer_class = CatalogSerializer
     pagination_class = None
