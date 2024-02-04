@@ -32,11 +32,23 @@ class TopLevelCategoryListView(APIView):
         return Response(serialzier.data)
 
 
-class TagListView(APIView):
-    def get(self, request):
-        queryset = Tag.objects.all()
-        serialzier = TagSerializer(queryset, many=True)
-        return Response(serialzier.data)
+class TagFilter(django_filters.FilterSet):
+    category = django_filters.NumberFilter(
+        field_name='category', method='filter_by_category_or_parent'
+    )
+
+    def filter_by_category_or_parent(self, queryset, name, value):
+        queryset = queryset.filter(
+            Q(products__category=value) | Q(products__category__parent=value)
+        )
+        return queryset
+
+
+class TagListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
+    queryset = Tag.objects.all()
+    serializer_class = TagSerializer
+    filterset_class = TagFilter
+    pagination_class = None
 
 
 class CatalogPagination(pagination.PageNumberPagination):
@@ -148,7 +160,7 @@ class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         Product.objects.select_related('category')
         .prefetch_related(
             'images',
-            Prefetch('tags', queryset=Tag.objects.only('id', 'name')),
+            'tags',
             Prefetch('reviews', queryset=Review.objects.only('id')),
         )
         .annotate(reviews_count=Count('reviews'))
