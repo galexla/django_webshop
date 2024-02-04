@@ -65,7 +65,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
         return data
 
 
-class CatalogSerializer(serializers.ModelSerializer):
+class ProductShortSerializer(serializers.ModelSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
 

@@ -17,7 +17,7 @@ from rest_framework.views import APIView
 
 from .models import Category, Product, Review, Tag
 from .serializers import (
-    CatalogSerializer,
+    ProductShortSerializer,
     TagSerializer,
     TopLevelCategorySerializer,
 )
@@ -174,7 +174,7 @@ class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
         .defer('full_description')
         .all()
     )
-    serializer_class = CatalogSerializer
+    serializer_class = ProductShortSerializer
     filter_backends = [
         CatalogFilterBackend,
         CatalogOrderingFilter,
@@ -196,7 +196,24 @@ class PopularProductsListView(generics.ListAPIView):
         .order_by('-rating', '-purchases')
         .all()[:8]
     )
-    serializer_class = CatalogSerializer
+    serializer_class = ProductShortSerializer
+    pagination_class = None
+
+
+class LimitedProductsListView(generics.ListAPIView):
+    queryset = (
+        Product.objects.select_related('category')
+        .prefetch_related(
+            'images',
+            'tags',
+            Prefetch('reviews', queryset=Review.objects.only('id')),
+        )
+        .annotate(reviews_count=Count('reviews'))
+        .defer('full_description')
+        .filter(limited_edition=True)
+        .all()[:16]
+    )
+    serializer_class = ProductShortSerializer
     pagination_class = None
 
 

@@ -130,6 +130,9 @@ class Product(models.Model):
     free_delivery = models.BooleanField(
         default=True,
     )
+    limited_edition = models.BooleanField(
+        default=False,
+    )
     tags = models.ManyToManyField(
         Tag,
         blank=True,
