@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    BannerProductsStubListView,
     BasketStubViewSet,
     CatalogViewSet,
     LimitedProductsListView,
@@ -18,6 +19,7 @@ routers.register('tags', TagListViewSet)
 
 urlpatterns = [
     path('', include(routers.urls)),
+    path('banners/', BannerProductsStubListView.as_view(), name='banners'),
     path(
         'products/popular/',
         PopularProductsListView.as_view(),
