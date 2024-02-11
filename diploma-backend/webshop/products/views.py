@@ -218,64 +218,20 @@ class LimitedProductsListView(generics.ListAPIView):
 
 
 class BannerProductsStubListView(generics.ListAPIView):
-    def get(self, request, *args, **kwargs):
-        data = [
-            {
-                "category": 5,
-                "price": "999.00",
-                "count": 1,
-                "date": "2024-01-28T10:37:51.758904Z",
-                "title": "Laptop",
-                "description": "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.",
-                "free_delivery": True,
-                "images": [
-                    {
-                        "src": "/media/products/product1/images/laptop.jpg",
-                        "alt": "",
-                    }
-                ],
-                "tags": [{"id": 1, "name": "Tag1"}],
-                "reviews": 0,
-                "rating": "4.5",
-            },
-            {
-                "category": 3,
-                "price": "799.00",
-                "count": 8,
-                "date": "2024-01-30T15:29:54.733294Z",
-                "title": "Smartphone",
-                "description": "Nulla in libero volutpat, pellentesque erat eget, viverra nisi.",
-                "free_delivery": True,
-                "images": [
-                    {
-                        "src": "/media/products/product3/images/smartphone.jpg",
-                        "alt": "",
-                    }
-                ],
-                "tags": [],
-                "reviews": 0,
-                "rating": "4.0",
-            },
-            {
-                "category": 6,
-                "price": "500.00",
-                "count": 0,
-                "date": "2024-01-30T15:29:07.742167Z",
-                "title": "Tablet",
-                "description": "Etiam hendrerit eget arcu nec vulputate.",
-                "free_delivery": True,
-                "images": [
-                    {
-                        "src": "/media/products/product2/images/tablet.jpg",
-                        "alt": "",
-                    }
-                ],
-                "tags": [{"id": 2, "name": "Tag2"}],
-                "reviews": 0,
-                "rating": "3.0",
-            },
-        ]
-        return Response(data)
+    queryset = (
+        Product.objects.select_related('category')
+        .prefetch_related(
+            'images',
+            'tags',
+            Prefetch('reviews', queryset=Review.objects.only('id')),
+        )
+        .annotate(reviews_count=Count('reviews'))
+        .defer('full_description')
+        .filter(is_banner=True)
+        .all()[:3]
+    )
+    serializer_class = ProductShortSerializer
+    pagination_class = None
 
 
 # TODO: create a real basket view
