@@ -210,7 +210,7 @@ class LimitedProductsListView(generics.ListAPIView):
         )
         .annotate(reviews_count=Count('reviews'))
         .defer('full_description')
-        .filter(limited_edition=True)
+        .filter(is_limited_edition=True)
         .all()[:16]
     )
     serializer_class = ProductShortSerializer

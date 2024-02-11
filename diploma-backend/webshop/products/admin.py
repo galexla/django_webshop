@@ -69,7 +69,8 @@ class ProductAdmin(admin.ModelAdmin):
         'short_description',
         'free_delivery',
         'purchases',
-        'limited_edition',
+        'is_limited_edition',
+        'is_banner',
         'rating',
         'archived',
     )
