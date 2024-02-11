@@ -91,6 +91,11 @@ class Product(models.Model):
                 fields=['free_delivery'], name='idx_product_free_delivery'
             ),
             models.Index(fields=['rating'], name='idx_product_rating'),
+            models.Index(
+                fields=['is_limited_edition'],
+                name='idx_product_is_limited_edition',
+            ),
+            models.Index(fields=['is_banner'], name='idx_product_is_banner'),
             models.Index(fields=['archived'], name='idx_product_archived'),
         ]
 
