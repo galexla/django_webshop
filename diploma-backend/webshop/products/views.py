@@ -217,7 +217,7 @@ class LimitedProductsListView(generics.ListAPIView):
     pagination_class = None
 
 
-class BannerProductsStubListView(generics.ListAPIView):
+class BannerProductsListView(generics.ListAPIView):
     queryset = (
         Product.objects.select_related('category')
         .prefetch_related(
