@@ -72,6 +72,7 @@ class ProductShortSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = (
+            'id',
             'category',
             'price',
             'count',
