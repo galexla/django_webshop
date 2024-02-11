@@ -7,6 +7,7 @@ from .views import (
     CatalogViewSet,
     LimitedProductsListView,
     PopularProductsListView,
+    ProductDetailView,
     TagListViewSet,
     TopLevelCategoryListView,
 )
@@ -19,6 +20,11 @@ routers.register('tags', TagListViewSet)
 
 urlpatterns = [
     path('', include(routers.urls)),
+    path(
+        'product/<int:pk>/',
+        ProductDetailView.as_view(),
+        name='product-details',
+    ),
     path('banners/', BannerProductsListView.as_view(), name='banners'),
     path(
         'products/popular/',

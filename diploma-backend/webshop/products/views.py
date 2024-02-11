@@ -17,6 +17,7 @@ from rest_framework.views import APIView
 
 from .models import Category, Product, Review, Tag
 from .serializers import (
+    ProductSerializer,
     ProductShortSerializer,
     TagSerializer,
     TopLevelCategorySerializer,
@@ -232,6 +233,20 @@ class BannerProductsListView(generics.ListAPIView):
     )
     serializer_class = ProductShortSerializer
     pagination_class = None
+
+
+class ProductDetailView(generics.RetrieveAPIView):
+    queryset = (
+        Product.objects.select_related('category')
+        .prefetch_related(
+            'images',
+            'tags',
+            'reviews',
+        )
+        .filter(archived=False)
+        .all()
+    )
+    serializer_class = ProductSerializer
 
 
 # TODO: create a real basket view
