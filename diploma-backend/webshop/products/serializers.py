@@ -23,7 +23,7 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'title', 'image']
-        read_only_fields = ('id', 'title', 'image')
+        read_only_fields = ['id', 'title', 'image']
 
 
 class TopLevelCategorySerializer(serializers.ModelSerializer):
@@ -33,24 +33,24 @@ class TopLevelCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ['id', 'title', 'image', 'subcategories']
-        read_only_fields = (
+        read_only_fields = [
             'id',
             'title',
             'image',
             'subcategories',
-        )
+        ]
 
 
 class TagSerializer(serializers.ModelSerializer):
     class Meta:
         model = Tag
-        fields = 'id', 'name'
+        fields = ['id', 'name']
 
 
 class SpecificationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Specification
-        fields = 'name', 'value'
+        fields = ['name', 'value']
 
 
 class ProductShortSerializer(serializers.ModelSerializer):
@@ -61,7 +61,7 @@ class ProductShortSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = (
+        fields = [
             'id',
             'category',
             'price',
@@ -74,7 +74,7 @@ class ProductShortSerializer(serializers.ModelSerializer):
             'tags',
             'reviews',
             'rating',
-        )
+        ]
 
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -86,7 +86,7 @@ class ProductSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = (
+        fields = [
             'id',
             'category',
             'price',
@@ -101,4 +101,4 @@ class ProductSerializer(serializers.ModelSerializer):
             'specifications',
             'reviews',
             'rating',
-        )
+        ]
