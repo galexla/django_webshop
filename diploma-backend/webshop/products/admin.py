@@ -34,7 +34,7 @@ class ParentCategoryListFilter(admin.SimpleListFilter):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = 'title', 'get_parent_title'
+    list_display = 'title', 'get_parent_title', 'archived'
     search_fields = 'title', 'parent__title'
     list_filter = (ParentCategoryListFilter,)
     sortable_by = ()
@@ -69,8 +69,8 @@ class ProductAdmin(admin.ModelAdmin):
         'short_description',
         'free_delivery',
         'purchases',
-        'is_limited_edition',
-        'is_banner',
+        'limited',
+        'banner',
         'rating',
         'archived',
     )
@@ -81,6 +81,16 @@ class ProductAdmin(admin.ModelAdmin):
         return obj.description[:20] + '...'
 
     short_description.short_description = _('Description')
+
+    def limited(self, obj):
+        return obj.is_limited_edition
+
+    limited.short_description = _('Limited')
+
+    def banner(self, obj):
+        return obj.is_banner
+
+    banner.short_description = _('Banner')
 
 
 @admin.register(Tag)
