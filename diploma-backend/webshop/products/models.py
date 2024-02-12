@@ -57,6 +57,9 @@ class Category(models.Model):
         max_length=200,
         blank=True,
     )
+    archived = models.BooleanField(
+        default=False,
+    )
 
     def clean(self) -> None:
         if self.parent is not None:

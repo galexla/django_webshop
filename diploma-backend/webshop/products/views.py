@@ -27,7 +27,7 @@ from .serializers import (
 class TopLevelCategoryListView(APIView):
     def get(self, request):
         queryset = Category.objects.prefetch_related('subcategories').filter(
-            parent=None
+            parent=None, archived=False
         )
         serialzier = TopLevelCategorySerializer(queryset, many=True)
         return Response(serialzier.data)
@@ -173,6 +173,7 @@ class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             )
         )
         .defer('full_description')
+        .filter(archived=False)
         .all()
     )
     serializer_class = ProductShortSerializer
@@ -194,6 +195,7 @@ class PopularProductsListView(generics.ListAPIView):
         )
         .annotate(reviews_count=Count('reviews'))
         .defer('full_description')
+        .filter(archived=False)
         .order_by('-rating', '-purchases')
         .all()[:8]
     )
@@ -212,6 +214,7 @@ class LimitedProductsListView(generics.ListAPIView):
         .annotate(reviews_count=Count('reviews'))
         .defer('full_description')
         .filter(is_limited_edition=True)
+        .filter(archived=False)
         .all()[:16]
     )
     serializer_class = ProductShortSerializer
@@ -229,6 +232,7 @@ class BannerProductsListView(generics.ListAPIView):
         .annotate(reviews_count=Count('reviews'))
         .defer('full_description')
         .filter(is_banner=True)
+        .filter(archived=False)
         .all()[:3]
     )
     serializer_class = ProductShortSerializer
