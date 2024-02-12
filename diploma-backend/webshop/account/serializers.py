@@ -1,11 +1,8 @@
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import check_password
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
-from rest_framework.request import Request
-from rest_framework.serializers import ModelSerializer, Serializer
 from rest_framework.validators import UniqueValidator
 
 from .models import Profile
@@ -13,7 +10,7 @@ from .models import Profile
 User = get_user_model()
 
 
-class SignUpSerializer(ModelSerializer):
+class SignUpSerializer(serializers.ModelSerializer):
     name = serializers.CharField(
         validators=User._meta.get_field('first_name').validators,
         write_only=True,
@@ -48,7 +45,7 @@ class SignUpSerializer(ModelSerializer):
         return user
 
 
-class SignInSerializer(Serializer):
+class SignInSerializer(serializers.Serializer):
     username = serializers.CharField(
         validators=User._meta.get_field('username').validators
     )
@@ -64,7 +61,7 @@ class SetPasswordSerializer(serializers.Serializer):
         return value
 
 
-class ProfileSerializer(Serializer):
+class ProfileSerializer(serializers.Serializer):
     fullName = serializers.CharField(
         required=True,
         allow_blank=False,
@@ -115,7 +112,7 @@ class ProfileSerializer(Serializer):
         return data
 
 
-class AvatarUpdateSerializer(ModelSerializer):
+class AvatarUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ['avatar']
