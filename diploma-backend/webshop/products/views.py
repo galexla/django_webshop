@@ -276,7 +276,7 @@ class BasketStubViewSet(generics.ListAPIView):
                 "date": "2024-01-30T15:29:54.733294Z",
                 "title": "Smartphone",
                 "description": "Nulla in libero volutpat, pellentesque erat eget, viverra nisi.",
-                "free_delivery": True,
+                "freeDelivery": True,
                 "images": [
                     {
                         "src": "http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg",
@@ -294,7 +294,7 @@ class BasketStubViewSet(generics.ListAPIView):
             #     "date": "2024-01-30T15:30:48.823393Z",
             #     "title": "Monitor",
             #     "description": "Maecenas in nisi in eros sagittis sagittis eget in purus.",
-            #     "free_delivery": True,
+            #     "freeDelivery": True,
             #     "images": [
             #         {
             #             "src": "http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg",

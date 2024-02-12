@@ -1,46 +1,42 @@
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .models import Category, Product, ProductImage, Specification, Tag
+from .models import Category, Product, Specification, Tag
 
 User = get_user_model()
 
 
-class CategoryImageRepresentationMixin:
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        image = {
-            'src': data['image'],
-            'alt': data['image_alt'],
-        }
-        data['image'] = image
-        data.pop('image_alt')
+class ImageSerializer(serializers.Serializer):
+    src = serializers.SerializerMethodField()
+    alt = serializers.SerializerMethodField()
 
-        return data
+    def get_src(self, instance):
+        return instance.image.url
+
+    def get_alt(self, instance):
+        return getattr(instance, 'image_alt', '')
 
 
-class CategorySerializer(
-    CategoryImageRepresentationMixin, serializers.ModelSerializer
-):
+class CategorySerializer(serializers.ModelSerializer):
+    image = ImageSerializer(source='*')
+
     class Meta:
         model = Category
-        fields = ['id', 'title', 'image', 'image_alt']
-        read_only_fields = ('id', 'title', 'image', 'image_alt')
+        fields = ['id', 'title', 'image']
+        read_only_fields = ('id', 'title', 'image')
 
 
-class TopLevelCategorySerializer(
-    CategoryImageRepresentationMixin, serializers.ModelSerializer
-):
+class TopLevelCategorySerializer(serializers.ModelSerializer):
+    image = ImageSerializer(source='*')
     subcategories = CategorySerializer(many=True, read_only=True)
 
     class Meta:
         model = Category
-        fields = ['id', 'title', 'image', 'image_alt', 'subcategories']
+        fields = ['id', 'title', 'image', 'subcategories']
         read_only_fields = (
             'id',
             'title',
             'image',
-            'image_alt',
             'subcategories',
         )
 
@@ -57,23 +53,11 @@ class SpecificationSerializer(serializers.ModelSerializer):
         fields = 'name', 'value'
 
 
-class ProductImageSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ProductImage
-        fields = 'image', 'image_alt'
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['src'] = instance.image.url
-        data['alt'] = data.pop('image_alt', '')
-        data.pop('image', 0)
-
-        return data
-
-
 class ProductShortSerializer(serializers.ModelSerializer):
-    images = ProductImageSerializer(many=True, read_only=True)
+    images = ImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
+    reviews = serializers.IntegerField(source='reviews_count')
+    freeDelivery = serializers.CharField(source='free_delivery')
 
     class Meta:
         model = Product
@@ -85,25 +69,20 @@ class ProductShortSerializer(serializers.ModelSerializer):
             'date',
             'title',
             'description',
-            'free_delivery',
+            'freeDelivery',
             'images',
             'tags',
             'reviews',
             'rating',
         )
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        reviews_count = data.pop('reviews_count', 0)
-        data['reviews'] = reviews_count
-
-        return data
-
 
 class ProductSerializer(serializers.ModelSerializer):
-    images = ProductImageSerializer(many=True, read_only=True)
+    images = ImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     specifications = SpecificationSerializer(many=True, read_only=True)
+    fullDescription = serializers.CharField(source='full_description')
+    freeDelivery = serializers.CharField(source='free_delivery')
 
     class Meta:
         model = Product
@@ -115,17 +94,11 @@ class ProductSerializer(serializers.ModelSerializer):
             'date',
             'title',
             'description',
-            'full_description',
-            'free_delivery',
+            'fullDescription',
+            'freeDelivery',
             'images',
             'tags',
             'specifications',
             'reviews',
             'rating',
         )
-
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data['fullDescription'] = data.pop('full_description')
-        data['freeDelivery'] = data.pop('free_delivery')
-        return data
