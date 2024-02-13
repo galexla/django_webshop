@@ -21,27 +21,22 @@ class ImageSerializer(serializers.Serializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    image = ImageSerializer(source='*')
-
     class Meta:
         model = Category
         fields = ['id', 'title', 'image']
         read_only_fields = ['id', 'title', 'image']
 
+    image = ImageSerializer(source='*')
+
 
 class TopLevelCategorySerializer(serializers.ModelSerializer):
-    image = ImageSerializer(source='*')
-    subcategories = CategorySerializer(many=True, read_only=True)
-
     class Meta:
         model = Category
         fields = ['id', 'title', 'image', 'subcategories']
-        read_only_fields = [
-            'id',
-            'title',
-            'image',
-            'subcategories',
-        ]
+        read_only_fields = ['id', 'title', 'image', 'subcategories']
+
+    image = ImageSerializer(source='*')
+    subcategories = CategorySerializer(many=True, read_only=True)
 
 
 class TagSerializer(serializers.ModelSerializer):
@@ -57,11 +52,6 @@ class SpecificationSerializer(serializers.ModelSerializer):
 
 
 class ProductShortSerializer(serializers.ModelSerializer):
-    images = ImageSerializer(many=True, read_only=True)
-    tags = TagSerializer(many=True, read_only=True)
-    reviews = serializers.IntegerField(source='reviews_count')
-    freeDelivery = serializers.CharField(source='free_delivery')
-
     class Meta:
         model = Product
         fields = [
@@ -79,6 +69,11 @@ class ProductShortSerializer(serializers.ModelSerializer):
             'rating',
         ]
 
+    images = ImageSerializer(many=True, read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
+    reviews = serializers.IntegerField(source='reviews_count')
+    freeDelivery = serializers.CharField(source='free_delivery')
+
 
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
@@ -87,13 +82,6 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    images = ImageSerializer(many=True, read_only=True)
-    tags = TagSerializer(many=True, read_only=True)
-    specifications = SpecificationSerializer(many=True, read_only=True)
-    reviews = ReviewSerializer(many=True, read_only=True)
-    fullDescription = serializers.CharField(source='full_description')
-    freeDelivery = serializers.CharField(source='free_delivery')
-
     class Meta:
         model = Product
         fields = [
@@ -112,6 +100,13 @@ class ProductSerializer(serializers.ModelSerializer):
             'reviews',
             'rating',
         ]
+
+    images = ImageSerializer(many=True, read_only=True)
+    tags = TagSerializer(many=True, read_only=True)
+    specifications = SpecificationSerializer(many=True, read_only=True)
+    reviews = ReviewSerializer(many=True, read_only=True)
+    fullDescription = serializers.CharField(source='full_description')
+    freeDelivery = serializers.CharField(source='free_delivery')
 
 
 class ReviewCreateSerializer(serializers.Serializer):
