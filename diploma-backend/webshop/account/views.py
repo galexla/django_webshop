@@ -31,7 +31,7 @@ class SignInView(APIView):
 
             if user and user.is_active:
                 login(self.request, user)
-                return Response(None, status.HTTP_200_OK)
+                return Response()
 
         return Response(
             serializer.errors, status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -44,7 +44,7 @@ class SignOutView(APIView):
 
     def post(self, request: Request) -> Response:
         logout(request)
-        return Response(None, status.HTTP_200_OK)
+        return Response()
 
 
 class SignUpView(APIView):
@@ -62,7 +62,7 @@ class SignUpView(APIView):
             if user and user.is_active:
                 login(self.request, user)
 
-            return Response(None, status.HTTP_200_OK)
+            return Response()
 
         return Response(
             serializer.errors, status.HTTP_500_INTERNAL_SERVER_ERROR
@@ -89,7 +89,7 @@ class SetPasswordView(APIView):
             user.set_password(serializer.validated_data['newPassword'])
             user.save()
 
-            return Response(None, status=status.HTTP_200_OK)
+            return Response()
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -120,6 +120,6 @@ class AvatarUpdateView(APIView):
         serializer = AvatarUpdateSerializer(profile, data=request.data)
         if serializer.is_valid():
             serializer.save()
-            return Response(None, status=status.HTTP_200_OK)
+            return Response()
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
