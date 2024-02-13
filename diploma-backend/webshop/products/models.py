@@ -129,11 +129,13 @@ class Product(models.Model):
     date = models.DateTimeField(
         auto_now_add=True,
     )
-    description = models.TextField(
+    description = models.CharField(
         blank=True,
+        max_length=3000,
     )
-    full_description = models.TextField(
+    full_description = models.CharField(
         blank=True,
+        max_length=20000,
     )
     free_delivery = models.BooleanField(
         default=True,
