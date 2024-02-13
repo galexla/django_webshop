@@ -12,6 +12,7 @@ from django.http.request import QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, mixins, pagination, viewsets
 from rest_framework.filters import OrderingFilter
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -19,6 +20,7 @@ from .models import Category, Product, Review, Tag
 from .serializers import (
     ProductSerializer,
     ProductShortSerializer,
+    ReviewCreateSerializer,
     TagSerializer,
     TopLevelCategorySerializer,
 )
@@ -251,6 +253,16 @@ class ProductDetailView(generics.RetrieveAPIView):
         .all()
     )
     serializer_class = ProductSerializer
+
+
+class ReviewCreateView(APIView):
+    def post(self, request: Request, pk):
+        serializer = ReviewCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(data=serializer.errors, status=400)
+
+        serializer.save(product_id=pk)
+        return Response([serializer.data])
 
 
 # TODO: create a real basket view
