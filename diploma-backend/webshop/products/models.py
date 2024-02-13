@@ -208,7 +208,9 @@ class Review(models.Model):
         max_length=200,
     )
     email = models.EmailField()
-    text = models.CharField(max_length=2000)
+    text = models.CharField(
+        max_length=2000,
+    )
     rate = models.IntegerField(
         validators=[
             MinValueValidator(1),

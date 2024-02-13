@@ -34,8 +34,8 @@ class ParentCategoryListFilter(admin.SimpleListFilter):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = 'title', 'get_parent_title', 'archived'
-    search_fields = 'title', 'parent__title'
+    list_display = ['title', 'get_parent_title', 'archived']
+    search_fields = ['title', 'parent__title']
     list_filter = (ParentCategoryListFilter,)
     sortable_by = ()
     form = CategoryAdminForm
@@ -95,9 +95,9 @@ class ProductAdmin(admin.ModelAdmin):
 
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ('name',)
+    list_display = ['name']
 
 
 @admin.register(Specification)
 class SpecificationAdmin(admin.ModelAdmin):
-    list_display = 'name', 'value'
+    list_display = ['name', 'value']
