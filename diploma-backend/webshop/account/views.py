@@ -9,9 +9,13 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Profile
-from .serializers import (AvatarUpdateSerializer, ProfileSerializer,
-                          SetPasswordSerializer, SignInSerializer,
-                          SignUpSerializer)
+from .serializers import (
+    AvatarUpdateSerializer,
+    ProfileSerializer,
+    SetPasswordSerializer,
+    SignInSerializer,
+    SignUpSerializer,
+)
 
 
 class SignInView(APIView):

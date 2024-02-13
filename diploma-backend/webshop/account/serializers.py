@@ -1,5 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.core.validators import RegexValidator
 from django.db import transaction
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -12,7 +14,7 @@ User = get_user_model()
 
 class SignUpSerializer(serializers.ModelSerializer):
     name = serializers.CharField(
-        validators=User._meta.get_field('first_name').validators,
+        max_length=150,
         write_only=True,
     )
 
@@ -47,7 +49,10 @@ class SignUpSerializer(serializers.ModelSerializer):
 
 class SignInSerializer(serializers.Serializer):
     username = serializers.CharField(
-        validators=User._meta.get_field('username').validators
+        max_length=150,
+        validators=[
+            UnicodeUsernameValidator(),
+        ],
     )
     password = serializers.CharField(write_only=True)
 
@@ -65,18 +70,26 @@ class ProfileSerializer(serializers.Serializer):
     fullName = serializers.CharField(
         required=True,
         allow_blank=False,
-        validators=User._meta.get_field('first_name').validators,
+        max_length=150,
     )
     email = serializers.EmailField(
         required=True,
         allow_blank=False,
-        validators=[UniqueValidator(queryset=User.objects.all())],
+        validators=[
+            UniqueValidator(queryset=User.objects.all()),
+        ],
     )
     phone = serializers.CharField(
         required=True,
         allow_blank=False,
-        validators=Profile._meta.get_field('phone').validators
-        + [UniqueValidator(queryset=Profile.objects.all())],
+        max_length=32,
+        validators=[
+            UniqueValidator(queryset=Profile.objects.all()),
+            RegexValidator(
+                r'^\+\d{5,}(\#\d+)?$',
+                message='Phone must be in format: +123456789[#123].',
+            ),
+        ],
     )
 
     @transaction.atomic
