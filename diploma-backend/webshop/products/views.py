@@ -152,6 +152,9 @@ class CatalogOrderingFilter(OrderingFilter):
         if not sort_field or sort_field not in self.ordering_fields:
             return queryset
 
+        if sort_field == 'reviews':
+            sort_field = 'reviews_count'
+
         sort_type = request.query_params.get('sortType')
         sort_sign = '-' if sort_type == 'dec' else ''
 
