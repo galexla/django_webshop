@@ -1,4 +1,5 @@
 import django_filters
+from django.conf import settings
 from django.db.models import (
     Case,
     Count,
@@ -16,8 +17,9 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Category, Product, Review, Tag
+from .models import Basket, Category, Product, Review, Tag
 from .serializers import (
+    BasketItemSerializer,
     ProductSerializer,
     ProductShortSerializer,
     ReviewCreateSerializer,
@@ -328,3 +330,40 @@ class BasketStubViewSet(generics.ListAPIView):
             },
         ]
         return Response(data)
+
+
+class BasketView(generics.ListCreateAPIView):
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        if not user.is_anonymous:
+            basket = Basket.objects.filter(user=user)
+            if not basket:
+                basket = self._basket_get_or_create(request)
+        else:
+            basket = self._basket_get_or_create(request)
+
+        serializer = ProductShortSerializer(basket.products)
+
+        response = Response(serializer.data)
+        cookie_max_age = min(settings.SESSION_COOKIE_AGE, 14 * 24 * 3600)
+        response.set_cookie('basket_id', basket.id, max_age=cookie_max_age)
+
+        return response
+
+    def post(self, request, *args, **kwargs):
+        serializer = BasketItemSerializer(data=request.data)
+        # if serializer.is_valid():
+        #     serializer.save()
+        return super().post(request, *args, **kwargs)
+
+    def _basket_get_or_create(self, request: Request) -> Basket:
+        user = request.user
+        basket_id = request.COOKIES.get('basket_id')
+        if basket_id:  # cookie
+            basket = Basket.objects.filter(id=basket_id)
+            if not basket:  # not found in DB
+                basket = Basket.objects.create(user=user)
+        else:  # no cookie
+            basket = Basket.objects.create(user=user)
+
+        return basket

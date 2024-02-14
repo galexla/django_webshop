@@ -1,8 +1,13 @@
+import uuid
+
+from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
+
+User = get_user_model()
 
 
 class Tag(models.Model):
@@ -218,5 +223,25 @@ class Review(models.Model):
         ],
     )
     date = models.DateTimeField(
+        auto_now_add=True,
+    )
+
+
+class Basket(models.Model):
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='user',
+    )
+    products = models.ManyToManyField(
+        Product,
+        related_name='basket',
+    )
+    last_accessed = models.DateTimeField(
         auto_now_add=True,
     )

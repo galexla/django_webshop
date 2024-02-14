@@ -135,3 +135,18 @@ class ReviewCreateSerializer(serializers.Serializer):
         review.save()
 
         return review
+
+
+class BasketItemSerializer(serializers.Serializer):
+    id = serializers.IntegerField(
+        required=True,
+        validators=[
+            MinValueValidator(0),
+        ],
+    )
+    count = serializers.IntegerField(
+        required=True,
+        validators=[
+            MinValueValidator(0),
+        ],
+    )
