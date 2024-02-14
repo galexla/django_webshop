@@ -286,6 +286,7 @@ class BasketStubViewSet(generics.ListAPIView):
     def get(self, request, *args, **kwargs):
         data = [
             {
+                "id": 3,
                 "category": 3,
                 "price": "799.00",
                 "count": 1,
@@ -303,23 +304,24 @@ class BasketStubViewSet(generics.ListAPIView):
                 "reviews": 0,
                 "rating": "4.0",
             },
-            # {
-            #     "category": 4,
-            #     "price": "490.00",
-            #     "count": 2,
-            #     "date": "2024-01-30T15:30:48.823393Z",
-            #     "title": "Monitor",
-            #     "description": "Maecenas in nisi in eros sagittis sagittis eget in purus.",
-            #     "freeDelivery": True,
-            #     "images": [
-            #         {
-            #             "src": "http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg",
-            #             "alt": "some alt",
-            #         }
-            #     ],
-            #     "tags": [{"id": 1, "name": "Tag1"}, {"id": 2, "name": "Tag2"}],
-            #     "reviews": 0,
-            #     "rating": "5.0",
-            # },
+            {
+                "id": 4,
+                "category": 4,
+                "price": "490.00",
+                "count": 2,
+                "date": "2024-01-30T15:30:48.823393Z",
+                "title": "Monitor",
+                "description": "Maecenas in nisi in eros sagittis sagittis eget in purus.",
+                "freeDelivery": True,
+                "images": [
+                    {
+                        "src": "http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg",
+                        "alt": "some alt",
+                    }
+                ],
+                "tags": [{"id": 1, "name": "Tag1"}, {"id": 2, "name": "Tag2"}],
+                "reviews": 0,
+                "rating": "5.0",
+            },
         ]
         return Response(data)
