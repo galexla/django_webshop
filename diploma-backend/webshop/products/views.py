@@ -1,3 +1,5 @@
+import datetime
+
 import django_filters
 from django.conf import settings
 from django.db.models import (
@@ -335,6 +337,11 @@ class BasketStubViewSet(generics.ListAPIView):
 class BasketView(generics.ListCreateAPIView):
     def get(self, request, *args, **kwargs):
         basket = self._get_or_create_basket(request)
+        sec10 = datetime.timedelta(seconds=10)
+        if datetime.datetime.now() - sec10 > basket.last_accessed:
+            # TODO: test, this must rewrite last access time
+            basket.save()
+
         serializer = ProductShortSerializer(basket.products)
 
         response = Response(serializer.data)

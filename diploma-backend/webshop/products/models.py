@@ -243,5 +243,5 @@ class Basket(models.Model):
         related_name='basket',
     )
     last_accessed = models.DateTimeField(
-        auto_now_add=True,
+        auto_now=True,
     )
