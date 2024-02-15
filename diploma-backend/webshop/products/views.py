@@ -374,7 +374,8 @@ class BasketView(generics.ListCreateAPIView):
             basket = Basket.objects.filter(id=basket_id)
             if not basket:  # not found in DB
                 basket = Basket.objects.create(user=user)
-            elif user is None and basket.user is not None:
+            elif user != basket.user:
+                # when trying to read a basket of another user
                 basket = Basket.objects.create()
         else:  # no cookie
             basket = Basket.objects.create(user=user)
