@@ -334,14 +334,7 @@ class BasketStubViewSet(generics.ListAPIView):
 
 class BasketView(generics.ListCreateAPIView):
     def get(self, request, *args, **kwargs):
-        user = request.user
-        if not user.is_anonymous:
-            basket = Basket.objects.filter(user=user)
-            if not basket:
-                basket = self._basket_get_or_create(request)
-        else:
-            basket = self._basket_get_or_create(request)
-
+        basket = self._get_or_create_basket(request)
         serializer = ProductShortSerializer(basket.products)
 
         response = Response(serializer.data)
@@ -356,9 +349,20 @@ class BasketView(generics.ListCreateAPIView):
         #     serializer.save()
         return super().post(request, *args, **kwargs)
 
-    def _basket_get_or_create(self, request: Request) -> Basket:
+    def _get_or_create_basket(self, request: Request) -> Basket:
         user = request.user
-        basket_id = request.COOKIES.get('basket_id')
+        if user.is_anonymous:
+            basket_id = request.COOKIES.get('basket_id')
+            basket = self._get_or_create_basket_by_id(basket_id)
+        else:
+            basket = Basket.objects.filter(user=user)
+            if not basket:
+                basket_id = request.COOKIES.get('basket_id')
+                basket = self._get_or_create_basket_by_id(basket_id, user)
+
+        return basket
+
+    def _get_or_create_basket_by_id(basket_id, user=None):
         if basket_id:  # cookie
             basket = Basket.objects.filter(id=basket_id)
             if not basket:  # not found in DB
