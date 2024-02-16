@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     BannerProductsListView,
     BasketStubViewSet,
+    BasketView,
     CatalogViewSet,
     LimitedProductsListView,
     PopularProductsListView,
@@ -44,5 +45,5 @@ urlpatterns = [
     ),
     path('categories/', TopLevelCategoryListView.as_view(), name='categories'),
     # path('tags/', TagListView.as_view(), name='tags'),
-    path('basket/', BasketStubViewSet.as_view(), name='basket'),
+    path('basket/', BasketView.as_view(), name='basket'),
 ]

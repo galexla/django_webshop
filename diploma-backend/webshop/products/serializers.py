@@ -137,6 +137,10 @@ class ReviewCreateSerializer(serializers.Serializer):
         return review
 
 
+class BasketIdSerializer(serializers.Serializer):
+    basket_id = serializers.UUIDField()
+
+
 class BasketItemSerializer(serializers.Serializer):
     id = serializers.IntegerField(
         required=True,

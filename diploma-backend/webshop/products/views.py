@@ -21,6 +21,7 @@ from rest_framework.views import APIView
 
 from .models import Basket, Category, Product, Review, Tag
 from .serializers import (
+    BasketIdSerializer,
     BasketItemSerializer,
     ProductSerializer,
     ProductShortSerializer,
@@ -335,49 +336,89 @@ class BasketStubViewSet(generics.ListAPIView):
 
 
 class BasketView(generics.ListCreateAPIView):
+    COOKIE_MAX_AGE = 14 * 24 * 3600
+
     def get(self, request, *args, **kwargs):
-        basket = self._get_or_create_basket(request)
-        sec10 = datetime.timedelta(seconds=10)
-        if datetime.datetime.now() - sec10 > basket.last_accessed:
-            # TODO: test, this must rewrite last access time
-            basket.save()
+        """Gets basket contents by COOKIES.basket_id or returns []"""
+        # basket = self._get_or_create_basket(request)
+        basket = self._get_basket(request)
+        if basket:
+            seconds = datetime.timedelta(seconds=1)
+            if datetime.datetime.now() - seconds > basket.last_accessed:
+                # TODO: test, this must rewrite last access time
+                basket.save()
+            serializer = ProductShortSerializer(basket.products, many=True)
+            response = Response(serializer.data)
+            response.set_cookie(
+                'basket_id', basket.id, max_age=self.COOKIE_MAX_AGE
+            )
 
-        serializer = ProductShortSerializer(basket.products)
+            return response
 
-        response = Response(serializer.data)
-        cookie_max_age = min(settings.SESSION_COOKIE_AGE, 14 * 24 * 3600)
-        response.set_cookie('basket_id', basket.id, max_age=cookie_max_age)
-
-        return response
+        return Response([])
 
     def post(self, request, *args, **kwargs):
-        serializer = BasketItemSerializer(data=request.data)
-        # if serializer.is_valid():
-        #     serializer.save()
-        return super().post(request, *args, **kwargs)
+        serializer = BasketItemSerializer(data=request.data, many=True)
+        if serializer.is_valid():
+            print(serializer.validated_data)
+            # serializer.save()
+        return Response([])
 
-    def _get_or_create_basket(self, request: Request) -> Basket:
+    def _get_basket(self, request: Request) -> Basket:
+        COOKIES = request._request.COOKIES or {}
         user = request.user
-        if user.is_anonymous:
-            basket_id = request.COOKIES.get('basket_id')
-            basket = self._get_or_create_basket_by_id(basket_id)
-        else:
+        basket = None
+
+        if not user.is_anonymous:
             basket = Basket.objects.filter(user=user)
-            if not basket:
-                basket_id = request.COOKIES.get('basket_id')
-                basket = self._get_or_create_basket_by_id(basket_id, user)
+        else:
+            basket_id = COOKIES.get('basket_id')
+            basket_id_serializer = BasketIdSerializer(
+                data={'basket_id': basket_id}
+            )
+            if basket_id_serializer.is_valid():
+                basket = Basket.objects.filter(id=basket_id)
 
         return basket
 
-    def _get_or_create_basket_by_id(basket_id, user=None):
-        if basket_id:  # cookie
-            basket = Basket.objects.filter(id=basket_id)
-            if not basket:  # not found in DB
-                basket = Basket.objects.create(user=user)
-            elif user != basket.user:
-                # when trying to read a basket of another user
-                basket = Basket.objects.create()
-        else:  # no cookie
-            basket = Basket.objects.create(user=user)
+    # def _get_or_create_basket(self, request: Request) -> tuple[Basket, bool]:
+    #     COOKIES = request._request.COOKIES or {}
+    #     user = request.user
+    #     basket = None
+    #     validation_errors = []
+    #     if user.is_anonymous:
+    #         basket_id = COOKIES.get('basket_id')
+    #         basket, validation_errors = self._get_basket_by_id_or_create(
+    #             basket_id
+    #         )
+    #     else:
+    #         basket = Basket.objects.filter(user=user)
+    #         if not basket:
+    #             basket_id = COOKIES.get('basket_id')
+    #             id_serializer = BasketIdSerializer(
+    #                 data={'basket_id': basket_id}
+    #             )
+    #             if id_serializer.is_valid():
+    #                 basket = self._get_basket_by_id_or_create(basket_id, user)
+    #             else:
+    #                 validation_errors = id_serializer.errors
 
-        return basket
+    #     return basket, validation_errors
+
+    # def _get_basket_by_id_or_create(self, basket_id, user=None):
+    #     print('##########', basket_id)
+    #     basket_id_serializer = BasketIdSerializer(
+    #         data={'basket_id': basket_id}
+    #     )
+
+    #     if basket_id is not None:  # cookie
+    #         basket = Basket.objects.filter(id=basket_id)
+    #         if not basket:  # not found in DB
+    #             basket = Basket.objects.create(user=user)
+    #         elif user != basket.user:
+    #             # when trying to read a basket of another user
+    #             basket = Basket.objects.create()
+    #     else:  # no cookie
+    #         basket = Basket.objects.create(user=user)
+
+    #     return basket, basket_id_serializer.errors

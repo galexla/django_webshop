@@ -236,11 +236,10 @@ class Basket(models.Model):
     user = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
-        related_name='user',
+        related_name='basket',
     )
     products = models.ManyToManyField(
         Product,
-        related_name='basket',
     )
     last_accessed = models.DateTimeField(
         auto_now=True,
