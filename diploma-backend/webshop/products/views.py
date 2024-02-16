@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta, timezone
 
 import django_filters
 from django.db.models import (Case, Count, IntegerField, Prefetch, Q, Value,
@@ -327,13 +327,15 @@ class BasketView(generics.ListCreateAPIView):
 
     def get(self, request, *args, **kwargs):
         """Gets basket contents by COOKIES.basket_id or returns []"""
+        # TODO: works with errors, fix
         basket = self._get_basket(request)
-        # print('###########', basket)
         if basket:
-            seconds = datetime.timedelta(seconds=1)
-            if datetime.datetime.now() - seconds > basket.last_accessed:
-                # TODO: test, this must rewrite last access time
-                basket.save()
+            seconds = timedelta(seconds=120)
+            # TODO: what about timezone?
+            now = datetime.now(timezone(timedelta(0)))
+            if now - seconds > basket.last_accessed:
+                basket.save()  # updates basket.last_accessed
+
             serializer = ProductShortSerializer(basket.products, many=True)
             response = Response(serializer.data)
             response.set_cookie(
