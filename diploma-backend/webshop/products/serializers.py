@@ -4,7 +4,15 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
-from .models import Category, Product, Review, Specification, Tag
+from .models import (
+    Basket,
+    BasketProduct,
+    Category,
+    Product,
+    Review,
+    Specification,
+    Tag,
+)
 
 User = get_user_model()
 
@@ -141,16 +149,47 @@ class BasketIdSerializer(serializers.Serializer):
     basket_id = serializers.UUIDField()
 
 
-class BasketItemSerializer(serializers.Serializer):
-    id = serializers.IntegerField(
-        required=True,
-        validators=[
-            MinValueValidator(0),
-        ],
-    )
-    count = serializers.IntegerField(
-        required=True,
-        validators=[
-            MinValueValidator(0),
-        ],
-    )
+class BasketProductSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BasketProduct
+        fields = ['basket', 'product', 'count']
+
+    # basket_id = serializers.UUIDField(required=True)
+    # product_id = serializers.IntegerField(
+    #     required=True,
+    #     validators=[
+    #         MinValueValidator(0),
+    #     ],
+    # )
+    # count = serializers.IntegerField(
+    #     required=True,
+    #     validators=[
+    #         MinValueValidator(0),
+    #     ],
+    # )
+
+
+class BasketSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Basket
+        fields = ['id', 'user', 'products', 'last_accessed']
+
+    products = BasketProductSerializer(many=True)
+
+    # id = models.UUIDField(
+    #     primary_key=True,
+    #     default=uuid.uuid4,
+    #     editable=False,
+    # )
+    # user = models.ForeignKey(
+    #     User,
+    #     on_delete=models.CASCADE,
+    #     related_name='basket',
+    # )
+    # products = models.ManyToManyField(
+    #     Product,
+    #     through=BasketProduct,
+    # )
+    # last_accessed = models.DateTimeField(
+    #     auto_now=True,
+    # )

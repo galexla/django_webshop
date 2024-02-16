@@ -1,7 +1,6 @@
 import datetime
 
 import django_filters
-from django.conf import settings
 from django.db.models import (
     Case,
     Count,
@@ -22,7 +21,7 @@ from rest_framework.views import APIView
 from .models import Basket, Category, Product, Review, Tag
 from .serializers import (
     BasketIdSerializer,
-    BasketItemSerializer,
+    BasketProductSerializer,
     ProductSerializer,
     ProductShortSerializer,
     ReviewCreateSerializer,
@@ -340,7 +339,6 @@ class BasketView(generics.ListCreateAPIView):
 
     def get(self, request, *args, **kwargs):
         """Gets basket contents by COOKIES.basket_id or returns []"""
-        # basket = self._get_or_create_basket(request)
         basket = self._get_basket(request)
         if basket:
             seconds = datetime.timedelta(seconds=1)
@@ -358,10 +356,27 @@ class BasketView(generics.ListCreateAPIView):
         return Response([])
 
     def post(self, request, *args, **kwargs):
-        serializer = BasketItemSerializer(data=request.data, many=True)
+        data = request.data.copy()
+        # print('###########', data)
+        if not isinstance(data, list):
+            return Response(None, status=400)
+
+        basket = self._get_basket(request)
+        if basket:
+            pass
+            # TODO: ??
+        else:
+            user = None if request.user.is_anonymous else request.user
+            basket = Basket.objects.create(user=user)
+
+        for item in data:
+            item['basket'] = basket.id
+
+        serializer = BasketProductSerializer(data=request.data, many=True)
         if serializer.is_valid():
             print(serializer.validated_data)
             # serializer.save()
+        # TODO: finish
         return Response([])
 
     def _get_basket(self, request: Request) -> Basket:

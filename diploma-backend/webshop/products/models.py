@@ -227,6 +227,12 @@ class Review(models.Model):
     )
 
 
+class BasketProduct(models.Model):
+    basket = models.ForeignKey('Basket', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    count = models.PositiveIntegerField()
+
+
 class Basket(models.Model):
     id = models.UUIDField(
         primary_key=True,
@@ -235,11 +241,14 @@ class Basket(models.Model):
     )
     user = models.ForeignKey(
         User,
+        blank=True,
+        null=True,
         on_delete=models.CASCADE,
         related_name='basket',
     )
     products = models.ManyToManyField(
         Product,
+        through=BasketProduct,
     )
     last_accessed = models.DateTimeField(
         auto_now=True,
