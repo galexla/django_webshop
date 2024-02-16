@@ -19,7 +19,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Basket, Category, Product, Review, Tag
+from .models import Basket, BasketProduct, Category, Product, Review, Tag
 from .serializers import (
     BasketIdSerializer,
     BasketProductSerializer,
@@ -343,26 +343,29 @@ class BasketView(generics.ListCreateAPIView):
 
     def post(self, request, *args, **kwargs):
         # TODO: if not enhough Product.count?
-        # TODO: add/subtract to basket
         # TODO: create unique index(basket, product) in model BasketProduct?
         data = request.data.copy()
         if not isinstance(data, list):
             return Response(None, status=400)
 
         basket = self._get_basket(request)
+        print('########', basket)
         if not basket:
             user = None if request.user.is_anonymous else request.user
             basket = Basket.objects.create(user=user)
 
+        # basket.products.add(BasketProduct())
+        print('##########', basket.products)
         for item in data:
             item['basket'] = basket.id
             item['product'] = item.pop('id')
 
         serializer = BasketProductSerializer(data=data, many=True)
         if serializer.is_valid():
-            with transaction.atomic():
-                serializer.save()
-                basket.save()
+            pass
+            # with transaction.atomic():
+            #     serializer.save()
+            #     basket.save()
         else:
             return Response(serializer.errors, status=400)
 
@@ -374,13 +377,15 @@ class BasketView(generics.ListCreateAPIView):
         basket = None
 
         if not user.is_anonymous:
-            basket = Basket.objects.filter(user=user)
+            basket = Basket.objects.prefetch_related(Product).filter(user=user)
         else:
             basket_id = COOKIES.get('basket_id')
             basket_id_serializer = BasketIdSerializer(
                 data={'basket_id': basket_id}
             )
             if basket_id_serializer.is_valid():
-                basket = Basket.objects.filter(id=basket_id)
+                basket = Basket.objects.prefetch_related(Product).filter(
+                    id=basket_id
+                )
 
         return basket[0] if basket else None
