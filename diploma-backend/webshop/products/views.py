@@ -1,8 +1,16 @@
 from datetime import datetime, timedelta, timezone
 
 import django_filters
-from django.db.models import (Case, Count, IntegerField, Prefetch, Q, Value,
-                              When)
+from django.db import transaction
+from django.db.models import (
+    Case,
+    Count,
+    IntegerField,
+    Prefetch,
+    Q,
+    Value,
+    When,
+)
 from django.http.request import QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, mixins, pagination, viewsets
@@ -12,10 +20,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Basket, Category, Product, Review, Tag
-from .serializers import (BasketIdSerializer, BasketProductSerializer,
-                          ProductSerializer, ProductShortSerializer,
-                          ReviewCreateSerializer, TagSerializer,
-                          TopLevelCategorySerializer)
+from .serializers import (
+    BasketIdSerializer,
+    BasketProductSerializer,
+    ProductSerializer,
+    ProductShortSerializer,
+    ReviewCreateSerializer,
+    TagSerializer,
+    TopLevelCategorySerializer,
+)
 
 
 class TopLevelCategoryListView(APIView):
@@ -260,66 +273,49 @@ class ReviewCreateView(APIView):
         return Response([serializer.data])
 
 
-# TODO: create a real basket view
-# class BasketStubViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 # class BasketStubViewSet(generics.ListAPIView):
-#     queryset = (
-#         Product.objects.prefetch_related(
-#             'images',
-#             Prefetch('tags', queryset=Tag.objects.only('id', 'name')),
-#             'reviews',
-#         )
-#         .annotate(reviews_count=Count('reviews'))
-#         .defer('full_description')
-#         .all()
-#     )
-#     # TODO: change serializer
-#     serializer_class = CatalogSerializer
-
-
-class BasketStubViewSet(generics.ListAPIView):
-    def get(self, request, *args, **kwargs):
-        data = [
-            {
-                "id": 3,
-                "category": 3,
-                "price": "799.00",
-                "count": 1,
-                "date": "2024-01-30T15:29:54.733294Z",
-                "title": "Smartphone",
-                "description": "Nulla in libero volutpat, pellentesque erat eget, viverra nisi.",
-                "freeDelivery": True,
-                "images": [
-                    {
-                        "src": "http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg",
-                        "alt": "some alt",
-                    }
-                ],
-                "tags": [],
-                "reviews": 0,
-                "rating": "4.0",
-            },
-            {
-                "id": 4,
-                "category": 4,
-                "price": "490.00",
-                "count": 2,
-                "date": "2024-01-30T15:30:48.823393Z",
-                "title": "Monitor",
-                "description": "Maecenas in nisi in eros sagittis sagittis eget in purus.",
-                "freeDelivery": True,
-                "images": [
-                    {
-                        "src": "http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg",
-                        "alt": "some alt",
-                    }
-                ],
-                "tags": [{"id": 1, "name": "Tag1"}, {"id": 2, "name": "Tag2"}],
-                "reviews": 0,
-                "rating": "5.0",
-            },
-        ]
-        return Response(data)
+#     def get(self, request, *args, **kwargs):
+#         data = [
+#             {
+#                 "id": 3,
+#                 "category": 3,
+#                 "price": "799.00",
+#                 "count": 1,
+#                 "date": "2024-01-30T15:29:54.733294Z",
+#                 "title": "Smartphone",
+#                 "description": "Nulla in libero volutpat, pellentesque erat eget, viverra nisi.",
+#                 "freeDelivery": True,
+#                 "images": [
+#                     {
+#                         "src": "http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg",
+#                         "alt": "some alt",
+#                     }
+#                 ],
+#                 "tags": [],
+#                 "reviews": 0,
+#                 "rating": "4.0",
+#             },
+#             {
+#                 "id": 4,
+#                 "category": 4,
+#                 "price": "490.00",
+#                 "count": 2,
+#                 "date": "2024-01-30T15:30:48.823393Z",
+#                 "title": "Monitor",
+#                 "description": "Maecenas in nisi in eros sagittis sagittis eget in purus.",
+#                 "freeDelivery": True,
+#                 "images": [
+#                     {
+#                         "src": "http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg",
+#                         "alt": "some alt",
+#                     }
+#                 ],
+#                 "tags": [{"id": 1, "name": "Tag1"}, {"id": 2, "name": "Tag2"}],
+#                 "reviews": 0,
+#                 "rating": "5.0",
+#             },
+#         ]
+#         return Response(data)
 
 
 class BasketView(generics.ListCreateAPIView):
@@ -327,7 +323,6 @@ class BasketView(generics.ListCreateAPIView):
 
     def get(self, request, *args, **kwargs):
         """Gets basket contents by COOKIES.basket_id or returns []"""
-        # TODO: works with errors, fix
         basket = self._get_basket(request)
         if basket:
             seconds = timedelta(seconds=120)
@@ -347,8 +342,10 @@ class BasketView(generics.ListCreateAPIView):
         return Response([])
 
     def post(self, request, *args, **kwargs):
+        # TODO: if not enhough Product.count?
+        # TODO: add/subtract to basket
+        # TODO: create unique index(basket, product) in model BasketProduct?
         data = request.data.copy()
-        # print('###########', data)
         if not isinstance(data, list):
             return Response(None, status=400)
 
@@ -359,14 +356,16 @@ class BasketView(generics.ListCreateAPIView):
 
         for item in data:
             item['basket'] = basket.id
+            item['product'] = item.pop('id')
 
-        print('###########', data)
-
-        serializer = BasketProductSerializer(data=request.data, many=True)
+        serializer = BasketProductSerializer(data=data, many=True)
         if serializer.is_valid():
-            print(serializer.validated_data)
-            # serializer.save()
-        # TODO: finish
+            with transaction.atomic():
+                serializer.save()
+                basket.save()
+        else:
+            return Response(serializer.errors, status=400)
+
         return Response([])
 
     def _get_basket(self, request: Request) -> Basket:
@@ -385,45 +384,3 @@ class BasketView(generics.ListCreateAPIView):
                 basket = Basket.objects.filter(id=basket_id)
 
         return basket[0] if basket else None
-
-    # def _get_or_create_basket(self, request: Request) -> tuple[Basket, bool]:
-    #     COOKIES = request._request.COOKIES or {}
-    #     user = request.user
-    #     basket = None
-    #     validation_errors = []
-    #     if user.is_anonymous:
-    #         basket_id = COOKIES.get('basket_id')
-    #         basket, validation_errors = self._get_basket_by_id_or_create(
-    #             basket_id
-    #         )
-    #     else:
-    #         basket = Basket.objects.filter(user=user)
-    #         if not basket:
-    #             basket_id = COOKIES.get('basket_id')
-    #             id_serializer = BasketIdSerializer(
-    #                 data={'basket_id': basket_id}
-    #             )
-    #             if id_serializer.is_valid():
-    #                 basket = self._get_basket_by_id_or_create(basket_id, user)
-    #             else:
-    #                 validation_errors = id_serializer.errors
-
-    #     return basket, validation_errors
-
-    # def _get_basket_by_id_or_create(self, basket_id, user=None):
-    #     print('##########', basket_id)
-    #     basket_id_serializer = BasketIdSerializer(
-    #         data={'basket_id': basket_id}
-    #     )
-
-    #     if basket_id is not None:  # cookie
-    #         basket = Basket.objects.filter(id=basket_id)
-    #         if not basket:  # not found in DB
-    #             basket = Basket.objects.create(user=user)
-    #         elif user != basket.user:
-    #             # when trying to read a basket of another user
-    #             basket = Basket.objects.create()
-    #     else:  # no cookie
-    #         basket = Basket.objects.create(user=user)
-
-    #     return basket, basket_id_serializer.errors
