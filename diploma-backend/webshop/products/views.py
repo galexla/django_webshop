@@ -1,15 +1,8 @@
 import datetime
 
 import django_filters
-from django.db.models import (
-    Case,
-    Count,
-    IntegerField,
-    Prefetch,
-    Q,
-    Value,
-    When,
-)
+from django.db.models import (Case, Count, IntegerField, Prefetch, Q, Value,
+                              When)
 from django.http.request import QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, mixins, pagination, viewsets
@@ -19,15 +12,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Basket, Category, Product, Review, Tag
-from .serializers import (
-    BasketIdSerializer,
-    BasketProductSerializer,
-    ProductSerializer,
-    ProductShortSerializer,
-    ReviewCreateSerializer,
-    TagSerializer,
-    TopLevelCategorySerializer,
-)
+from .serializers import (BasketIdSerializer, BasketProductSerializer,
+                          ProductSerializer, ProductShortSerializer,
+                          ReviewCreateSerializer, TagSerializer,
+                          TopLevelCategorySerializer)
 
 
 class TopLevelCategoryListView(APIView):
@@ -340,6 +328,7 @@ class BasketView(generics.ListCreateAPIView):
     def get(self, request, *args, **kwargs):
         """Gets basket contents by COOKIES.basket_id or returns []"""
         basket = self._get_basket(request)
+        # print('###########', basket)
         if basket:
             seconds = datetime.timedelta(seconds=1)
             if datetime.datetime.now() - seconds > basket.last_accessed:
@@ -362,15 +351,14 @@ class BasketView(generics.ListCreateAPIView):
             return Response(None, status=400)
 
         basket = self._get_basket(request)
-        if basket:
-            pass
-            # TODO: ??
-        else:
+        if not basket:
             user = None if request.user.is_anonymous else request.user
             basket = Basket.objects.create(user=user)
 
         for item in data:
             item['basket'] = basket.id
+
+        print('###########', data)
 
         serializer = BasketProductSerializer(data=request.data, many=True)
         if serializer.is_valid():
@@ -394,7 +382,7 @@ class BasketView(generics.ListCreateAPIView):
             if basket_id_serializer.is_valid():
                 basket = Basket.objects.filter(id=basket_id)
 
-        return basket
+        return basket[0] if basket else None
 
     # def _get_or_create_basket(self, request: Request) -> tuple[Basket, bool]:
     #     COOKIES = request._request.COOKIES or {}
