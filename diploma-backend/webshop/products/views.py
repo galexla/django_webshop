@@ -349,19 +349,17 @@ class BasketView(generics.ListCreateAPIView):
             return Response(None, status=400)
 
         basket = self._get_basket(request)
-        print('########', basket)
         if not basket:
             user = None if request.user.is_anonymous else request.user
             basket = Basket.objects.create(user=user)
 
-        # basket.products.add(BasketProduct())
-        print('##########', basket.products)
         for item in data:
             item['basket'] = basket.id
             item['product'] = item.pop('id')
 
         serializer = BasketProductSerializer(data=data, many=True)
         if serializer.is_valid():
+            print('##########', serializer.validated_data)
             pass
             # with transaction.atomic():
             #     serializer.save()
@@ -376,16 +374,21 @@ class BasketView(generics.ListCreateAPIView):
         user = request.user
         basket = None
 
+        queryset = Basket.objects.prefetch_related(
+            Prefetch(
+                'products',
+                queryset=BasketProduct.objects.select_related('product').all(),
+            )
+        )
+
         if not user.is_anonymous:
-            basket = Basket.objects.prefetch_related(Product).filter(user=user)
+            basket = queryset.filter(user=user)[0]
         else:
             basket_id = COOKIES.get('basket_id')
-            basket_id_serializer = BasketIdSerializer(
-                data={'basket_id': basket_id}
-            )
-            if basket_id_serializer.is_valid():
-                basket = Basket.objects.prefetch_related(Product).filter(
-                    id=basket_id
-                )
+            serializer = BasketIdSerializer(data={'basket_id': basket_id})
+            if serializer.is_valid():
+                basket = queryset.filter(
+                    id=serializer.validated_data['basket_id']
+                )[0]
 
-        return basket[0] if basket else None
+        return basket
