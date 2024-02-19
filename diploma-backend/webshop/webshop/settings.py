@@ -147,6 +147,14 @@ REST_FRAMEWORK = {
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+        },
+        'short': {
+            'format': '%(name)s: %(message)s',
+        },
+    },
     'filters': {
         'require_debug_true': {
             '()': 'django.utils.log.RequireDebugTrue',
@@ -155,6 +163,8 @@ LOGGING = {
     'handlers': {
         'console': {
             'level': 'DEBUG',
+            # 'formatter': 'verbose',
+            # 'formatter': 'short',
             'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
         },
@@ -169,5 +179,11 @@ LOGGING = {
         #     'level': 'DEBUG',
         #     'handlers': ['console'],
         # },
+    },
+    'root': {
+        'handlers': [
+            'console',
+        ],
+        'level': 'DEBUG',
     },
 }

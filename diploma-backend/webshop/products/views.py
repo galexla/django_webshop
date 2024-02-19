@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 import django_filters
@@ -22,6 +23,7 @@ from rest_framework.views import APIView
 from .models import Basket, BasketProduct, Category, Product, Review, Tag
 from .serializers import (
     BasketIdSerializer,
+    BasketItem,
     BasketProductSerializer,
     ProductSerializer,
     ProductShortSerializer,
@@ -29,6 +31,8 @@ from .serializers import (
     TagSerializer,
     TopLevelCategorySerializer,
 )
+
+log = logging.getLogger(__name__)
 
 
 class TopLevelCategoryListView(APIView):
@@ -273,65 +277,23 @@ class ReviewCreateView(APIView):
         return Response([serializer.data])
 
 
-# class BasketStubViewSet(generics.ListAPIView):
-#     def get(self, request, *args, **kwargs):
-#         data = [
-#             {
-#                 "id": 3,
-#                 "category": 3,
-#                 "price": "799.00",
-#                 "count": 1,
-#                 "date": "2024-01-30T15:29:54.733294Z",
-#                 "title": "Smartphone",
-#                 "description": "Nulla in libero volutpat, pellentesque erat eget, viverra nisi.",
-#                 "freeDelivery": True,
-#                 "images": [
-#                     {
-#                         "src": "http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg",
-#                         "alt": "some alt",
-#                     }
-#                 ],
-#                 "tags": [],
-#                 "reviews": 0,
-#                 "rating": "4.0",
-#             },
-#             {
-#                 "id": 4,
-#                 "category": 4,
-#                 "price": "490.00",
-#                 "count": 2,
-#                 "date": "2024-01-30T15:30:48.823393Z",
-#                 "title": "Monitor",
-#                 "description": "Maecenas in nisi in eros sagittis sagittis eget in purus.",
-#                 "freeDelivery": True,
-#                 "images": [
-#                     {
-#                         "src": "http://127.0.0.1:8000/media/categories/category1/image/mobile-devices.jpg",
-#                         "alt": "some alt",
-#                     }
-#                 ],
-#                 "tags": [{"id": 1, "name": "Tag1"}, {"id": 2, "name": "Tag2"}],
-#                 "reviews": 0,
-#                 "rating": "5.0",
-#             },
-#         ]
-#         return Response(data)
-
-
 class BasketView(generics.ListCreateAPIView):
     COOKIE_MAX_AGE = 14 * 24 * 3600
 
     def get(self, request, *args, **kwargs):
         """Gets basket contents by COOKIES.basket_id or returns []"""
         basket = self._get_basket(request)
+        log.debug('Got basket: %s', basket)
         if basket:
             seconds = timedelta(seconds=120)
-            # TODO: what about timezone?
+            # TODO: are timezones the same in DB & in code?
             now = datetime.now(timezone(timedelta(0)))
             if now - seconds > basket.last_accessed:
                 basket.save()  # updates basket.last_accessed
 
-            serializer = ProductShortSerializer(basket.products, many=True)
+            products = [item.product for item in basket.products.all()]
+
+            serializer = ProductShortSerializer(products, many=True)
             response = Response(serializer.data)
             response.set_cookie(
                 'basket_id', basket.id, max_age=self.COOKIE_MAX_AGE
@@ -342,16 +304,129 @@ class BasketView(generics.ListCreateAPIView):
         return Response([])
 
     def post(self, request, *args, **kwargs):
-        # TODO: if not enhough Product.count?
-        # TODO: create unique index(basket, product) in model BasketProduct?
-        data = request.data.copy()
-        if not isinstance(data, list):
+        serializer = BasketItem(data=request.data, many=True)
+        if not serializer.is_valid():
             return Response(None, status=400)
 
         basket = self._get_basket(request)
         if not basket:
             user = None if request.user.is_anonymous else request.user
             basket = Basket.objects.create(user=user)
+
+        basket_products = list(
+            BasketProduct.objects.select_related('product')
+            .defer('product__full_description')
+            .filter(basket_id=basket.id)
+        )
+
+        product_counts = {
+            item['id']: item['count'] for item in serializer.validated_data
+        }
+        log.debug('Product counts: %s', product_counts)
+
+        basket_products_to_update = []
+        for basket_product in basket_products:
+            product_id = basket_product.product.id
+            if product_id in product_counts:
+                product_count = product_counts[product_id]
+                if basket_product.count != product_count:
+                    basket_product.count = product_count
+                    basket_products_to_update.append(basket_product)
+                product_counts.pop(product_id)
+
+        basket_products_to_add = []
+        for product_id, product_count in product_counts.items():
+            basket_product = BasketProduct(
+                basket_id=basket.id, product_id=product_id, count=product_count
+            )
+            basket_products_to_add.append(basket_product)
+
+        log.debug('BasketProduct to add: %s', basket_products_to_add)
+        log.debug('BasketProduct to update: %s', basket_products_to_update)
+
+        with transaction.atomic():
+            created = BasketProduct.objects.bulk_create(basket_products_to_add)
+            n_created = len(created)
+            n_updated = BasketProduct.objects.bulk_update(
+                basket_products_to_update, fields=['count']
+            )
+            log.debug('BasketProduct created: %s', n_created)
+            log.debug('BasketProduct updated: %s', n_updated)
+
+        return Response([])
+
+    def post_old2(self, request, *args, **kwargs):
+        # queryset = Basket.objects.prefetch_related(
+        #     Prefetch(
+        #         'products',
+        #         queryset=BasketProduct.objects.select_related('product').all(),
+        #     )
+        # ).filter(id='60ac1520a1104db49090d934a0b9f8f9')
+
+        # queryset = (
+        #     Basket.objects.all()
+        #     .prefetch_related(
+        #         Prefetch(
+        #             'products',
+        #             queryset=BasketProduct.objects.select_related(
+        #                 'product'
+        #             ).all(),
+        #         )
+        #     )
+        #     .filter(id='60ac1520a1104db49090d934a0b9f8f9')
+        # )
+
+        # queryset = (
+        #     Basket.objects.all()
+        #     .prefetch_related(
+        #         Prefetch(
+        #             'products',
+        #             queryset=BasketProduct.objects.all(),
+        #         )
+        #     )
+        #     .filter(id='60ac1520a1104db49090d934a0b9f8f9')
+        # )
+
+        # queryset = Basket.objects.filter(id='60ac1520a1104db49090d934a0b9f8f9')
+
+        # basket = Basket.objects.get(id='60ac1520a1104db49090d934a0b9f8f9')
+        # basket = (
+        #     Basket.objects.all()
+        #     .prefetch_related('products')
+        #     .get(id='60ac1520a1104db49090d934a0b9f8f9')
+        # )
+
+        # basket = queryset[0]
+        # basket = Basket.objects.prefetch_related('basketproduct_set').get(
+        #     id='60ac1520a1104db49090d934a0b9f8f9'
+        # )
+        basket_products = list(
+            BasketProduct.objects.filter(
+                basket_id='60ac1520a1104db49090d934a0b9f8f9'
+            )
+        )
+        print('########', basket_products)
+
+        # print('########', basket)
+        # print('########', dir(basket))
+        # print('########', basket.basketproduct_set)
+        # print('########', basket.products)
+
+        return Response([])
+
+    def post_old1(self, request, *args, **kwargs):
+        data = request.data.copy()
+        if not isinstance(data, list):
+            return Response(None, status=400)
+
+        basket = self._get_basket(request)
+        print('########', basket)
+        if not basket:
+            user = None if request.user.is_anonymous else request.user
+            basket = Basket.objects.create(user=user)
+
+        print('#########', basket.products)
+        # print('#########', basket.basketproduct)
 
         for item in data:
             item['basket'] = basket.id
@@ -372,23 +447,22 @@ class BasketView(generics.ListCreateAPIView):
     def _get_basket(self, request: Request) -> Basket:
         COOKIES = request._request.COOKIES or {}
         user = request.user
-        basket = None
 
         queryset = Basket.objects.prefetch_related(
             Prefetch(
                 'products',
                 queryset=BasketProduct.objects.select_related('product').all(),
             )
-        )
+        ).all()
 
         if not user.is_anonymous:
-            basket = queryset.filter(user=user)[0]
+            queryset = queryset.filter(user=user)
         else:
             basket_id = COOKIES.get('basket_id')
             serializer = BasketIdSerializer(data={'basket_id': basket_id})
             if serializer.is_valid():
-                basket = queryset.filter(
+                queryset = queryset.filter(
                     id=serializer.validated_data['basket_id']
-                )[0]
+                )
 
-        return basket
+        return queryset[0] if queryset else None

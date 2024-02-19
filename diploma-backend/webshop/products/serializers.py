@@ -149,6 +149,21 @@ class BasketIdSerializer(serializers.Serializer):
     basket_id = serializers.UUIDField()
 
 
+class BasketItem(serializers.Serializer):
+    id = serializers.IntegerField(
+        required=True,
+        validators=[
+            MinValueValidator(0),
+        ],
+    )
+    count = serializers.IntegerField(
+        required=True,
+        validators=[
+            MinValueValidator(0),
+        ],
+    )
+
+
 class BasketProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = BasketProduct
