@@ -35,6 +35,20 @@ from .serializers import (
 log = logging.getLogger(__name__)
 
 
+def get_product_short_qs():
+    return (
+        Product.objects.select_related('category')
+        .prefetch_related(
+            'images',
+            'tags',
+            Prefetch('reviews', queryset=Review.objects.only('id')),
+        )
+        .annotate(reviews_count=Count('reviews'))
+        .filter(archived=False)
+        .all()
+    )
+
+
 class TopLevelCategoryListView(APIView):
     def get(self, request):
         queryset = Category.objects.prefetch_related('subcategories').filter(
@@ -291,7 +305,17 @@ class BasketView(generics.ListCreateAPIView):
             if now - seconds > basket.last_accessed:
                 basket.save()  # updates basket.last_accessed
 
-            products = [item.product for item in basket.products.all()]
+            basketproduct_set = basket.basketproduct_set.all()
+            product_counts = {}
+            for item in basketproduct_set:
+                product_counts[item.product_id] = item.count
+            log.debug('Got product counts: %s', product_counts)
+
+            products = get_product_short_qs()
+            products = list(products.filter(id__in=basket.products.all()))
+            log.debug('Got products: %s', products)
+            for product in products:
+                product.count = product_counts[product.id]
 
             serializer = ProductShortSerializer(products, many=True)
             response = Response(serializer.data)
@@ -447,13 +471,7 @@ class BasketView(generics.ListCreateAPIView):
     def _get_basket(self, request: Request) -> Basket:
         COOKIES = request._request.COOKIES or {}
         user = request.user
-
-        queryset = Basket.objects.prefetch_related(
-            Prefetch(
-                'products',
-                queryset=BasketProduct.objects.select_related('product').all(),
-            )
-        ).all()
+        queryset = Basket.objects.all()
 
         if not user.is_anonymous:
             queryset = queryset.filter(user=user)
