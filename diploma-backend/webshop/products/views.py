@@ -376,14 +376,12 @@ class BasketView(generics.ListCreateAPIView):
             basket = Basket.objects.create(user=user)
 
         basket_products = list(
-            BasketProduct.objects.select_related('product')
-            .defer('product__full_description')
-            .filter(basket_id=basket.id)
+            BasketProduct.objects.filter(basket_id=basket.id)
         )
 
         basket_products_to_update = []
         for basket_product in basket_products:
-            product_id = basket_product.product.id
+            product_id = basket_product.product_id
             if product_id in product_counts:
                 product_count = product_counts[product_id]
                 if basket_product.count != product_count:
