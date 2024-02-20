@@ -3,15 +3,8 @@ from datetime import datetime, timedelta, timezone
 
 import django_filters
 from django.db import transaction
-from django.db.models import (
-    Case,
-    Count,
-    IntegerField,
-    Prefetch,
-    Q,
-    Value,
-    When,
-)
+from django.db.models import (Case, Count, IntegerField, Prefetch, Q, Value,
+                              When)
 from django.http.request import QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, mixins, pagination, viewsets
@@ -21,16 +14,10 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Basket, BasketProduct, Category, Product, Review, Tag
-from .serializers import (
-    BasketIdSerializer,
-    BasketItem,
-    BasketProductSerializer,
-    ProductSerializer,
-    ProductShortSerializer,
-    ReviewCreateSerializer,
-    TagSerializer,
-    TopLevelCategorySerializer,
-)
+from .serializers import (BasketIdSerializer, BasketItem,
+                          BasketProductSerializer, ProductSerializer,
+                          ProductShortSerializer, ReviewCreateSerializer,
+                          TagSerializer, TopLevelCategorySerializer)
 
 log = logging.getLogger(__name__)
 
@@ -295,7 +282,7 @@ class BasketView(generics.ListCreateAPIView):
     COOKIE_MAX_AGE = 14 * 24 * 3600
 
     def get(self, request, *args, **kwargs):
-        """Gets basket contents by COOKIES.basket_id or returns []"""
+        """Get basket contents or return []"""
         basket = self._get_basket(request)
         log.debug('Got basket: %s', basket)
         if basket:
@@ -312,6 +299,7 @@ class BasketView(generics.ListCreateAPIView):
         return Response([])
 
     def post(self, request, *args, **kwargs):
+        """Inc/dec product counts; add/remove BasketProduct items"""
         counts_serializer = BasketItem(data=request.data, many=True)
         if not counts_serializer.is_valid():
             return Response(None, status=400)
@@ -454,6 +442,7 @@ class BasketView(generics.ListCreateAPIView):
         return Response([])
 
     def _get_basket(self, request: Request) -> Basket:
+        """Get basket by COOKIES.basket_id or by current user"""
         COOKIES = request._request.COOKIES or {}
         user = request.user
         queryset = Basket.objects.all()
@@ -476,6 +465,7 @@ class BasketView(generics.ListCreateAPIView):
             return basket
 
     def _update_access_time(self, basket: Basket) -> None:
+        """Update basket last access time"""
         seconds = timedelta(seconds=120)
         # TODO: are timezones the same in DB & in code?
         now = datetime.now(timezone(timedelta(0)))
@@ -483,6 +473,7 @@ class BasketView(generics.ListCreateAPIView):
             basket.save()  # updates basket.last_accessed
 
     def _get_products(self, basket: Basket) -> list[Product]:
+        """Get products with real count in basket"""
         basketproduct_set = basket.basketproduct_set.all()
         product_counts = {}
         for item in basketproduct_set:
