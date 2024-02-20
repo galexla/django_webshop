@@ -299,25 +299,9 @@ class BasketView(generics.ListCreateAPIView):
         basket = self._get_basket(request)
         log.debug('Got basket: %s', basket)
         if basket:
-            seconds = timedelta(seconds=120)
-            # TODO: are timezones the same in DB & in code?
-            now = datetime.now(timezone(timedelta(0)))
-            if now - seconds > basket.last_accessed:
-                basket.save()  # updates basket.last_accessed
-
-            basketproduct_set = basket.basketproduct_set.all()
-            product_counts = {}
-            for item in basketproduct_set:
-                product_counts[item.product_id] = item.count
-            log.debug('Got product counts: %s', product_counts)
-
-            products = get_product_short_qs()
-            products = list(products.filter(id__in=basket.products.all()))
-            log.debug('Got products: %s', products)
-            for product in products:
-                product.count = product_counts[product.id]
-
+            products = self._get_products(basket)
             serializer = ProductShortSerializer(products, many=True)
+
             response = Response(serializer.data)
             response.set_cookie(
                 'basket_id', basket.id, max_age=self.COOKIE_MAX_AGE
@@ -328,9 +312,15 @@ class BasketView(generics.ListCreateAPIView):
         return Response([])
 
     def post(self, request, *args, **kwargs):
-        serializer = BasketItem(data=request.data, many=True)
-        if not serializer.is_valid():
+        counts_serializer = BasketItem(data=request.data, many=True)
+        if not counts_serializer.is_valid():
             return Response(None, status=400)
+
+        product_counts = {
+            item['id']: item['count']
+            for item in counts_serializer.validated_data
+        }
+        log.debug('Product counts: %s', product_counts)
 
         basket = self._get_basket(request)
         if not basket:
@@ -342,11 +332,6 @@ class BasketView(generics.ListCreateAPIView):
             .defer('product__full_description')
             .filter(basket_id=basket.id)
         )
-
-        product_counts = {
-            item['id']: item['count'] for item in serializer.validated_data
-        }
-        log.debug('Product counts: %s', product_counts)
 
         basket_products_to_update = []
         for basket_product in basket_products:
@@ -483,4 +468,31 @@ class BasketView(generics.ListCreateAPIView):
                     id=serializer.validated_data['basket_id']
                 )
 
-        return queryset[0] if queryset else None
+        if not queryset:
+            return None
+        else:
+            basket = queryset[0]
+            self._update_access_time(basket)
+            return basket
+
+    def _update_access_time(self, basket: Basket) -> None:
+        seconds = timedelta(seconds=120)
+        # TODO: are timezones the same in DB & in code?
+        now = datetime.now(timezone(timedelta(0)))
+        if now - seconds > basket.last_accessed:
+            basket.save()  # updates basket.last_accessed
+
+    def _get_products(self, basket: Basket) -> list[Product]:
+        basketproduct_set = basket.basketproduct_set.all()
+        product_counts = {}
+        for item in basketproduct_set:
+            product_counts[item.product_id] = item.count
+        log.debug('Got product counts: %s', product_counts)
+
+        products = get_product_short_qs()
+        products = list(products.filter(id__in=basket.products.all()))
+        log.debug('Got products: %s', products)
+        for product in products:
+            product.count = product_counts[product.id]
+
+        return products
