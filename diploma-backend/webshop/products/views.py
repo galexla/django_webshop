@@ -3,8 +3,15 @@ from datetime import datetime, timedelta, timezone
 
 import django_filters
 from django.db import transaction
-from django.db.models import (Case, Count, IntegerField, Prefetch, Q, Value,
-                              When)
+from django.db.models import (
+    Case,
+    Count,
+    IntegerField,
+    Prefetch,
+    Q,
+    Value,
+    When,
+)
 from django.http.request import QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, mixins, pagination, viewsets
@@ -14,10 +21,16 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import Basket, BasketProduct, Category, Product, Review, Tag
-from .serializers import (BasketIdSerializer, BasketItem,
-                          BasketProductSerializer, ProductSerializer,
-                          ProductShortSerializer, ReviewCreateSerializer,
-                          TagSerializer, TopLevelCategorySerializer)
+from .serializers import (
+    BasketIdSerializer,
+    BasketItem,
+    BasketProductSerializer,
+    ProductSerializer,
+    ProductShortSerializer,
+    ReviewCreateSerializer,
+    TagSerializer,
+    TopLevelCategorySerializer,
+)
 
 log = logging.getLogger(__name__)
 
@@ -298,6 +311,53 @@ class BasketView(generics.ListCreateAPIView):
 
         return Response([])
 
+    def _get_basket(self, request: Request) -> Basket:
+        """Get basket by COOKIES.basket_id or by current user"""
+        COOKIES = request._request.COOKIES or {}
+        user = request.user
+        queryset = Basket.objects.all()
+
+        if not user.is_anonymous:
+            queryset = queryset.filter(user=user)
+        else:
+            basket_id = COOKIES.get('basket_id')
+            serializer = BasketIdSerializer(data={'basket_id': basket_id})
+            if serializer.is_valid():
+                queryset = queryset.filter(
+                    id=serializer.validated_data['basket_id']
+                )
+
+        if not queryset:
+            return None
+        else:
+            basket = queryset[0]
+            self._update_access_time(basket)
+            return basket
+
+    def _update_access_time(self, basket: Basket) -> None:
+        """Update basket last access time"""
+        seconds = timedelta(seconds=120)
+        # TODO: are timezones the same in DB & in code?
+        now = datetime.now(timezone(timedelta(0)))
+        if now - seconds > basket.last_accessed:
+            basket.save()  # updates basket.last_accessed
+
+    def _get_products(self, basket: Basket) -> list[Product]:
+        """Get products with real count in basket"""
+        basketproduct_set = basket.basketproduct_set.all()
+        product_counts = {}
+        for item in basketproduct_set:
+            product_counts[item.product_id] = item.count
+        log.debug('Got product counts: %s', product_counts)
+
+        products = get_product_short_qs()
+        products = list(products.filter(id__in=basket.products.all()))
+        log.debug('Got products: %s', products)
+        for product in products:
+            product.count = product_counts[product.id]
+
+        return products
+
     def post(self, request, *args, **kwargs):
         """Inc/dec product counts; add/remove BasketProduct items"""
         counts_serializer = BasketItem(data=request.data, many=True)
@@ -440,50 +500,3 @@ class BasketView(generics.ListCreateAPIView):
             return Response(serializer.errors, status=400)
 
         return Response([])
-
-    def _get_basket(self, request: Request) -> Basket:
-        """Get basket by COOKIES.basket_id or by current user"""
-        COOKIES = request._request.COOKIES or {}
-        user = request.user
-        queryset = Basket.objects.all()
-
-        if not user.is_anonymous:
-            queryset = queryset.filter(user=user)
-        else:
-            basket_id = COOKIES.get('basket_id')
-            serializer = BasketIdSerializer(data={'basket_id': basket_id})
-            if serializer.is_valid():
-                queryset = queryset.filter(
-                    id=serializer.validated_data['basket_id']
-                )
-
-        if not queryset:
-            return None
-        else:
-            basket = queryset[0]
-            self._update_access_time(basket)
-            return basket
-
-    def _update_access_time(self, basket: Basket) -> None:
-        """Update basket last access time"""
-        seconds = timedelta(seconds=120)
-        # TODO: are timezones the same in DB & in code?
-        now = datetime.now(timezone(timedelta(0)))
-        if now - seconds > basket.last_accessed:
-            basket.save()  # updates basket.last_accessed
-
-    def _get_products(self, basket: Basket) -> list[Product]:
-        """Get products with real count in basket"""
-        basketproduct_set = basket.basketproduct_set.all()
-        product_counts = {}
-        for item in basketproduct_set:
-            product_counts[item.product_id] = item.count
-        log.debug('Got product counts: %s', product_counts)
-
-        products = get_product_short_qs()
-        products = list(products.filter(id__in=basket.products.all()))
-        log.debug('Got products: %s', products)
-        for product in products:
-            product.count = product_counts[product.id]
-
-        return products
