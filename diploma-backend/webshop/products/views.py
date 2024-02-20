@@ -303,13 +303,16 @@ class BasketView(generics.ListCreateAPIView):
             serializer = ProductShortSerializer(products, many=True)
 
             response = Response(serializer.data)
-            response.set_cookie(
-                'basket_id', basket.id, max_age=self.COOKIE_MAX_AGE
-            )
+            self._set_basket_cookie(basket, response)
 
             return response
 
         return Response([])
+
+    def _set_basket_cookie(self, basket: Basket, response: Response):
+        response.set_cookie(
+            'basket_id', basket.id, max_age=self.COOKIE_MAX_AGE
+        )
 
     def _get_basket(self, request: Request) -> Basket:
         """Get basket by COOKIES.basket_id or by current user"""
@@ -408,7 +411,10 @@ class BasketView(generics.ListCreateAPIView):
             log.debug('BasketProduct created: %s', n_created)
             log.debug('BasketProduct updated: %s', n_updated)
 
-        return Response([])
+        response = Response([])
+        self._set_basket_cookie(basket, response)
+
+        return response
 
     def post_old2(self, request, *args, **kwargs):
         # queryset = Basket.objects.prefetch_related(
