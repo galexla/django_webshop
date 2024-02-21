@@ -232,6 +232,47 @@ class BasketProduct(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     count = models.PositiveIntegerField()
 
+    @property
+    def unique_key(self):
+        """Get unique key: basket_id:product_id to use in __hash__ and __eq__"""
+        if (
+            self.basket is None
+            or self.product is None
+            or self.basket.id is None
+            or self.product.id is None
+        ):
+            return None
+        return self.basket.id.hex + ':' + str(self.product.id)
+
+    def __eq__(self, other):
+        """Equal if basket_id and product_id are equal"""
+        if not isinstance(other, models.Model):
+            return NotImplemented
+        if self._meta.concrete_model != other._meta.concrete_model:
+            return False
+
+        my_pk = self.unique_key
+        other_pk = other.unique_key
+        if my_pk is None or other_pk is None:
+            return self is other
+
+        return my_pk == other.unique_key
+
+    def __hash__(self):
+        """basket_id + product_id is a unique key to get hash"""
+        key = self.unique_key
+        if key is None:
+            raise TypeError(
+                'BasketProduct instances with basket or product not set are unhashable'
+            )
+        return hash(key)
+
+    def __repr__(self):
+        return "<BP: %s>" % (self.unique_key,)
+
+    def __str__(self):
+        return "BP(%s, %s)" % (self.unique_key, self.pk)
+
 
 class Basket(models.Model):
     id = models.UUIDField(

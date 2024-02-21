@@ -24,7 +24,6 @@ from .models import Basket, BasketProduct, Category, Product, Review, Tag
 from .serializers import (
     BasketIdSerializer,
     BasketItem,
-    BasketProductSerializer,
     ProductSerializer,
     ProductShortSerializer,
     ReviewCreateSerializer,
@@ -367,140 +366,66 @@ class BasketView(generics.ListCreateAPIView):
         if not counts_serializer.is_valid():
             return Response(None, status=400)
 
-        product_counts = {
-            item['id']: item['count']
-            for item in counts_serializer.validated_data
-        }
-        log.debug('Product counts: %s', product_counts)
-
         basket = self._get_basket(request)
         if not basket:
             user = None if request.user.is_anonymous else request.user
             basket = Basket.objects.create(user=user)
 
-        basket_products = list(
-            BasketProduct.objects.filter(basket_id=basket.id)
-        )
-
-        basket_products_to_update = []
-        for basket_product in basket_products:
-            product_id = basket_product.product_id
-            if product_id in product_counts:
-                product_count = product_counts[product_id]
-                if basket_product.count != product_count:
-                    basket_product.count = product_count
-                    basket_products_to_update.append(basket_product)
-                product_counts.pop(product_id)
-
-        basket_products_to_add = []
-        for product_id, product_count in product_counts.items():
-            basket_product = BasketProduct(
-                basket_id=basket.id, product_id=product_id, count=product_count
+        basket_products_input = set(
+            BasketProduct(
+                basket_id=basket.id, product_id=item['id'], count=item['count']
             )
-            basket_products_to_add.append(basket_product)
+            for item in counts_serializer.validated_data
+            if item['count'] != 0
+        )
+        log.debug('BasketProduct input: %s', basket_products_input)
 
-        log.debug('BasketProduct to add: %s', basket_products_to_add)
+        basket_products = set(
+            BasketProduct.objects.filter(basket_id=basket.id).all()
+        )
+        log.debug('BasketProduct in DB: %s', basket_products)
+
+        basket_products_to_create = basket_products_input - basket_products
+        log.debug('BasketProduct to create: %s', basket_products_to_create)
+
+        basket_products_to_delete = basket_products - basket_products_input
+        log.debug('BasketProduct to delete: %s', basket_products_to_delete)
+
+        bp_input_index = {bp.unique_key: bp for bp in basket_products_input}
+        basket_products_to_update = set()
+        for bp in basket_products:
+            if bp in basket_products_input:
+                bp_input = bp_input_index[bp.unique_key]
+                if bp.count != bp_input.count:
+                    bp.count = bp_input.count
+                    basket_products_to_update.add(bp)
         log.debug('BasketProduct to update: %s', basket_products_to_update)
 
+        basket_product_ids_to_delete = set(
+            bp.id for bp in basket_products_to_delete
+        )
+
         with transaction.atomic():
-            created = BasketProduct.objects.bulk_create(basket_products_to_add)
-            n_created = len(created)
-            n_updated = BasketProduct.objects.bulk_update(
-                basket_products_to_update, fields=['count']
-            )
-            log.debug('BasketProduct created: %s', n_created)
-            log.debug('BasketProduct updated: %s', n_updated)
+            created, n_updated, n_deleted = [], 0, 0
+
+            if basket_products_to_create:
+                created = BasketProduct.objects.bulk_create(
+                    basket_products_to_create
+                )
+            if basket_products_to_update:
+                n_updated = BasketProduct.objects.bulk_update(
+                    basket_products_to_update, fields=['count']
+                )
+            if basket_product_ids_to_delete:
+                n_deleted, deleted = BasketProduct.objects.filter(
+                    id__in=basket_product_ids_to_delete
+                ).delete()
+
+            log.info('BasketProduct created: %s', len(created))
+            log.info('BasketProduct updated: %s', n_updated)
+            log.info('BasketProduct deleted: %s', n_deleted)
 
         response = Response([])
         self._set_basket_cookie(basket, response)
 
         return response
-
-    def post_old2(self, request, *args, **kwargs):
-        # queryset = Basket.objects.prefetch_related(
-        #     Prefetch(
-        #         'products',
-        #         queryset=BasketProduct.objects.select_related('product').all(),
-        #     )
-        # ).filter(id='60ac1520a1104db49090d934a0b9f8f9')
-
-        # queryset = (
-        #     Basket.objects.all()
-        #     .prefetch_related(
-        #         Prefetch(
-        #             'products',
-        #             queryset=BasketProduct.objects.select_related(
-        #                 'product'
-        #             ).all(),
-        #         )
-        #     )
-        #     .filter(id='60ac1520a1104db49090d934a0b9f8f9')
-        # )
-
-        # queryset = (
-        #     Basket.objects.all()
-        #     .prefetch_related(
-        #         Prefetch(
-        #             'products',
-        #             queryset=BasketProduct.objects.all(),
-        #         )
-        #     )
-        #     .filter(id='60ac1520a1104db49090d934a0b9f8f9')
-        # )
-
-        # queryset = Basket.objects.filter(id='60ac1520a1104db49090d934a0b9f8f9')
-
-        # basket = Basket.objects.get(id='60ac1520a1104db49090d934a0b9f8f9')
-        # basket = (
-        #     Basket.objects.all()
-        #     .prefetch_related('products')
-        #     .get(id='60ac1520a1104db49090d934a0b9f8f9')
-        # )
-
-        # basket = queryset[0]
-        # basket = Basket.objects.prefetch_related('basketproduct_set').get(
-        #     id='60ac1520a1104db49090d934a0b9f8f9'
-        # )
-        basket_products = list(
-            BasketProduct.objects.filter(
-                basket_id='60ac1520a1104db49090d934a0b9f8f9'
-            )
-        )
-        print('########', basket_products)
-
-        # print('########', basket)
-        # print('########', dir(basket))
-        # print('########', basket.basketproduct_set)
-        # print('########', basket.products)
-
-        return Response([])
-
-    def post_old1(self, request, *args, **kwargs):
-        data = request.data.copy()
-        if not isinstance(data, list):
-            return Response(None, status=400)
-
-        basket = self._get_basket(request)
-        print('########', basket)
-        if not basket:
-            user = None if request.user.is_anonymous else request.user
-            basket = Basket.objects.create(user=user)
-
-        print('#########', basket.products)
-        # print('#########', basket.basketproduct)
-
-        for item in data:
-            item['basket'] = basket.id
-            item['product'] = item.pop('id')
-
-        serializer = BasketProductSerializer(data=data, many=True)
-        if serializer.is_valid():
-            print('##########', serializer.validated_data)
-            pass
-            # with transaction.atomic():
-            #     serializer.save()
-            #     basket.save()
-        else:
-            return Response(serializer.errors, status=400)
-
-        return Response([])
