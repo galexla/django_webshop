@@ -370,39 +370,33 @@ class BasketView(generics.ListCreateAPIView):
         if not basket:
             user = None if request.user.is_anonymous else request.user
             basket = Basket.objects.create(user=user)
+        basket_id = basket.id.hex
 
-        basket_products_input = set(
-            BasketProduct(
-                basket_id=basket.id, product_id=item['id'], count=item['count']
+        basket_products_input = {
+            self._bp_unique_key(basket_id, item['id']): BasketProduct(
+                basket_id=basket_id, product_id=item['id'], count=item['count']
             )
             for item in counts_serializer.validated_data
             if item['count'] != 0
+        }
+        log.debug('BasketProduct input: %s', basket_products_input.values())
+
+        basket_products = {
+            self._bp_unique_key(basket_id, bp.product_id): bp
+            for bp in BasketProduct.objects.filter(basket_id=basket_id).all()
+        }
+        log.debug('BasketProduct in DB: %s', basket_products.values())
+
+        basket_products_to_create = self._get_products_to_create(
+            basket_products_input, basket_products
         )
-        log.debug('BasketProduct input: %s', basket_products_input)
 
-        basket_products = set(
-            BasketProduct.objects.filter(basket_id=basket.id).all()
+        basket_product_ids_to_delete = self._get_product_ids_to_delete(
+            basket_products_input, basket_products
         )
-        log.debug('BasketProduct in DB: %s', basket_products)
 
-        basket_products_to_create = basket_products_input - basket_products
-        log.debug('BasketProduct to create: %s', basket_products_to_create)
-
-        basket_products_to_delete = basket_products - basket_products_input
-        log.debug('BasketProduct to delete: %s', basket_products_to_delete)
-
-        bp_input_index = {bp.unique_key: bp for bp in basket_products_input}
-        basket_products_to_update = set()
-        for bp in basket_products:
-            if bp in basket_products_input:
-                bp_input = bp_input_index[bp.unique_key]
-                if bp.count != bp_input.count:
-                    bp.count = bp_input.count
-                    basket_products_to_update.add(bp)
-        log.debug('BasketProduct to update: %s', basket_products_to_update)
-
-        basket_product_ids_to_delete = set(
-            bp.id for bp in basket_products_to_delete
+        basket_products_to_update = self._get_products_to_update(
+            basket_products_input, basket_products
         )
 
         with transaction.atomic():
@@ -432,3 +426,48 @@ class BasketView(generics.ListCreateAPIView):
         self._set_basket_cookie(basket, response)
 
         return response
+
+    def _get_products_to_create(self, basket_products_input, basket_products):
+        basket_products_to_create = [
+            bp
+            for key, bp in basket_products_input.items()
+            if key not in basket_products
+        ]
+        log.debug('BasketProduct to create: %s', basket_products_to_create)
+
+        return basket_products_to_create
+
+    def _get_product_ids_to_delete(
+        self, basket_products_input, basket_products
+    ) -> list:
+        basket_products_to_delete = [
+            bp
+            for key, bp in basket_products.items()
+            if key not in basket_products_input
+        ]
+        log.debug('BasketProduct to delete: %s', basket_products_to_delete)
+
+        basket_product_ids_to_delete = [
+            bp.id for bp in basket_products_to_delete
+        ]
+
+        return basket_product_ids_to_delete
+
+    def _get_products_to_update(
+        self, basket_products_input, basket_products
+    ) -> list[BasketProduct]:
+        basket_products_to_update = []
+        for bp in basket_products.values():
+            key = self._bp_unique_key(bp.basket_id.hex, bp.product_id)
+            if key in basket_products_input:
+                bp_input = basket_products_input[key]
+                if bp.count != bp_input.count:
+                    bp.count = bp_input.count
+                    basket_products_to_update.append(bp)
+        log.debug('BasketProduct to update: %s', basket_products_to_update)
+
+        return basket_products_to_update
+
+    def _bp_unique_key(self, basket_id: str, product_id) -> str:
+        """Get BasketProduct unique key"""
+        return basket_id + ':' + str(product_id)
