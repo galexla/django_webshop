@@ -348,8 +348,8 @@ class BasketView(generics.ListCreateAPIView):
         """Get products with real count in basket"""
         basketproduct_set = basket.basketproduct_set.all()
         product_counts = {}
-        for item in basketproduct_set:
-            product_counts[item.product_id] = item.count
+        for basket_product in basketproduct_set:
+            product_counts[basket_product.product_id] = basket_product.count
         log.debug('Got product counts: %s', product_counts)
 
         products = get_product_short_qs()
@@ -425,7 +425,10 @@ class BasketView(generics.ListCreateAPIView):
             log.info('BasketProduct updated: %s', n_updated)
             log.info('BasketProduct deleted: %s', n_deleted)
 
-        response = Response([])
+        products = self._get_products(basket)
+        serializer = ProductShortSerializer(products, many=True)
+
+        response = Response(serializer.data)
         self._set_basket_cookie(basket, response)
 
         return response
