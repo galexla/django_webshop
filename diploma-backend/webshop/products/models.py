@@ -242,10 +242,11 @@ class Basket(models.Model):
         default=uuid.uuid4,
         editable=False,
     )
-    user = models.ForeignKey(
+    user = models.OneToOneField(
         User,
         blank=True,
         null=True,
+        unique=True,
         on_delete=models.CASCADE,
         related_name='basket',
     )
