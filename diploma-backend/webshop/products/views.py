@@ -299,27 +299,29 @@ def get_client_ip(request):
     return ip
 
 
-class BasketView(generics.ListCreateAPIView):
+class BasketView(
+    generics.mixins.DestroyModelMixin, generics.ListCreateAPIView
+):
     COOKIE_MAX_AGE = 14 * 24 * 3600
 
     def get(self, request, *args, **kwargs):
         """Get basket contents or return []"""
         basket = self._get_basket(request)
-        log.debug('Got basket: %s', basket)
+        log.debug('Got basket: %s', basket.id)
         if basket:
             products = self._get_products(basket)
             serializer = ProductShortSerializer(products, many=True)
 
             response = Response(serializer.data)
-            self._set_basket_cookie(basket, response)
+            self._set_basket_cookie(response, basket.id)
 
             return response
 
         return Response([])
 
-    def _set_basket_cookie(self, basket: Basket, response: Response):
+    def _set_basket_cookie(self, response: Response, basket_id: str):
         response.set_cookie(
-            'basket_id', basket.id, max_age=self.COOKIE_MAX_AGE
+            'basket_id', basket_id, max_age=self.COOKIE_MAX_AGE
         )
 
     def _get_basket(self, request: Request) -> Basket:
@@ -344,7 +346,7 @@ class BasketView(generics.ListCreateAPIView):
             ip = get_client_ip(request)
             user_id = user.id if user else None
             log.warning(
-                f'User <{user_id}> [{ip}] attempts to retrieve basket of user <{basket.user.id}>'
+                f'User {user_id} [{ip}] attempts to retrieve basket of user {basket.user.id}'
             )
             return None
 
@@ -366,11 +368,13 @@ class BasketView(generics.ListCreateAPIView):
         product_counts = {}
         for basket_product in basketproduct_set:
             product_counts[basket_product.product_id] = basket_product.count
-        log.debug('Got product counts: %s', product_counts)
+        log.debug(
+            'Got product counts %s in basket %s', product_counts, basket.id
+        )
 
         products = get_product_short_qs()
         products = list(products.filter(id__in=basket.products.all()))
-        log.debug('Got products: %s', products)
+        log.debug('Got products %s from basket %s', products, basket.id)
         for product in products:
             product.count = product_counts[product.id]
 
@@ -439,7 +443,7 @@ class BasketView(generics.ListCreateAPIView):
         serializer = ProductShortSerializer(products, many=True)
 
         response = Response(serializer.data)
-        self._set_basket_cookie(basket, response)
+        self._set_basket_cookie(response, basket_id)
 
         return response
 
@@ -487,3 +491,56 @@ class BasketView(generics.ListCreateAPIView):
     def _bp_unique_key(self, basket_id: str, product_id) -> str:
         """Get BasketProduct unique key"""
         return basket_id + ':' + str(product_id)
+
+    def delete(self, request, *args, **kwargs):
+        counts_serializer = BasketItem(data=request.data)
+        if not counts_serializer.is_valid():
+            return Response(None, status=400)
+
+        basket = self._get_basket(request)
+        if not basket:
+            return Response([])
+
+        basket_id = basket.id.hex
+
+        product_id = counts_serializer.validated_data['id']
+        product_dec_count = counts_serializer.validated_data['count']
+        log.debug(
+            'To decrease product %s count by %s in basket %s',
+            product_id,
+            product_dec_count,
+            basket_id,
+        )
+
+        queryset = BasketProduct.objects.filter(
+            basket_id=basket_id, product_id=product_id
+        ).all()
+        basket_product = queryset[0] if queryset else None
+
+        if basket_product is None:
+            return Response(None, status=400)
+
+        basket_product.count -= product_dec_count
+        if basket_product.count <= 0:
+            basket_product.delete()
+            log.info(
+                'Deleted product %s from basket %s',
+                product_id,
+                basket_id,
+            )
+        else:
+            basket_product.save()
+            log.info(
+                'Decreased product %s count by %s in basket %s',
+                product_id,
+                product_dec_count,
+                basket_id,
+            )
+
+        products = self._get_products(basket)
+        serializer = ProductShortSerializer(products, many=True)
+
+        response = Response(serializer.data)
+        self._set_basket_cookie(response, basket_id)
+
+        return response
