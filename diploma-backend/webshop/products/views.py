@@ -290,6 +290,15 @@ class ReviewCreateView(APIView):
         return Response([serializer.data])
 
 
+def get_client_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
 class BasketView(generics.ListCreateAPIView):
     COOKIE_MAX_AGE = 14 * 24 * 3600
 
@@ -316,10 +325,10 @@ class BasketView(generics.ListCreateAPIView):
     def _get_basket(self, request: Request) -> Basket:
         """Get basket by COOKIES.basket_id or by current user"""
         COOKIES = request._request.COOKIES or {}
-        user = request.user
+        user = request.user if not request.user.is_anonymous else None
         queryset = Basket.objects.all()
 
-        if not user.is_anonymous:
+        if user:
             queryset = queryset.filter(user=user)
         else:
             basket_id = COOKIES.get('basket_id')
@@ -329,12 +338,19 @@ class BasketView(generics.ListCreateAPIView):
                     id=serializer.validated_data['basket_id']
                 )
 
-        if not queryset:
+        basket = queryset[0] if queryset else None
+
+        if basket and basket.user != user:
+            ip = get_client_ip(request)
+            user_id = user.id if user else None
+            log.warning(
+                f'User <{user_id}> [{ip}] attempts to retrieve basket of user <{basket.user.id}>'
+            )
             return None
-        else:
-            basket = queryset[0]
-            self._update_access_time(basket)
-            return basket
+
+        self._update_access_time(basket)
+
+        return basket
 
     def _update_access_time(self, basket: Basket) -> None:
         """Update basket last access time"""
@@ -368,7 +384,7 @@ class BasketView(generics.ListCreateAPIView):
 
         basket = self._get_basket(request)
         if not basket:
-            user = None if request.user.is_anonymous else request.user
+            user = request.user if not request.user.is_anonymous else None
             basket = Basket.objects.create(user=user)
         basket_id = basket.id.hex
 
