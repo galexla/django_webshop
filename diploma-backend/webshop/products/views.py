@@ -305,35 +305,25 @@ class BasketView(
     COOKIE_MAX_AGE = 14 * 24 * 3600
 
     def get(self, request, *args, **kwargs):
-        """Get basket contents or return []"""
+        """Get basket contents"""
         basket = self._get_basket(request)
-        log.debug('Got basket: %s', basket.id)
         if basket:
+            log.debug('Got basket: %s', basket.id)
             products = self._get_products(basket)
-            serializer = ProductShortSerializer(products, many=True)
-
-            response = Response(serializer.data)
-            self._set_basket_cookie(response, basket.id)
-
-            return response
+            return self._get_response(products, basket.id)
 
         return Response([])
 
-    def _set_basket_cookie(self, response: Response, basket_id: str):
-        response.set_cookie(
-            'basket_id', basket_id, max_age=self.COOKIE_MAX_AGE
-        )
-
     def _get_basket(self, request: Request) -> Basket:
         """Get basket by COOKIES.basket_id or by current user"""
-        COOKIES = request._request.COOKIES or {}
         user = request.user if not request.user.is_anonymous else None
         queryset = Basket.objects.all()
 
         if user:
             queryset = queryset.filter(user=user)
         else:
-            basket_id = COOKIES.get('basket_id')
+            # basket_id = request._request.COOKIES.get('basket_id')
+            basket_id = request.COOKIES.get('basket_id')
             serializer = BasketIdSerializer(data={'basket_id': basket_id})
             if serializer.is_valid():
                 queryset = queryset.filter(
@@ -363,7 +353,7 @@ class BasketView(
             basket.save()  # updates basket.last_accessed
 
     def _get_products(self, basket: Basket) -> list[Product]:
-        """Get products with real count in basket"""
+        """Get products in basket"""
         basketproduct_set = basket.basketproduct_set.all()
         product_counts = {}
         for basket_product in basketproduct_set:
@@ -380,9 +370,18 @@ class BasketView(
 
         return products
 
+    def _get_response(self, products, basket_id) -> Response:
+        serializer = ProductShortSerializer(products, many=True)
+        response = Response(serializer.data)
+        response.set_cookie(
+            'basket_id', basket_id, max_age=self.COOKIE_MAX_AGE
+        )
+
+        return response
+
     def post(self, request, *args, **kwargs):
-        """Inc/dec product counts; add/remove BasketProduct items"""
-        counts_serializer = BasketItem(data=request.data, many=True)
+        """Add some quantity of a product to basket"""
+        counts_serializer = BasketItem(data=request.data)
         if not counts_serializer.is_valid():
             return Response(None, status=400)
 
@@ -390,109 +389,57 @@ class BasketView(
         if not basket:
             user = request.user if not request.user.is_anonymous else None
             basket = Basket.objects.create(user=user)
+
         basket_id = basket.id.hex
 
-        basket_products_input = {
-            self._bp_unique_key(basket_id, item['id']): BasketProduct(
-                basket_id=basket_id, product_id=item['id'], count=item['count']
+        product_id = counts_serializer.validated_data['id']
+        product_count = counts_serializer.validated_data['count']
+        log.debug(
+            'To increase product %s count by %s in basket %s',
+            product_id,
+            product_count,
+            basket_id,
+        )
+
+        try:
+            Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            log.debug('Product %s doesn\'t exist', product_id)
+            return Response(None, status=400)
+
+        queryset = BasketProduct.objects.filter(
+            basket_id=basket_id, product_id=product_id
+        ).all()
+        basket_product = queryset[0] if queryset else None
+
+        if basket_product is None:
+            basket_product = BasketProduct(
+                basket_id=basket_id,
+                product_id=product_id,
+                count=product_count,
             )
-            for item in counts_serializer.validated_data
-            if item['count'] != 0
-        }
-        log.debug('BasketProduct input: %s', basket_products_input.values())
-
-        basket_products = {
-            self._bp_unique_key(basket_id, bp.product_id): bp
-            for bp in BasketProduct.objects.filter(basket_id=basket_id).all()
-        }
-        log.debug('BasketProduct in DB: %s', basket_products.values())
-
-        basket_products_to_create = self._get_products_to_create(
-            basket_products_input, basket_products
-        )
-
-        basket_product_ids_to_delete = self._get_product_ids_to_delete(
-            basket_products_input, basket_products
-        )
-
-        basket_products_to_update = self._get_products_to_update(
-            basket_products_input, basket_products
-        )
-
-        with transaction.atomic():
-            created, n_updated, n_deleted = [], 0, 0
-
-            if basket_products_to_create:
-                created = BasketProduct.objects.bulk_create(
-                    basket_products_to_create
-                )
-            if basket_products_to_update:
-                n_updated = BasketProduct.objects.bulk_update(
-                    basket_products_to_update, fields=['count']
-                )
-            if basket_product_ids_to_delete:
-                n_deleted, deleted = BasketProduct.objects.filter(
-                    id__in=basket_product_ids_to_delete
-                ).delete()
-
-            log.info('BasketProduct created: %s', len(created))
-            log.info('BasketProduct updated: %s', n_updated)
-            log.info('BasketProduct deleted: %s', n_deleted)
+            basket_product.save()
+            log.info(
+                'Added %s item(s) of product %s to basket %s',
+                product_count,
+                product_id,
+                basket_id,
+            )
+        else:
+            basket_product.count += product_count
+            basket_product.save()
+            log.info(
+                'Increased product %s count by %s in basket %s',
+                product_id,
+                product_count,
+                basket_id,
+            )
 
         products = self._get_products(basket)
-        serializer = ProductShortSerializer(products, many=True)
-
-        response = Response(serializer.data)
-        self._set_basket_cookie(response, basket_id)
-
-        return response
-
-    def _get_products_to_create(self, basket_products_input, basket_products):
-        basket_products_to_create = [
-            bp
-            for key, bp in basket_products_input.items()
-            if key not in basket_products
-        ]
-        log.debug('BasketProduct to create: %s', basket_products_to_create)
-
-        return basket_products_to_create
-
-    def _get_product_ids_to_delete(
-        self, basket_products_input, basket_products
-    ) -> list:
-        basket_products_to_delete = [
-            bp
-            for key, bp in basket_products.items()
-            if key not in basket_products_input
-        ]
-        log.debug('BasketProduct to delete: %s', basket_products_to_delete)
-
-        basket_product_ids_to_delete = [
-            bp.id for bp in basket_products_to_delete
-        ]
-
-        return basket_product_ids_to_delete
-
-    def _get_products_to_update(
-        self, basket_products_input, basket_products
-    ) -> list[BasketProduct]:
-        basket_products_to_update = []
-        for bp in basket_products.values():
-            key = self._bp_unique_key(bp.basket_id.hex, bp.product_id)
-            if key in basket_products_input:
-                bp_input = basket_products_input[key]
-                if bp.count != bp_input.count:
-                    bp.count = bp_input.count
-                    basket_products_to_update.append(bp)
-        log.debug('BasketProduct to update: %s', basket_products_to_update)
-
-        return basket_products_to_update
-
-    def _bp_unique_key(self, basket_id: str, product_id) -> str:
-        """Get BasketProduct unique key"""
-        return basket_id + ':' + str(product_id)
+        return self._get_response(products, basket_id)
 
     def delete(self, request, *args, **kwargs):
+        """Delete from basket some quantity of a product"""
         counts_serializer = BasketItem(data=request.data)
         if not counts_serializer.is_valid():
             return Response(None, status=400)
@@ -504,11 +451,11 @@ class BasketView(
         basket_id = basket.id.hex
 
         product_id = counts_serializer.validated_data['id']
-        product_dec_count = counts_serializer.validated_data['count']
+        product_count = counts_serializer.validated_data['count']
         log.debug(
             'To decrease product %s count by %s in basket %s',
             product_id,
-            product_dec_count,
+            product_count,
             basket_id,
         )
 
@@ -518,9 +465,10 @@ class BasketView(
         basket_product = queryset[0] if queryset else None
 
         if basket_product is None:
+            log.debug('Product %s is not in basket %s', product_id, basket_id)
             return Response(None, status=400)
 
-        basket_product.count -= product_dec_count
+        basket_product.count -= product_count
         if basket_product.count <= 0:
             basket_product.delete()
             log.info(
@@ -533,14 +481,9 @@ class BasketView(
             log.info(
                 'Decreased product %s count by %s in basket %s',
                 product_id,
-                product_dec_count,
+                product_count,
                 basket_id,
             )
 
         products = self._get_products(basket)
-        serializer = ProductShortSerializer(products, many=True)
-
-        response = Response(serializer.data)
-        self._set_basket_cookie(response, basket_id)
-
-        return response
+        return self._get_response(products, basket_id)

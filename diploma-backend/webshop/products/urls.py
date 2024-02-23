@@ -44,5 +44,5 @@ urlpatterns = [
     ),
     path('categories/', TopLevelCategoryListView.as_view(), name='categories'),
     # path('tags/', TagListView.as_view(), name='tags'),
-    path('basket/', BasketView.as_view(), name='basket'),
+    path('basket', BasketView.as_view(), name='basket'),
 ]
