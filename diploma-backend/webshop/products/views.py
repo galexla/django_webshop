@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 import django_filters
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import (
     Case,
@@ -14,16 +15,26 @@ from django.db.models import (
 )
 from django.http.request import QueryDict
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import generics, mixins, pagination, viewsets
+from rest_framework import generics, mixins, pagination, status, viewsets
 from rest_framework.filters import OrderingFilter
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Basket, BasketProduct, Category, Product, Review, Tag
+from .models import (
+    Basket,
+    BasketProduct,
+    Category,
+    Order,
+    OrderProduct,
+    Product,
+    Review,
+    Tag,
+)
 from .serializers import (
     BasketIdSerializer,
-    BasketItem,
+    OrderSerializer,
+    ProductCountSerializer,
     ProductSerializer,
     ProductShortSerializer,
     ReviewCreateSerializer,
@@ -284,7 +295,9 @@ class ReviewCreateView(APIView):
     def post(self, request: Request, pk):
         serializer = ReviewCreateSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(data=serializer.errors, status=400)
+            return Response(
+                data=serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            )
 
         serializer.save(product_id=pk)
         return Response([serializer.data])
@@ -381,9 +394,9 @@ class BasketView(
 
     def post(self, request, *args, **kwargs):
         """Add some quantity of a product to basket"""
-        counts_serializer = BasketItem(data=request.data)
+        counts_serializer = ProductCountSerializer(data=request.data)
         if not counts_serializer.is_valid():
-            return Response(None, status=400)
+            return Response(None, status=status.HTTP_400_BAD_REQUEST)
 
         basket = self._get_basket(request)
         if not basket:
@@ -405,7 +418,7 @@ class BasketView(
             Product.objects.get(id=product_id)
         except Product.DoesNotExist:
             log.debug('Product %s doesn\'t exist', product_id)
-            return Response(None, status=400)
+            return Response(None, status=status.HTTP_400_BAD_REQUEST)
 
         queryset = BasketProduct.objects.filter(
             basket_id=basket_id, product_id=product_id
@@ -440,9 +453,9 @@ class BasketView(
 
     def delete(self, request, *args, **kwargs):
         """Delete from basket some quantity of a product"""
-        counts_serializer = BasketItem(data=request.data)
+        counts_serializer = ProductCountSerializer(data=request.data)
         if not counts_serializer.is_valid():
-            return Response(None, status=400)
+            return Response(None, status=status.HTTP_400_BAD_REQUEST)
 
         basket = self._get_basket(request)
         if not basket:
@@ -466,7 +479,7 @@ class BasketView(
 
         if basket_product is None:
             log.debug('Product %s is not in basket %s', product_id, basket_id)
-            return Response(None, status=400)
+            return Response(None, status=status.HTTP_400_BAD_REQUEST)
 
         basket_product.count -= product_count
         if basket_product.count <= 0:
@@ -487,3 +500,47 @@ class BasketView(
 
         products = self._get_products(basket)
         return self._get_response(products, basket_id)
+
+
+class OrderView(LoginRequiredMixin, APIView):
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        if user.is_anonymous:
+            return Response([])
+
+        orders = (
+            Order.objects.prefetch_related('products').filter(user=user).all()
+        )
+        serializer = OrderSerializer(orders, many=True)
+        log.debug('Got %s orders, user=%s', len(serializer.data), user.id)
+
+        return Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        data = [
+            {
+                'id': item.get('id'),
+                'count': item.get('count'),
+            }
+            for item in request.data
+        ]
+        serializer = ProductCountSerializer(data=data, many=True)
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = request.user
+        order = Order(user=user)
+        order.save()
+
+        order_products = []
+        log.debug(serializer.validated_data)
+        for item in serializer.validated_data:
+            order_product = OrderProduct(
+                order_id=order.id, product_id=item['id'], count=item['count']
+            )
+            order_products.append(order_product)
+        OrderProduct.objects.bulk_create(order_products)
+
+        return Response({'orderId': order.id})

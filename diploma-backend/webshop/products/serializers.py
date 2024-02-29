@@ -149,7 +149,7 @@ class BasketIdSerializer(serializers.Serializer):
     basket_id = serializers.UUIDField()
 
 
-class BasketItem(serializers.Serializer):
+class ProductCountSerializer(serializers.Serializer):
     id = serializers.IntegerField(
         required=True,
         validators=[
@@ -169,20 +169,6 @@ class BasketProductSerializer(serializers.ModelSerializer):
         model = BasketProduct
         fields = ['basket', 'product', 'count']
 
-    # basket_id = serializers.UUIDField(required=True)
-    # product_id = serializers.IntegerField(
-    #     required=True,
-    #     validators=[
-    #         MinValueValidator(0),
-    #     ],
-    # )
-    # count = serializers.IntegerField(
-    #     required=True,
-    #     validators=[
-    #         MinValueValidator(0),
-    #     ],
-    # )
-
 
 class BasketSerializer(serializers.ModelSerializer):
     class Meta:
@@ -191,20 +177,23 @@ class BasketSerializer(serializers.ModelSerializer):
 
     products = BasketProductSerializer(many=True)
 
-    # id = models.UUIDField(
-    #     primary_key=True,
-    #     default=uuid.uuid4,
-    #     editable=False,
-    # )
-    # user = models.ForeignKey(
-    #     User,
-    #     on_delete=models.CASCADE,
-    #     related_name='basket',
-    # )
-    # products = models.ManyToManyField(
-    #     Product,
-    #     through=BasketProduct,
-    # )
-    # last_accessed = models.DateTimeField(
-    #     auto_now=True,
-    # )
+
+class OrderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Basket
+        fields = [
+            'id',
+            'created_at',
+            'full_name',
+            'email',
+            'phone',
+            'delivery_type',
+            'payment_type',
+            'total_cost',
+            'status',
+            'city',
+            'address',
+            'products',
+        ]
+
+    products = ProductShortSerializer()

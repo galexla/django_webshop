@@ -2,7 +2,11 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import (
+    MaxValueValidator,
+    MinValueValidator,
+    RegexValidator,
+)
 from django.db import models
 from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
@@ -256,4 +260,67 @@ class Basket(models.Model):
     )
     last_accessed = models.DateTimeField(
         auto_now=True,
+    )
+
+
+class OrderProduct(models.Model):
+    class Meta:
+        unique_together = ('order', 'product')
+
+    order = models.ForeignKey('Order', on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    count = models.PositiveIntegerField()
+
+
+class Order(models.Model):
+    DELIVERY_ORDINARY = 'ordinary'
+    DELIVERY_EXPRESS = 'express'
+    PAYMENT_ONLINE = 'online'
+    PAYMENT_SOMEONE = 'someone'
+    STATUS_NEW = 'new'
+    STATUS_ACCEPTED = 'accepted'
+
+    user = models.ForeignKey(
+        User, related_name='orders', on_delete=models.CASCADE
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    full_name = models.CharField(blank=True, max_length=120)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(
+        blank=True,
+        max_length=32,
+        validators=[RegexValidator(r'^\+\d{5,}(\#\d+)?$')],
+    )
+    delivery_type = models.CharField(
+        blank=True,
+        max_length=15,
+        choices=(
+            (DELIVERY_ORDINARY, DELIVERY_ORDINARY),
+            (DELIVERY_EXPRESS, DELIVERY_EXPRESS),
+        ),
+    )
+    payment_type = models.CharField(
+        blank=True,
+        max_length=15,
+        choices=(
+            (PAYMENT_ONLINE, PAYMENT_ONLINE),
+            (PAYMENT_SOMEONE, PAYMENT_SOMEONE),
+        ),
+    )
+    total_cost = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0
+    )
+    status = models.CharField(
+        blank=True,
+        max_length=15,
+        choices=(
+            (STATUS_NEW, STATUS_NEW),
+            (STATUS_ACCEPTED, STATUS_ACCEPTED),
+        ),
+        default=STATUS_NEW,
+    )
+    city = models.CharField(blank=True, max_length=150)
+    address = models.CharField(blank=True, max_length=300)
+    products = models.ManyToManyField(
+        Product, through=OrderProduct, related_name='orders'
     )
