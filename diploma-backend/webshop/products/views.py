@@ -341,7 +341,8 @@ class BasketView(
             )
             return None
 
-        self._update_access_time(basket)
+        if basket:
+            self._update_access_time(basket)
 
         return basket
 
