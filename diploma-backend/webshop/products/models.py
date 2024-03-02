@@ -8,6 +8,7 @@ from django.core.validators import (
     RegexValidator,
 )
 from django.db import models
+from django.db.models import Count
 from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
 
@@ -207,6 +208,20 @@ class ProductImage(models.Model):
     )
 
 
+def get_product_short_qs():
+    return (
+        Product.objects.select_related('category')
+        .prefetch_related(
+            'images',
+            'tags',
+            # Prefetch('reviews', queryset=Review.objects.only('id')),
+        )
+        .annotate(reviews_count=Count('reviews'))
+        .filter(archived=False)
+        .all()
+    )
+
+
 class Review(models.Model):
     product = models.ForeignKey(
         Product,
@@ -273,12 +288,25 @@ class OrderProduct(models.Model):
 
 
 class Order(models.Model):
-    DELIVERY_ORDINARY = 'ordinary'
+    DELIVERY_REGULAR = 'regular'
     DELIVERY_EXPRESS = 'express'
     PAYMENT_ONLINE = 'online'
-    PAYMENT_SOMEONE = 'someone'
+    PAYMENT_RANDOM = 'random'
     STATUS_NEW = 'new'
     STATUS_ACCEPTED = 'accepted'
+
+    DELIVERY_TYPES = (
+        (DELIVERY_REGULAR, DELIVERY_REGULAR),
+        (DELIVERY_EXPRESS, DELIVERY_EXPRESS),
+    )
+    PAYMENT_TYPES = (
+        (PAYMENT_ONLINE, PAYMENT_ONLINE),
+        (PAYMENT_RANDOM, PAYMENT_RANDOM),
+    )
+    STATUSES = (
+        (STATUS_NEW, STATUS_NEW),
+        (STATUS_ACCEPTED, STATUS_ACCEPTED),
+    )
 
     user = models.ForeignKey(
         User, related_name='orders', on_delete=models.CASCADE
@@ -294,18 +322,12 @@ class Order(models.Model):
     delivery_type = models.CharField(
         blank=True,
         max_length=15,
-        choices=(
-            (DELIVERY_ORDINARY, DELIVERY_ORDINARY),
-            (DELIVERY_EXPRESS, DELIVERY_EXPRESS),
-        ),
+        choices=DELIVERY_TYPES,
     )
     payment_type = models.CharField(
         blank=True,
         max_length=15,
-        choices=(
-            (PAYMENT_ONLINE, PAYMENT_ONLINE),
-            (PAYMENT_SOMEONE, PAYMENT_SOMEONE),
-        ),
+        choices=PAYMENT_TYPES,
     )
     total_cost = models.DecimalField(
         max_digits=10, decimal_places=2, default=0
@@ -313,10 +335,7 @@ class Order(models.Model):
     status = models.CharField(
         blank=True,
         max_length=15,
-        choices=(
-            (STATUS_NEW, STATUS_NEW),
-            (STATUS_ACCEPTED, STATUS_ACCEPTED),
-        ),
+        choices=STATUSES,
         default=STATUS_NEW,
     )
     city = models.CharField(blank=True, max_length=150)

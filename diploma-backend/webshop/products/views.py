@@ -14,6 +14,7 @@ from django.db.models import (
     When,
 )
 from django.http.request import QueryDict
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, mixins, pagination, status, viewsets
 from rest_framework.filters import OrderingFilter
@@ -30,6 +31,7 @@ from .models import (
     Product,
     Review,
     Tag,
+    get_product_short_qs,
 )
 from .serializers import (
     BasketIdSerializer,
@@ -43,20 +45,6 @@ from .serializers import (
 )
 
 log = logging.getLogger(__name__)
-
-
-def get_product_short_qs():
-    return (
-        Product.objects.select_related('category')
-        .prefetch_related(
-            'images',
-            'tags',
-            Prefetch('reviews', queryset=Review.objects.only('id')),
-        )
-        .annotate(reviews_count=Count('reviews'))
-        .filter(archived=False)
-        .all()
-    )
 
 
 class TopLevelCategoryListView(APIView):
@@ -502,12 +490,9 @@ class BasketView(
         return self._get_response(products, basket_id)
 
 
-class OrderView(LoginRequiredMixin, APIView):
+class OrdersView(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
-        if user.is_anonymous:
-            return Response([])
-
         orders = (
             Order.objects.prefetch_related('products').filter(user=user).all()
         )
@@ -535,7 +520,7 @@ class OrderView(LoginRequiredMixin, APIView):
         order.save()
 
         order_products = []
-        log.debug(serializer.validated_data)
+        log.debug('validated data:', serializer.validated_data)
         for item in serializer.validated_data:
             order_product = OrderProduct(
                 order_id=order.id, product_id=item['id'], count=item['count']
@@ -544,3 +529,22 @@ class OrderView(LoginRequiredMixin, APIView):
         OrderProduct.objects.bulk_create(order_products)
 
         return Response({'orderId': order.id})
+
+
+class OrderView(LoginRequiredMixin, APIView):
+    def get(self, request, pk):
+        order = get_object_or_404(Order, pk=pk, user=request.user)
+        serializer = OrderSerializer(order)
+        return Response(serializer.data)
+
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk, user=request.user)
+        serializer = OrderSerializer(order, data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        serializer.save()
+
+        return Response()

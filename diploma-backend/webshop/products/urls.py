@@ -6,6 +6,7 @@ from .views import (
     BasketView,
     CatalogViewSet,
     LimitedProductsListView,
+    OrdersView,
     OrderView,
     PopularProductsListView,
     ProductDetailView,
@@ -45,5 +46,6 @@ urlpatterns = [
     ),
     path('categories/', TopLevelCategoryListView.as_view(), name='categories'),
     path('basket', BasketView.as_view(), name='basket'),
-    path('orders', OrderView.as_view(), name='orders'),
+    path('orders', OrdersView.as_view(), name='orders'),
+    path('order/<int:pk>', OrderView.as_view(), name='order'),
 ]

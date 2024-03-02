@@ -27,6 +27,7 @@ SECRET_KEY = (
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+# INTERNAL_IPS = ['127.0.0.1']
 ALLOWED_HOSTS = []
 
 
@@ -43,6 +44,7 @@ INSTALLED_APPS = [
     'frontend',
     'account.apps.AccountConfig',
     'products.apps.ProductsConfig',
+    # 'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -55,6 +57,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     #
     # 'request_logging.middleware.LoggingMiddleware',
+    # 'debug_toolbar.middleware.DebugToolbarMiddleware',
 ]
 
 ROOT_URLCONF = 'webshop.urls'
@@ -178,6 +181,7 @@ LOGGING = {
         # 'django.db.backends': {
         #     'level': 'DEBUG',
         #     'handlers': ['console'],
+        #     'propagate': False,
         # },
     },
     'root': {

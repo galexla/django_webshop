@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import transaction
@@ -8,12 +10,16 @@ from .models import (
     Basket,
     BasketProduct,
     Category,
+    Order,
+    OrderProduct,
     Product,
     Review,
     Specification,
     Tag,
+    get_product_short_qs,
 )
 
+log = logging.getLogger(__name__)
 User = get_user_model()
 
 
@@ -131,7 +137,6 @@ class ReviewCreateSerializer(serializers.Serializer):
 
     def save(self, product_id, **kwargs):
         product = get_object_or_404(Product, pk=product_id)
-        assert product, 'Product not found.'
         kwargs['product'] = product
 
         return super().save(**kwargs)
@@ -143,10 +148,6 @@ class ReviewCreateSerializer(serializers.Serializer):
         review.save()
 
         return review
-
-
-class BasketIdSerializer(serializers.Serializer):
-    basket_id = serializers.UUIDField()
 
 
 class ProductCountSerializer(serializers.Serializer):
@@ -162,6 +163,10 @@ class ProductCountSerializer(serializers.Serializer):
             MinValueValidator(0),
         ],
     )
+
+
+class BasketIdSerializer(serializers.Serializer):
+    basket_id = serializers.UUIDField()
 
 
 class BasketProductSerializer(serializers.ModelSerializer):
@@ -180,20 +185,46 @@ class BasketSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Basket
+        model = Order
         fields = [
             'id',
-            'created_at',
-            'full_name',
+            'createdAt',
+            'fullName',
             'email',
             'phone',
-            'delivery_type',
-            'payment_type',
-            'total_cost',
+            'deliveryType',
+            'paymentType',
+            'totalCost',
             'status',
             'city',
             'address',
             'products',
         ]
 
-    products = ProductShortSerializer()
+    createdAt = serializers.CharField(source='created_at', read_only=True)
+    fullName = serializers.CharField(source='full_name')
+    deliveryType = serializers.ChoiceField(
+        source='delivery_type', choices=Order.DELIVERY_TYPES
+    )
+    paymentType = serializers.ChoiceField(
+        source='payment_type', choices=Order.PAYMENT_TYPES
+    )
+    totalCost = serializers.DecimalField(
+        source='total_cost', max_digits=10, decimal_places=2
+    )
+    products = serializers.SerializerMethodField()
+
+    def get_products(self, obj):
+        order_products = OrderProduct.objects.filter(order=obj).all()
+        product_counts = {op.product_id: op.count for op in order_products}
+
+        products = get_product_short_qs()
+        product_ids = list(product_counts.keys())
+        products = products.filter(id__in=product_ids).all()
+
+        result = ProductShortSerializer(products, many=True).data
+
+        for item in result:
+            item['count'] = product_counts[item['id']]
+
+        return result
