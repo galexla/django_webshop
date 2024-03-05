@@ -348,11 +348,11 @@ class BasketView(
 
     def _update_access_time(self, basket: Basket) -> None:
         """Update basket last access time"""
-        seconds = timedelta(seconds=120)
+        update_after = timedelta(seconds=120)
         # TODO: are timezones the same in DB & in code?
         now = datetime.now(timezone(timedelta(0)))
-        if now - seconds > basket.last_accessed:
-            basket.save()  # updates basket.last_accessed
+        if now - update_after > basket.last_accessed:
+            basket.save()  # update basket.last_accessed
 
     def _get_products(self, basket: Basket) -> list[Product]:
         """Get products in basket"""
@@ -383,8 +383,8 @@ class BasketView(
 
     def post(self, request, *args, **kwargs):
         """Add some quantity of a product to basket"""
-        counts_serializer = ProductCountSerializer(data=request.data)
-        if not counts_serializer.is_valid():
+        serializer = ProductCountSerializer(data=request.data)
+        if not serializer.is_valid():
             return Response(None, status=status.HTTP_400_BAD_REQUEST)
 
         basket = self._get_basket(request)
@@ -394,26 +394,34 @@ class BasketView(
 
         basket_id = basket.id.hex
 
-        product_id = counts_serializer.validated_data['id']
-        product_count = counts_serializer.validated_data['count']
+        product_id = serializer.validated_data['id']
+        product_count = serializer.validated_data['count']
         log.debug(
-            'To increase product %s count by %s in basket %s',
-            product_id,
+            'To add %s of product %s to basket %s',
             product_count,
+            product_id,
             basket_id,
         )
 
-        try:
-            Product.objects.get(id=product_id)
-        except Product.DoesNotExist:
-            log.debug('Product %s doesn\'t exist', product_id)
-            return Response(None, status=status.HTTP_400_BAD_REQUEST)
+        get_object_or_404(Product, id=product_id)
 
         queryset = BasketProduct.objects.filter(
             basket_id=basket_id, product_id=product_id
         ).all()
         basket_product = queryset[0] if queryset else None
 
+        self._increment(basket_product, basket_id, product_id, product_count)
+
+        products = self._get_products(basket)
+        return self._get_response(products, basket_id)
+
+    def _increment(
+        self,
+        basket_product: BasketProduct | None,
+        basket_id,
+        product_id,
+        product_count,
+    ):
         if basket_product is None:
             basket_product = BasketProduct(
                 basket_id=basket_id,
@@ -421,29 +429,21 @@ class BasketView(
                 count=product_count,
             )
             basket_product.save()
-            log.info(
-                'Added %s item(s) of product %s to basket %s',
-                product_count,
-                product_id,
-                basket_id,
-            )
         else:
             basket_product.count += product_count
             basket_product.save()
-            log.info(
-                'Increased product %s count by %s in basket %s',
-                product_id,
-                product_count,
-                basket_id,
-            )
 
-        products = self._get_products(basket)
-        return self._get_response(products, basket_id)
+        log.info(
+            'Added %s item(s) of product %s to basket %s',
+            product_count,
+            product_id,
+            basket_id,
+        )
 
     def delete(self, request, *args, **kwargs):
         """Delete from basket some quantity of a product"""
-        counts_serializer = ProductCountSerializer(data=request.data)
-        if not counts_serializer.is_valid():
+        serializer = ProductCountSerializer(data=request.data)
+        if not serializer.is_valid():
             return Response(None, status=status.HTTP_400_BAD_REQUEST)
 
         basket = self._get_basket(request)
@@ -452,12 +452,12 @@ class BasketView(
 
         basket_id = basket.id.hex
 
-        product_id = counts_serializer.validated_data['id']
-        product_count = counts_serializer.validated_data['count']
+        product_id = serializer.validated_data['id']
+        product_count = serializer.validated_data['count']
         log.debug(
-            'To decrease product %s count by %s in basket %s',
-            product_id,
+            'To delete %s of product %s from basket %s',
             product_count,
+            product_id,
             basket_id,
         )
 
@@ -470,25 +470,23 @@ class BasketView(
             log.debug('Product %s is not in basket %s', product_id, basket_id)
             return Response(None, status=status.HTTP_400_BAD_REQUEST)
 
-        basket_product.count -= product_count
-        if basket_product.count <= 0:
-            basket_product.delete()
-            log.info(
-                'Deleted product %s from basket %s',
-                product_id,
-                basket_id,
-            )
-        else:
-            basket_product.save()
-            log.info(
-                'Decreased product %s count by %s in basket %s',
-                product_id,
-                product_count,
-                basket_id,
-            )
+        self._decrement(basket_product, basket_id, product_id, product_count)
 
         products = self._get_products(basket)
         return self._get_response(products, basket_id)
+
+    def _decrement(self, basket_product, basket_id, product_id, product_count):
+        basket_product.count -= product_count
+        if basket_product.count <= 0:
+            basket_product.delete()
+        else:
+            basket_product.save()
+        log.info(
+            'Deleted %s of product %s from basket %s',
+            product_count,
+            product_id,
+            basket_id,
+        )
 
 
 class OrdersView(LoginRequiredMixin, APIView):
