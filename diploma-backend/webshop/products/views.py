@@ -412,13 +412,6 @@ class BasketView(
         products = self._get_products(basket)
         return self._get_response(products, basket_id)
 
-    def is_available(self, product_id, product_count) -> bool:
-        product = get_object_or_404(Product, id=product_id, archived=False)
-        if product.count < product_count:
-            return False
-
-        return True
-
     def _increment(self, basket_id, product_id, product_count):
         product = get_object_or_404(Product, id=product_id, archived=False)
 
@@ -535,8 +528,8 @@ class OrdersView(LoginRequiredMixin, APIView):
             item['id']: item['count'] for item in serializer.validated_data
         }
         with transaction.atomic():
-            if self.are_available(product_counts_dict):
-                order = self.create_order(product_counts_dict, request.user)
+            if self._are_available(product_counts_dict):
+                order = self._create_order(product_counts_dict, request.user)
                 return Response({'orderId': order.id})
             else:
                 return Response(
@@ -546,7 +539,7 @@ class OrdersView(LoginRequiredMixin, APIView):
 
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def create_order(self, product_counts_dict, user):
+    def _create_order(self, product_counts_dict, user):
         order = Order(user=user)
         order.save()
 
@@ -571,7 +564,7 @@ class OrdersView(LoginRequiredMixin, APIView):
 
         return order
 
-    def are_available(self, product_counts_dict: dict[str, int]) -> bool:
+    def _are_available(self, product_counts_dict: dict[str, int]) -> bool:
         ids = set(product_counts_dict.keys())
         products = (
             Product.objects.filter(id__in=ids, archived=False)
