@@ -515,24 +515,15 @@ class OrdersView(LoginRequiredMixin, APIView):
             return Response(
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
             )
+        log.debug('validated product_counts: %s', serializer.validated_data)
 
+        product_counts_dict = {
+            item['id']: item['count'] for item in serializer.validated_data
+        }
+        log.debug('product_counts_dict=%s', product_counts_dict)
         with transaction.atomic():
-            user = request.user
-            order = Order(user=user)
-            order.save()
-
-            order_products = []
-            log.debug('validated data: %s', serializer.validated_data)
-            for item in serializer.validated_data:
-                order_product = OrderProduct(
-                    order_id=order.id,
-                    product_id=item['id'],
-                    count=item['count'],
-                )
-                order_products.append(order_product)
-
-            if self.are_available(serializer.validated_data):
-                OrderProduct.objects.bulk_create(order_products)
+            if self.are_available(product_counts_dict):
+                order = self.create_order(product_counts_dict, request.user)
                 return Response({'orderId': order.id})
             else:
                 return Response(
@@ -544,17 +535,43 @@ class OrdersView(LoginRequiredMixin, APIView):
 
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def are_available(self, product_counts: list[dict[str, int]]) -> bool:
-        product_counts_dict = {
-            item['id']: item['count'] for item in product_counts
-        }
+    def create_order(self, product_counts_dict, user):
+        order = Order(user=user)
+        order.save()
 
-        ids = list(product_counts_dict.keys())
+        order_products = []
+        for product_id, product_count in product_counts_dict.items():
+            order_product = OrderProduct(
+                order_id=order.id,
+                product_id=product_id,
+                count=product_count,
+            )
+            order_products.append(order_product)
+        OrderProduct.objects.bulk_create(order_products)
+
+        product_ids = list(product_counts_dict.keys())
+        log.debug('product_ids: %s', product_ids)
+        products = list(
+            Product.objects.filter(id__in=product_ids, archived=False).all()
+        )
+        for product in products:
+            product.count -= product_counts_dict[product.id]
+        Product.objects.bulk_update(products, fields=['count'])
+
+        return order
+
+    def are_available(self, product_counts_dict: dict[str, int]) -> bool:
+        ids = set(product_counts_dict.keys())
         products = (
             Product.objects.filter(id__in=ids, archived=False)
-            .only('id', 'count')
+            # .only('id', 'count')
             .all()
         )
+        ids_fetched = set(product.id for product in products)
+
+        if ids_fetched != ids:
+            return False
+
         for product in products:
             if product.count < product_counts_dict[product.id]:
                 return False
