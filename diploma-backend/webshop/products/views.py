@@ -385,7 +385,7 @@ class BasketView(
         """Add some quantity of a product to basket"""
         serializer = ProductCountSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(None, status=status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
         basket = self._get_basket(request)
         if not basket:
@@ -403,26 +403,34 @@ class BasketView(
             basket_id,
         )
 
-        get_object_or_404(Product, id=product_id)
+        if not self._increment(basket_id, product_id, product_count):
+            return Response(
+                {'count': ['Product quantity is not available.']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        products = self._get_products(basket)
+        return self._get_response(products, basket_id)
+
+    def is_available(self, product_id, product_count) -> bool:
+        product = get_object_or_404(Product, id=product_id, archived=False)
+        if product.count < product_count:
+            return False
+
+        return True
+
+    def _increment(self, basket_id, product_id, product_count):
+        product = get_object_or_404(Product, id=product_id, archived=False)
 
         queryset = BasketProduct.objects.filter(
             basket_id=basket_id, product_id=product_id
         ).all()
         basket_product = queryset[0] if queryset else None
 
-        self._increment(basket_product, basket_id, product_id, product_count)
-
-        products = self._get_products(basket)
-        return self._get_response(products, basket_id)
-
-    def _increment(
-        self,
-        basket_product: BasketProduct | None,
-        basket_id,
-        product_id,
-        product_count,
-    ):
         if basket_product is None:
+            if product.count < product_count:
+                return False
+
             basket_product = BasketProduct(
                 basket_id=basket_id,
                 product_id=product_id,
@@ -430,6 +438,9 @@ class BasketView(
             )
             basket_product.save()
         else:
+            if product.count < basket_product.count + product_count:
+                return False
+
             basket_product.count += product_count
             basket_product.save()
 
@@ -440,11 +451,13 @@ class BasketView(
             basket_id,
         )
 
+        return True
+
     def delete(self, request, *args, **kwargs):
         """Delete from basket some quantity of a product"""
         serializer = ProductCountSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(None, status=status.HTTP_400_BAD_REQUEST)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
 
         basket = self._get_basket(request)
         if not basket:
@@ -461,6 +474,13 @@ class BasketView(
             basket_id,
         )
 
+        if not self._decrement(basket_id, product_id, product_count):
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        products = self._get_products(basket)
+        return self._get_response(products, basket_id)
+
+    def _decrement(self, basket_id, product_id, product_count):
         queryset = BasketProduct.objects.filter(
             basket_id=basket_id, product_id=product_id
         ).all()
@@ -468,14 +488,8 @@ class BasketView(
 
         if basket_product is None:
             log.debug('Product %s is not in basket %s', product_id, basket_id)
-            return Response(None, status=status.HTTP_400_BAD_REQUEST)
+            return False
 
-        self._decrement(basket_product, basket_id, product_id, product_count)
-
-        products = self._get_products(basket)
-        return self._get_response(products, basket_id)
-
-    def _decrement(self, basket_product, basket_id, product_id, product_count):
         basket_product.count -= product_count
         if basket_product.count <= 0:
             basket_product.delete()
@@ -487,6 +501,8 @@ class BasketView(
             product_id,
             basket_id,
         )
+
+        return True
 
 
 class OrdersView(LoginRequiredMixin, APIView):
@@ -518,16 +534,13 @@ class OrdersView(LoginRequiredMixin, APIView):
         product_counts_dict = {
             item['id']: item['count'] for item in serializer.validated_data
         }
-        log.debug('product_counts_dict=%s', product_counts_dict)
         with transaction.atomic():
             if self.are_available(product_counts_dict):
                 order = self.create_order(product_counts_dict, request.user)
                 return Response({'orderId': order.id})
             else:
                 return Response(
-                    {
-                        'count': ['Product amounts are not available.'],
-                    },
+                    {'count': ['Product quantities are not available.']},
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
