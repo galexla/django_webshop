@@ -503,33 +503,63 @@ class OrdersView(LoginRequiredMixin, APIView):
         return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
-        data = [
+        product_counts = [
             {
                 'id': item.get('id'),
                 'count': item.get('count'),
             }
             for item in request.data
         ]
-        serializer = ProductCountSerializer(data=data, many=True)
+        serializer = ProductCountSerializer(data=product_counts, many=True)
         if not serializer.is_valid():
             return Response(
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
             )
 
-        user = request.user
-        order = Order(user=user)
-        order.save()
+        with transaction.atomic():
+            user = request.user
+            order = Order(user=user)
+            order.save()
 
-        order_products = []
-        log.debug('validated data:', serializer.validated_data)
-        for item in serializer.validated_data:
-            order_product = OrderProduct(
-                order_id=order.id, product_id=item['id'], count=item['count']
-            )
-            order_products.append(order_product)
-        OrderProduct.objects.bulk_create(order_products)
+            order_products = []
+            log.debug('validated data: %s', serializer.validated_data)
+            for item in serializer.validated_data:
+                order_product = OrderProduct(
+                    order_id=order.id,
+                    product_id=item['id'],
+                    count=item['count'],
+                )
+                order_products.append(order_product)
 
-        return Response({'orderId': order.id})
+            if self.are_available(serializer.validated_data):
+                OrderProduct.objects.bulk_create(order_products)
+                return Response({'orderId': order.id})
+            else:
+                return Response(
+                    {
+                        'count': ['Product amounts are not available.'],
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    def are_available(self, product_counts: list[dict[str, int]]) -> bool:
+        product_counts_dict = {
+            item['id']: item['count'] for item in product_counts
+        }
+
+        ids = list(product_counts_dict.keys())
+        products = (
+            Product.objects.filter(id__in=ids, archived=False)
+            .only('id', 'count')
+            .all()
+        )
+        for product in products:
+            if product.count < product_counts_dict[product.id]:
+                return False
+
+        return True
 
 
 class OrderView(LoginRequiredMixin, APIView):

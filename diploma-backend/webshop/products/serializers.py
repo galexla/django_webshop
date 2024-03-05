@@ -7,8 +7,6 @@ from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 
 from .models import (
-    Basket,
-    BasketProduct,
     Category,
     Order,
     OrderProduct,
@@ -169,20 +167,6 @@ class BasketIdSerializer(serializers.Serializer):
     basket_id = serializers.UUIDField()
 
 
-class BasketProductSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BasketProduct
-        fields = ['basket', 'product', 'count']
-
-
-class BasketSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Basket
-        fields = ['id', 'user', 'products', 'last_accessed']
-
-    products = BasketProductSerializer(many=True)
-
-
 class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
@@ -212,7 +196,7 @@ class OrderSerializer(serializers.ModelSerializer):
     totalCost = serializers.DecimalField(
         source='total_cost', max_digits=10, decimal_places=2
     )
-    products = serializers.SerializerMethodField()
+    products = serializers.SerializerMethodField(read_only=True)
 
     def get_products(self, obj):
         order_products = OrderProduct.objects.filter(order=obj).all()

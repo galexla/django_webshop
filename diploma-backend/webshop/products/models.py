@@ -291,7 +291,7 @@ class Order(models.Model):
     DELIVERY_REGULAR = 'regular'
     DELIVERY_EXPRESS = 'express'
     PAYMENT_ONLINE = 'online'
-    PAYMENT_RANDOM = 'random'
+    PAYMENT_SOMEONE = 'someone'
     STATUS_NEW = 'new'
     STATUS_ACCEPTED = 'accepted'
 
@@ -301,7 +301,7 @@ class Order(models.Model):
     )
     PAYMENT_TYPES = (
         (PAYMENT_ONLINE, PAYMENT_ONLINE),
-        (PAYMENT_RANDOM, PAYMENT_RANDOM),
+        (PAYMENT_SOMEONE, PAYMENT_SOMEONE),
     )
     STATUSES = (
         (STATUS_NEW, STATUS_NEW),
