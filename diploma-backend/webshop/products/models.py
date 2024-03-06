@@ -208,13 +208,12 @@ class ProductImage(models.Model):
     )
 
 
-def get_product_short_qs():
+def get_products_queryset():
     return (
         Product.objects.select_related('category')
         .prefetch_related(
             'images',
             'tags',
-            # Prefetch('reviews', queryset=Review.objects.only('id')),
         )
         .annotate(reviews_count=Count('reviews'))
         .filter(archived=False)

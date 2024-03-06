@@ -14,7 +14,7 @@ from .models import (
     Review,
     Specification,
     Tag,
-    get_product_short_qs,
+    get_products_queryset,
 )
 
 log = logging.getLogger(__name__)
@@ -202,7 +202,7 @@ class OrderSerializer(serializers.ModelSerializer):
         order_products = OrderProduct.objects.filter(order=obj).all()
         product_counts = {op.product_id: op.count for op in order_products}
 
-        products = get_product_short_qs()
+        products = get_products_queryset()
         product_ids = list(product_counts.keys())
         products = products.filter(id__in=product_ids).all()
 

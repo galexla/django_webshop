@@ -4,15 +4,7 @@ from datetime import datetime, timedelta, timezone
 import django_filters
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import (
-    Case,
-    Count,
-    IntegerField,
-    Prefetch,
-    Q,
-    Value,
-    When,
-)
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.http.request import QueryDict
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -29,9 +21,8 @@ from .models import (
     Order,
     OrderProduct,
     Product,
-    Review,
     Tag,
-    get_product_short_qs,
+    get_products_queryset,
 )
 from .serializers import (
     BasketIdSerializer,
@@ -184,13 +175,7 @@ class CatalogOrderingFilter(OrderingFilter):
 
 class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     queryset = (
-        Product.objects.select_related('category')
-        .prefetch_related(
-            'images',
-            'tags',
-            Prefetch('reviews', queryset=Review.objects.only('id')),
-        )
-        .annotate(reviews_count=Count('reviews'))
+        get_products_queryset()
         .annotate(
             available=Case(
                 When(count=0, then=Value(0)),
@@ -199,7 +184,6 @@ class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
             )
         )
         .defer('full_description')
-        .filter(archived=False)
         .all()
     )
     serializer_class = ProductShortSerializer
@@ -213,15 +197,8 @@ class CatalogViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
 
 class PopularProductsListView(generics.ListAPIView):
     queryset = (
-        Product.objects.select_related('category')
-        .prefetch_related(
-            'images',
-            'tags',
-            Prefetch('reviews', queryset=Review.objects.only('id')),
-        )
-        .annotate(reviews_count=Count('reviews'))
+        get_products_queryset()
         .defer('full_description')
-        .filter(archived=False)
         .order_by('-rating', '-purchases')
         .all()[:8]
     )
@@ -231,16 +208,9 @@ class PopularProductsListView(generics.ListAPIView):
 
 class LimitedProductsListView(generics.ListAPIView):
     queryset = (
-        Product.objects.select_related('category')
-        .prefetch_related(
-            'images',
-            'tags',
-            Prefetch('reviews', queryset=Review.objects.only('id')),
-        )
-        .annotate(reviews_count=Count('reviews'))
+        get_products_queryset()
         .defer('full_description')
         .filter(is_limited_edition=True)
-        .filter(archived=False)
         .all()[:16]
     )
     serializer_class = ProductShortSerializer
@@ -249,16 +219,9 @@ class LimitedProductsListView(generics.ListAPIView):
 
 class BannerProductsListView(generics.ListAPIView):
     queryset = (
-        Product.objects.select_related('category')
-        .prefetch_related(
-            'images',
-            'tags',
-            Prefetch('reviews', queryset=Review.objects.only('id')),
-        )
-        .annotate(reviews_count=Count('reviews'))
+        get_products_queryset()
         .defer('full_description')
         .filter(is_banner=True)
-        .filter(archived=False)
         .all()[:3]
     )
     serializer_class = ProductShortSerializer
@@ -364,7 +327,7 @@ class BasketView(
             'Got product counts %s in basket %s', product_counts, basket.id
         )
 
-        products = get_product_short_qs()
+        products = get_products_queryset()
         products = list(products.filter(id__in=basket.products.all()))
         log.debug('Got products %s from basket %s', products, basket.id)
         for product in products:
