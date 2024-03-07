@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime, timedelta, timezone
 
 import django_filters
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -14,6 +13,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from .common import get_basket
 from .models import (
     Basket,
     BasketProduct,
@@ -25,7 +25,6 @@ from .models import (
     get_products_queryset,
 )
 from .serializers import (
-    BasketIdSerializer,
     OrderSerializer,
     ProductCountSerializer,
     ProductSerializer,
@@ -254,15 +253,6 @@ class ReviewCreateView(APIView):
         return Response([serializer.data])
 
 
-def get_client_ip(request):
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        ip = x_forwarded_for.split(',')[0]
-    else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
-
-
 class BasketView(
     generics.mixins.DestroyModelMixin, generics.ListCreateAPIView
 ):
@@ -270,52 +260,13 @@ class BasketView(
 
     def get(self, request, *args, **kwargs):
         """Get basket contents"""
-        basket = self._get_basket(request)
+        basket = get_basket(request)
         if basket:
             log.debug('Got basket: %s', basket.id)
             products = self._get_products(basket)
             return self._get_response(products, basket.id)
 
         return Response([])
-
-    def _get_basket(self, request: Request) -> Basket:
-        """Get basket by COOKIES.basket_id or by current user"""
-        user = request.user if not request.user.is_anonymous else None
-        queryset = Basket.objects.all()
-
-        if user:
-            queryset = queryset.filter(user=user)
-        else:
-            # basket_id = request._request.COOKIES.get('basket_id')
-            basket_id = request.COOKIES.get('basket_id')
-            serializer = BasketIdSerializer(data={'basket_id': basket_id})
-            if serializer.is_valid():
-                queryset = queryset.filter(
-                    id=serializer.validated_data['basket_id']
-                )
-
-        basket = queryset[0] if queryset else None
-
-        if basket and basket.user != user:
-            ip = get_client_ip(request)
-            user_id = user.id if user else None
-            log.warning(
-                f'User {user_id} [{ip}] attempts to retrieve basket of user {basket.user.id}'
-            )
-            return None
-
-        if basket:
-            self._update_access_time(basket)
-
-        return basket
-
-    def _update_access_time(self, basket: Basket) -> None:
-        """Update basket last access time"""
-        update_after = timedelta(seconds=120)
-        # TODO: are timezones the same in DB & in code?
-        now = datetime.now(timezone(timedelta(0)))
-        if now - update_after > basket.last_accessed:
-            basket.save()  # update basket.last_accessed
 
     def _get_products(self, basket: Basket) -> list[Product]:
         """Get products in basket"""
@@ -350,7 +301,7 @@ class BasketView(
         if not serializer.is_valid():
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        basket = self._get_basket(request)
+        basket = get_basket(request)
         if not basket:
             user = request.user if not request.user.is_anonymous else None
             basket = Basket.objects.create(user=user)
@@ -415,7 +366,7 @@ class BasketView(
         if not serializer.is_valid():
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
-        basket = self._get_basket(request)
+        basket = get_basket(request)
         if not basket:
             return Response([])
 
@@ -529,11 +480,7 @@ class OrdersView(LoginRequiredMixin, APIView):
 
     def _are_available(self, product_counts_dict: dict[str, int]) -> bool:
         ids = set(product_counts_dict.keys())
-        products = (
-            Product.objects.filter(id__in=ids, archived=False)
-            # .only('id', 'count')
-            .all()
-        )
+        products = Product.objects.filter(id__in=ids, archived=False).all()
         ids_fetched = set(product.id for product in products)
 
         if ids_fetched != ids:

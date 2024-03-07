@@ -1,6 +1,6 @@
 import logging
 
-from django.contrib.auth import get_user_model
+from account.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -18,7 +18,6 @@ from .models import (
 )
 
 log = logging.getLogger(__name__)
-User = get_user_model()
 
 
 class ImageSerializer(serializers.Serializer):

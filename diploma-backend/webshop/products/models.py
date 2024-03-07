@@ -1,6 +1,6 @@
 import uuid
 
-from django.contrib.auth import get_user_model
+from account.models import User
 from django.core.exceptions import ValidationError
 from django.core.validators import (
     MaxValueValidator,
@@ -11,8 +11,6 @@ from django.db import models
 from django.db.models import Count
 from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
-
-User = get_user_model()
 
 
 class Tag(models.Model):
