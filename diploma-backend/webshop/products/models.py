@@ -285,7 +285,7 @@ class OrderProduct(models.Model):
 
 
 class Order(models.Model):
-    DELIVERY_REGULAR = 'regular'
+    DELIVERY_ORDINARY = 'ordinary'
     DELIVERY_EXPRESS = 'express'
     PAYMENT_ONLINE = 'online'
     PAYMENT_SOMEONE = 'someone'
@@ -293,7 +293,7 @@ class Order(models.Model):
     STATUS_ACCEPTED = 'accepted'
 
     DELIVERY_TYPES = (
-        (DELIVERY_REGULAR, DELIVERY_REGULAR),
+        (DELIVERY_ORDINARY, DELIVERY_ORDINARY),
         (DELIVERY_EXPRESS, DELIVERY_EXPRESS),
     )
     PAYMENT_TYPES = (
