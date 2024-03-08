@@ -1,6 +1,7 @@
 import logging
 
 import django_filters
+from account.models import User
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Case, IntegerField, Q, Value, When
@@ -453,8 +454,11 @@ class OrdersView(LoginRequiredMixin, APIView):
 
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def _create_order(self, product_counts_dict, user):
+    def _create_order(self, product_counts_dict, user: User):
         order = Order(user=user)
+        order.full_name = user.get_full_name()
+        order.phone = user.profile.phone
+        order.email = user.email
         order.save()
 
         order_products = []
@@ -472,8 +476,12 @@ class OrdersView(LoginRequiredMixin, APIView):
         products = list(
             Product.objects.filter(id__in=product_ids, archived=False).all()
         )
+        order.total_cost = 0
         for product in products:
-            product.count -= product_counts_dict[product.id]
+            count = product_counts_dict[product.id]
+            product.count -= count
+            order.total_cost += product.price * count
+        order.save()
         Product.objects.bulk_update(products, fields=['count'])
 
         return order
