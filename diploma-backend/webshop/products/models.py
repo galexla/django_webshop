@@ -293,14 +293,17 @@ class Order(models.Model):
     STATUS_ACCEPTED = 'accepted'
 
     DELIVERY_TYPES = (
+        ('', ''),
         (DELIVERY_ORDINARY, DELIVERY_ORDINARY),
         (DELIVERY_EXPRESS, DELIVERY_EXPRESS),
     )
     PAYMENT_TYPES = (
+        ('', ''),
         (PAYMENT_ONLINE, PAYMENT_ONLINE),
         (PAYMENT_SOMEONE, PAYMENT_SOMEONE),
     )
     STATUSES = (
+        ('', ''),
         (STATUS_NEW, STATUS_NEW),
         (STATUS_ACCEPTED, STATUS_ACCEPTED),
     )
