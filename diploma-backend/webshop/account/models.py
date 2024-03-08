@@ -22,6 +22,7 @@ class Profile(models.Model):
     user = models.OneToOneField(
         'User',
         on_delete=models.CASCADE,
+        related_name='profile',
     )
     phone = models.CharField(
         verbose_name=_('phone number'),
