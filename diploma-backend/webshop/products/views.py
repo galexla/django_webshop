@@ -81,7 +81,9 @@ class CatalogPagination(pagination.PageNumberPagination):
 
 
 class CatalogFilter(django_filters.FilterSet):
-    name = django_filters.CharFilter(field_name='title', lookup_expr='iexact')
+    name = django_filters.CharFilter(
+        field_name='title', lookup_expr='istartswith'
+    )
     category = django_filters.NumberFilter(
         field_name='category', method='filter_by_category_or_parent'
     )
