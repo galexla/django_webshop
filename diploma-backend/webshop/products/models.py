@@ -290,7 +290,8 @@ class Order(models.Model):
     PAYMENT_ONLINE = 'online'
     PAYMENT_SOMEONE = 'someone'
     STATUS_NEW = 'new'
-    STATUS_ACCEPTED = 'accepted'
+    STATUS_PROCESSING = 'processing'
+    STATUS_PAID = 'paid'
 
     DELIVERY_TYPES = (
         ('', ''),
@@ -303,9 +304,9 @@ class Order(models.Model):
         (PAYMENT_SOMEONE, PAYMENT_SOMEONE),
     )
     STATUSES = (
-        ('', ''),
         (STATUS_NEW, STATUS_NEW),
-        (STATUS_ACCEPTED, STATUS_ACCEPTED),
+        (STATUS_PROCESSING, STATUS_PROCESSING),
+        (STATUS_PAID, STATUS_PAID),
     )
 
     user = models.ForeignKey(
@@ -333,7 +334,6 @@ class Order(models.Model):
         max_digits=10, decimal_places=2, default=0
     )
     status = models.CharField(
-        blank=True,
         max_length=15,
         choices=STATUSES,
         default=STATUS_NEW,
