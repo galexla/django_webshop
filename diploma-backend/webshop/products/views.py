@@ -254,6 +254,32 @@ class ReviewCreateView(APIView):
         return Response([serializer.data])
 
 
+def basket_decrement(basket_id, product_counts: dict[str, int]) -> bool:
+    product_ids = list(product_counts.keys())
+    basket_products = BasketProduct.objects.filter(
+        basket_id=basket_id, product__in=product_ids
+    ).all()
+
+    if basket_products is None:
+        log.info(
+            'Unable to delete, products %s are not in basket %s',
+            product_ids,
+            basket_id,
+        )
+        return False
+
+    for basket_product in basket_products:
+        basket_product.count -= product_counts[basket_product.product_id]
+        if basket_product.count <= 0:
+            basket_product.delete()
+        else:
+            basket_product.save()
+
+    log.info('Deleted products from basket %s', basket_id)
+
+    return True
+
+
 class BasketView(
     generics.mixins.DestroyModelMixin, generics.ListCreateAPIView
 ):
@@ -330,10 +356,9 @@ class BasketView(
     def _increment(self, basket_id, product_id, product_count):
         product = get_object_or_404(Product, id=product_id, archived=False)
 
-        queryset = BasketProduct.objects.filter(
+        basket_product = BasketProduct.objects.filter(
             basket_id=basket_id, product_id=product_id
-        ).all()
-        basket_product = queryset[0] if queryset else None
+        ).first()
 
         if basket_product is None:
             if product.count < product_count:
@@ -389,28 +414,7 @@ class BasketView(
         return self._get_response(products, basket_id)
 
     def _decrement(self, basket_id, product_id, product_count):
-        queryset = BasketProduct.objects.filter(
-            basket_id=basket_id, product_id=product_id
-        ).all()
-        basket_product = queryset[0] if queryset else None
-
-        if basket_product is None:
-            log.debug('Product %s is not in basket %s', product_id, basket_id)
-            return False
-
-        basket_product.count -= product_count
-        if basket_product.count <= 0:
-            basket_product.delete()
-        else:
-            basket_product.save()
-        log.info(
-            'Deleted %s of product %s from basket %s',
-            product_count,
-            product_id,
-            basket_id,
-        )
-
-        return True
+        return basket_decrement(basket_id, {product_id: product_count})
 
 
 class OrdersView(LoginRequiredMixin, APIView):
@@ -445,6 +449,9 @@ class OrdersView(LoginRequiredMixin, APIView):
         with transaction.atomic():
             if self._are_available(product_counts_dict):
                 order = self._create_order(product_counts_dict, request.user)
+                basket = Basket.objects.filter(user=request.user).first()
+                if basket:
+                    basket_decrement(basket.id, product_counts_dict)
                 return Response({'orderId': order.id})
             else:
                 return Response(
@@ -454,7 +461,7 @@ class OrdersView(LoginRequiredMixin, APIView):
 
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    def _create_order(self, product_counts_dict, user: User):
+    def _create_order(self, product_counts: dict[str, int], user: User):
         order = Order(user=user)
         order.full_name = user.get_full_name()
         order.phone = user.profile.phone
@@ -462,23 +469,23 @@ class OrdersView(LoginRequiredMixin, APIView):
         order.save()
 
         order_products = []
-        for product_id, product_count in product_counts_dict.items():
+        for product_id, count in product_counts.items():
             order_product = OrderProduct(
                 order_id=order.id,
                 product_id=product_id,
-                count=product_count,
+                count=count,
             )
             order_products.append(order_product)
         OrderProduct.objects.bulk_create(order_products)
 
-        product_ids = list(product_counts_dict.keys())
+        product_ids = list(product_counts.keys())
         log.debug('product_ids: %s', product_ids)
         products = list(
             Product.objects.filter(id__in=product_ids, archived=False).all()
         )
         order.total_cost = 0
         for product in products:
-            count = product_counts_dict[product.id]
+            count = product_counts[product.id]
             product.count -= count
             order.total_cost += product.price * count
         order.save()

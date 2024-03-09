@@ -28,8 +28,7 @@ def get_basket_by_user(user: User) -> Basket | None:
     if user is None or user.is_anonymous:
         return None
 
-    queryset = Basket.objects.filter(user=user).all()
-    return queryset[0] if queryset else None
+    return Basket.objects.filter(user=user).first()
 
 
 def get_basket_by_cookie(request: Request) -> Basket | None:
@@ -38,10 +37,9 @@ def get_basket_by_cookie(request: Request) -> Basket | None:
     if not serializer.is_valid():
         return None
 
-    queryset = Basket.objects.filter(
+    return Basket.objects.filter(
         id=serializer.validated_data['basket_id']
-    ).all()
-    return queryset[0] if queryset else None
+    ).first()
 
 
 def get_client_ip(request: Request):
