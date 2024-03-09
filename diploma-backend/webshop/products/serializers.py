@@ -1,6 +1,5 @@
 import logging
 
-from account.models import User
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import transaction
 from django.shortcuts import get_object_or_404
@@ -184,7 +183,9 @@ class OrderSerializer(serializers.ModelSerializer):
             'products',
         ]
 
-    createdAt = serializers.CharField(source='created_at', read_only=True)
+    createdAt = serializers.DateTimeField(
+        source='created_at', read_only=True, format='%Y.%m.%d %H:%M:%S'
+    )
     fullName = serializers.CharField(source='full_name')
     deliveryType = serializers.ChoiceField(
         source='delivery_type', choices=Order.DELIVERY_TYPES
