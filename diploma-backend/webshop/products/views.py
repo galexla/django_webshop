@@ -423,7 +423,10 @@ class OrdersView(LoginRequiredMixin, APIView):
     def get(self, request, *args, **kwargs):
         user = request.user
         orders = (
-            Order.objects.prefetch_related('products').filter(user=user).all()
+            Order.objects.prefetch_related('products')
+            .filter(user=user)
+            .order_by('-created_at')
+            .all()
         )
         serializer = OrderSerializer(orders, many=True)
         log.debug('Got %s orders, user=%s', len(serializer.data), user.id)
@@ -468,6 +471,7 @@ class OrdersView(LoginRequiredMixin, APIView):
         order.full_name = user.get_full_name()
         order.phone = user.profile.phone
         order.email = user.email
+        order.status = order.STATUS_NEW
         order.save()
 
         order_products = []
@@ -518,12 +522,23 @@ class OrderView(LoginRequiredMixin, APIView):
 
     def post(self, request, pk):
         order = get_object_or_404(Order, pk=pk, user=request.user)
+        if order.status != Order.STATUS_NEW:
+            return Response(
+                {
+                    'status': [
+                        f'You can only modify orders with status "{Order.STATUS_NEW}".'
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         serializer = OrderSerializer(order, data=request.data)
         if not serializer.is_valid():
             return Response(
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
             )
 
+        serializer.validated_data['status'] = Order.STATUS_PROCESSING
         serializer.save()
 
         return Response()
