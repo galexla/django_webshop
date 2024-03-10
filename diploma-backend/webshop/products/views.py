@@ -1,10 +1,12 @@
 import logging
+from datetime import datetime, timedelta
 
 import django_filters
 from account.models import User
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Case, IntegerField, Q, Value, When
+from django.db.models import Case, IntegerField, Q, Sum, Value, When
+from django.db.models.functions import TruncDate
 from django.http.request import QueryDict
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -66,9 +68,8 @@ class TagListViewSet(mixins.ListModelMixin, viewsets.GenericViewSet):
     pagination_class = None
 
 
-class CatalogPagination(pagination.PageNumberPagination):
+class Pagination(pagination.PageNumberPagination):
     page_query_param = 'currentPage'
-    page_size_query_param = 'limit'
 
     def get_paginated_response(self, data):
         return Response(
@@ -78,6 +79,10 @@ class CatalogPagination(pagination.PageNumberPagination):
                 'lastPage': self.page.paginator.num_pages,
             }
         )
+
+
+class CatalogPagination(Pagination):
+    page_size_query_param = 'limit'
 
 
 class CatalogFilter(django_filters.FilterSet):
@@ -228,6 +233,51 @@ class BannerProductsListView(generics.ListAPIView):
     )
     serializer_class = ProductShortSerializer
     pagination_class = None
+
+
+# class Sales(generics.ListAPIView):
+class Sales(APIView):
+    # pagination_class = Pagination
+
+    def get(self, request, *args, **kwargs):
+        queryset = (
+            OrderProduct.objects
+            # .prefetch_related('product', 'product__images')
+            .annotate(date=TruncDate('order__created_at'))
+            .values('date', 'product_id', 'count')
+            .annotate(product_count=Sum('count'))
+            .annotate(total_price=Sum('product__price'))
+            # .filter(order__archived=False)
+            .all()
+        )
+
+        if queryset is None:
+            return Response([])
+
+        # pagination = Pagination()
+        # queryset = pagination.paginate_queryset(queryset, request)
+
+        min_date = min(queryset, key=lambda x: x['date'])
+        max_date = max(queryset, key=lambda x: x['date'])
+        min_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        max_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        start_date = min_date - timedelta(days=min_date.isoweekday() - 1)
+        end_date = max_date + timedelta(days=7 - max_date.isoweekday())
+        n_weeks = round((end_date - start_date).days / 7)
+
+        for i_week in range(n_weeks):
+            week_start = start_date + i_week * timedelta(days=7)
+
+        for item in result:
+            result.append(
+                {
+                    '': item['product_id'],
+                    '': item['product_id'],
+                    '': item['product_id'],
+                    '': item['product_id'],
+                    '': item['product_id'],
+                }
+            )
 
 
 class ProductDetailView(generics.RetrieveAPIView):
