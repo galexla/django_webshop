@@ -2,8 +2,11 @@ import uuid
 
 from account.models import User
 from django.core.exceptions import ValidationError
-from django.core.validators import (MaxValueValidator, MinValueValidator,
-                                    RegexValidator)
+from django.core.validators import (
+    MaxValueValidator,
+    MinValueValidator,
+    RegexValidator,
+)
 from django.db import models
 from django.db.models import Count
 from django.db.models.functions import Lower
@@ -92,7 +95,6 @@ class Product(models.Model):
         indexes = [
             models.Index(Lower('title'), name='idx_product_title_lower'),
             models.Index(fields=['price'], name='idx_product_price'),
-            models.Index(fields=['category'], name='idx_product_category'),
             models.Index(fields=['count'], name='idx_product_count'),
             models.Index(fields=['date'], name='idx_product_date'),
             models.Index(
@@ -128,7 +130,7 @@ class Product(models.Model):
     count = models.PositiveIntegerField(
         default=0,
     )
-    purchases = models.PositiveIntegerField(
+    sold_count = models.PositiveIntegerField(
         default=0,
     )
     date = models.DateTimeField(

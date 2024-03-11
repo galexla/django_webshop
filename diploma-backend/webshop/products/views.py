@@ -206,7 +206,7 @@ class PopularProductsListView(generics.ListAPIView):
     queryset = (
         get_products_queryset()
         .defer('full_description')
-        .order_by('-rating', '-purchases')
+        .order_by('-rating', '-sold_count')
         .all()[:8]
     )
     serializer_class = ProductShortSerializer

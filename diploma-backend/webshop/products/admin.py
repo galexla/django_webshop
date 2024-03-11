@@ -69,7 +69,7 @@ class ProductAdmin(admin.ModelAdmin):
         'date',
         'short_description',
         'free_delivery',
-        'purchases',
+        'sold_count',
         'limited',
         'banner',
         'rating',
