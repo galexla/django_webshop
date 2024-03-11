@@ -11,6 +11,7 @@ from .models import (
     OrderProduct,
     Product,
     Review,
+    Sale,
     Specification,
     Tag,
     get_products_queryset,
@@ -117,6 +118,20 @@ class ProductSerializer(serializers.ModelSerializer):
     reviews = ReviewSerializer(many=True, read_only=True)
     fullDescription = serializers.CharField(source='full_description')
     freeDelivery = serializers.CharField(source='free_delivery')
+
+
+class SaleSerializer(serializers.Serializer):
+    id = serializers.IntegerField(source='product.id')
+    price = serializers.DecimalField(
+        source='product.price', max_digits=8, decimal_places=2
+    )
+    salePrice = serializers.DecimalField(
+        source='sale_price', max_digits=8, decimal_places=2
+    )
+    dateFrom = serializers.DateTimeField(source='date_from')
+    dateTo = serializers.DateTimeField(source='date_to')
+    title = serializers.CharField(source='product.title')
+    images = ImageSerializer(source='product.images', many=True)
 
 
 class ReviewCreateSerializer(serializers.Serializer):

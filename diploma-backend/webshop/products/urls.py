@@ -11,6 +11,7 @@ from .views import (
     PopularProductsListView,
     ProductDetailView,
     ReviewCreateView,
+    SalesView,
     TagListViewSet,
     TopLevelCategoryListView,
 )
@@ -44,6 +45,7 @@ urlpatterns = [
         LimitedProductsListView.as_view(),
         name='limited-products',
     ),
+    path('sales/', SalesView.as_view(), name='sales'),
     path('categories/', TopLevelCategoryListView.as_view(), name='categories'),
     path('basket', BasketView.as_view(), name='basket'),
     path('orders', OrdersView.as_view(), name='orders'),

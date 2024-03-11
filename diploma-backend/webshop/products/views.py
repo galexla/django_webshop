@@ -24,6 +24,7 @@ from .models import (
     Order,
     OrderProduct,
     Product,
+    Sale,
     Tag,
     get_products_queryset,
 )
@@ -33,6 +34,7 @@ from .serializers import (
     ProductSerializer,
     ProductShortSerializer,
     ReviewCreateSerializer,
+    SaleSerializer,
     TagSerializer,
     TopLevelCategorySerializer,
 )
@@ -235,49 +237,23 @@ class BannerProductsListView(generics.ListAPIView):
     pagination_class = None
 
 
-# class Sales(generics.ListAPIView):
-class Sales(APIView):
-    # pagination_class = Pagination
+class SalesView(generics.ListAPIView):
+    queryset = (
+        Sale.objects.prefetch_related('product', 'product__images')
+        .filter(product__archived=False)
+        .all()
+    )
+    serializer_class = SaleSerializer
 
-    def get(self, request, *args, **kwargs):
-        queryset = (
-            OrderProduct.objects
-            # .prefetch_related('product', 'product__images')
-            .annotate(date=TruncDate('order__created_at'))
-            .values('date', 'product_id', 'count')
-            .annotate(product_count=Sum('count'))
-            .annotate(total_price=Sum('product__price'))
-            # .filter(order__archived=False)
-            .all()
-        )
-
-        if queryset is None:
-            return Response([])
-
-        # pagination = Pagination()
-        # queryset = pagination.paginate_queryset(queryset, request)
-
-        min_date = min(queryset, key=lambda x: x['date'])
-        max_date = max(queryset, key=lambda x: x['date'])
-        min_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        max_date.replace(hour=0, minute=0, second=0, microsecond=0)
-        start_date = min_date - timedelta(days=min_date.isoweekday() - 1)
-        end_date = max_date + timedelta(days=7 - max_date.isoweekday())
-        n_weeks = round((end_date - start_date).days / 7)
-
-        for i_week in range(n_weeks):
-            week_start = start_date + i_week * timedelta(days=7)
-
-        for item in result:
-            result.append(
-                {
-                    '': item['product_id'],
-                    '': item['product_id'],
-                    '': item['product_id'],
-                    '': item['product_id'],
-                    '': item['product_id'],
-                }
-            )
+    @property
+    def paginator(self):
+        """
+        The paginator instance associated with the view.
+        """
+        if not hasattr(self, '_paginator'):
+            self._paginator = Pagination()
+            self._paginator.page_size = 10
+        return self._paginator
 
 
 class ProductDetailView(generics.RetrieveAPIView):
