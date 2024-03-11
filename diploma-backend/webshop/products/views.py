@@ -169,7 +169,7 @@ class CatalogOrderingFilter(OrderingFilter):
         """
         sort_field = request.query_params.get('sort')
         if not sort_field or sort_field not in self.ordering_fields:
-            return queryset
+            return queryset.order_by('id')
 
         if sort_field == 'reviews':
             sort_field = 'reviews_count'
@@ -239,7 +239,7 @@ class SalesView(generics.ListAPIView):
     queryset = (
         Sale.objects.prefetch_related('product', 'product__images')
         .filter(product__archived=False)
-        .all()
+        .order_by('id')
     )
     serializer_class = SaleSerializer
 
