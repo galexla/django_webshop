@@ -2,11 +2,8 @@ import uuid
 
 from account.models import User
 from django.core.exceptions import ValidationError
-from django.core.validators import (
-    MaxValueValidator,
-    MinValueValidator,
-    RegexValidator,
-)
+from django.core.validators import (MaxValueValidator, MinValueValidator,
+                                    RegexValidator)
 from django.db import models
 from django.db.models import Count
 from django.db.models.functions import Lower
@@ -216,6 +213,24 @@ def get_products_queryset():
         .annotate(reviews_count=Count('reviews'))
         .filter(archived=False)
         .all()
+    )
+
+
+class Sale(models.Model):
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='sales',
+    )
+    date_from = models.DateTimeField()
+    date_to = models.DateTimeField()
+    sale_price = models.DecimalField(
+        blank=False,
+        max_digits=8,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(0),
+        ],
     )
 
 
