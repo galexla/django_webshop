@@ -1,12 +1,10 @@
 import logging
-from datetime import datetime, timedelta
 
 import django_filters
 from account.models import User
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
-from django.db.models import Case, IntegerField, Q, Sum, Value, When
-from django.db.models.functions import TruncDate
+from django.db.models import Case, IntegerField, Q, Value, When
 from django.http.request import QueryDict
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
