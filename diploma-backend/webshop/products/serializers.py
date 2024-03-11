@@ -128,8 +128,8 @@ class SaleSerializer(serializers.Serializer):
     salePrice = serializers.DecimalField(
         source='sale_price', max_digits=8, decimal_places=2
     )
-    dateFrom = serializers.DateTimeField(source='date_from')
-    dateTo = serializers.DateTimeField(source='date_to')
+    dateFrom = serializers.DateTimeField(source='date_from', format='%m-%d')
+    dateTo = serializers.DateTimeField(source='date_to', format='%m-%d')
     title = serializers.CharField(source='product.title')
     images = ImageSerializer(source='product.images', many=True)
 

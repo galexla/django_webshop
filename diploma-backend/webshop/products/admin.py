@@ -1,12 +1,13 @@
 from typing import Any
 
+from django import forms
 from django.contrib import admin
 from django.db.models.query import QuerySet
 from django.http.request import HttpRequest
 from django.utils.translation import gettext_lazy as _
 
 from .forms import CategoryAdminForm, ProductAdminForm
-from .models import Category, Product, ProductImage, Specification, Tag
+from .models import Category, Product, ProductImage, Sale, Specification, Tag
 
 
 class SubcategoryInline(admin.TabularInline):
@@ -101,3 +102,23 @@ class TagAdmin(admin.ModelAdmin):
 @admin.register(Specification)
 class SpecificationAdmin(admin.ModelAdmin):
     list_display = ['name', 'value']
+
+
+class ProductChoiceField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        return f"{obj.title} - ${obj.price}"
+
+
+@admin.register(Sale)
+class SaleAdmin(admin.ModelAdmin):
+    list_display = (
+        'product',
+        'date_from',
+        'date_to',
+        'sale_price',
+    )
+
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "product":
+            return ProductChoiceField(queryset=Product.objects.all())
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
