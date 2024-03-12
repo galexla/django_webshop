@@ -29,7 +29,7 @@ from .models import (
 from .serializers import (
     OrderSerializer,
     ProductCountSerializer,
-    ProductSerializer,
+    ProductDetailSerializer,
     ProductShortSerializer,
     ReviewCreateSerializer,
     SaleSerializer,
@@ -260,12 +260,11 @@ class ProductDetailView(generics.RetrieveAPIView):
         .prefetch_related(
             'images',
             'tags',
-            'reviews',
         )
         .filter(archived=False)
         .all()
     )
-    serializer_class = ProductSerializer
+    serializer_class = ProductDetailSerializer
 
 
 class ReviewCreateView(APIView):

@@ -11,7 +11,6 @@ from .models import (
     OrderProduct,
     Product,
     Review,
-    Sale,
     Specification,
     Tag,
     get_products_queryset,
@@ -92,7 +91,7 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ['id', 'author', 'email', 'text', 'rate', 'date']
 
 
-class ProductSerializer(serializers.ModelSerializer):
+class ProductDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
@@ -112,12 +111,22 @@ class ProductSerializer(serializers.ModelSerializer):
             'rating',
         ]
 
+    REVIEWS_COUNT = 10
+
     images = ImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     specifications = SpecificationSerializer(many=True, read_only=True)
-    reviews = ReviewSerializer(many=True, read_only=True)
+    reviews = serializers.SerializerMethodField(read_only=True)
     fullDescription = serializers.CharField(source='full_description')
     freeDelivery = serializers.CharField(source='free_delivery')
+
+    def get_reviews(self, obj):
+        reviews = Review.objects.filter(product=obj).order_by('-date')[
+            : self.REVIEWS_COUNT
+        ]
+        serializer = ReviewSerializer(reviews, many=True)
+
+        return serializer.data
 
 
 class SaleSerializer(serializers.Serializer):
