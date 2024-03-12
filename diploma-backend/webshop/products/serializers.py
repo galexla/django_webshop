@@ -236,3 +236,27 @@ class OrderSerializer(serializers.ModelSerializer):
             item['count'] = product_counts[item['id']]
 
         return result
+
+    def validate(self, data):
+        """Allow empty fields only for order with status Order.STATUS_NEW"""
+        if data['status'] == Order.STATUS_NEW:
+            return data
+
+        fields = [
+            'full_name',
+            'email',
+            'phone',
+            'delivery_type',
+            'payment_type',
+            'city',
+            'address',
+        ]
+        values = (data.get(field, '') for field in fields)
+        is_empty = (str(value).strip() == '' for value in values)
+
+        if any(is_empty):
+            raise serializers.ValidationError(
+                'No field can be empty in a confirmed order'
+            )
+
+        return data

@@ -555,13 +555,13 @@ class OrderView(LoginRequiredMixin, APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        serializer = OrderSerializer(order, data=request.data)
+        data = request.data
+        data['status'] = Order.STATUS_PROCESSING
+        serializer = OrderSerializer(order, data=data)
         if not serializer.is_valid():
             return Response(
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
             )
-
-        serializer.validated_data['status'] = Order.STATUS_PROCESSING
         serializer.save()
 
         return Response()
