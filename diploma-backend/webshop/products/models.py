@@ -302,6 +302,11 @@ class OrderProduct(models.Model):
 
 
 class Order(models.Model):
+    class Meta:
+        indexes = [
+            models.Index(fields=['created_at'], name='idx_order_created_at'),
+        ]
+
     DELIVERY_ORDINARY = 'ordinary'
     DELIVERY_EXPRESS = 'express'
     PAYMENT_ONLINE = 'online'
@@ -328,6 +333,9 @@ class Order(models.Model):
 
     user = models.ForeignKey(
         User, related_name='orders', on_delete=models.CASCADE
+    )
+    products = models.ManyToManyField(
+        Product, through=OrderProduct, related_name='orders'
     )
     created_at = models.DateTimeField(auto_now_add=True)
     full_name = models.CharField(blank=True, max_length=120)
@@ -357,6 +365,3 @@ class Order(models.Model):
     )
     city = models.CharField(blank=True, max_length=150)
     address = models.CharField(blank=True, max_length=300)
-    products = models.ManyToManyField(
-        Product, through=OrderProduct, related_name='orders'
-    )
