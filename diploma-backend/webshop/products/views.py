@@ -547,6 +547,13 @@ class OrderView(LoginRequiredMixin, APIView):
 
     def post(self, request, pk):
         order = get_object_or_404(Order, pk=pk, user=request.user)
+
+        if order.status == Order.STATUS_PROCESSING:
+            serializer = OrderSerializer(order)
+            data = serializer.data
+            data['orderId'] = data['id']
+            return Response(data)
+
         if order.status != Order.STATUS_NEW:
             return Response(
                 {
@@ -570,7 +577,7 @@ class OrderView(LoginRequiredMixin, APIView):
         )
         serializer.save()
 
-        return Response()
+        return Response(data)
 
     def get_delivery_cost(self, delivery_type, order_cost):
         shop_confs = get_all_shop_configurations()
@@ -580,3 +587,10 @@ class OrderView(LoginRequiredMixin, APIView):
             if order_cost < shop_confs['free_delivery_limit']:
                 return shop_confs['ordinary_delivery_price']
         return 0
+
+
+class PaymentView(LoginRequiredMixin, APIView):
+    def post(self, request: Request, pk):
+        log.debug('request=%s', request.data)
+        order = get_object_or_404(Order, pk=pk, user=request.user)
+        return Response()

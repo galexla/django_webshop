@@ -8,6 +8,7 @@ from .views import (
     LimitedProductsListView,
     OrdersView,
     OrderView,
+    PaymentView,
     PopularProductsListView,
     ProductDetailView,
     ReviewCreateView,
@@ -50,4 +51,5 @@ urlpatterns = [
     path('basket', BasketView.as_view(), name='basket'),
     path('orders', OrdersView.as_view(), name='orders'),
     path('order/<int:pk>', OrderView.as_view(), name='order'),
+    path('payment/<int:pk>', PaymentView.as_view(), name='payment'),
 ]
