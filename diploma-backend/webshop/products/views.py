@@ -2,6 +2,7 @@ import logging
 
 import django_filters
 from account.models import User
+from configurations.models import get_all_shop_configurations
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import transaction
 from django.db.models import Case, IntegerField, Q, Value, When
@@ -490,6 +491,7 @@ class OrdersView(LoginRequiredMixin, APIView):
         return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _create_order(self, product_counts: dict[str, int], user: User):
+        """Must always be used inside transaction.atomic block"""
         order = Order(user=user)
         order.full_name = user.get_full_name()
         order.phone = user.profile.phone
@@ -555,13 +557,26 @@ class OrderView(LoginRequiredMixin, APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        data = request.data
-        data['status'] = Order.STATUS_PROCESSING
-        serializer = OrderSerializer(order, data=data)
+        request.data['status'] = Order.STATUS_PROCESSING
+        serializer = OrderSerializer(order, data=request.data)
         if not serializer.is_valid():
             return Response(
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
             )
+
+        data = serializer.validated_data
+        data['total_cost'] += self.get_delivery_cost(
+            data['delivery_type'], data['total_cost']
+        )
         serializer.save()
 
         return Response()
+
+    def get_delivery_cost(self, delivery_type, order_cost):
+        shop_confs = get_all_shop_configurations()
+        if delivery_type == Order.DELIVERY_EXPRESS:
+            return shop_confs['express_delivery_price']
+        elif delivery_type == Order.DELIVERY_ORDINARY:
+            if order_cost < shop_confs['free_delivery_limit']:
+                return shop_confs['ordinary_delivery_price']
+        return 0

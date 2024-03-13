@@ -63,3 +63,8 @@ def get_shop_configuration(key: str):
     if item is None:
         return 0
     return item.clean_value()
+
+
+def get_all_shop_configurations() -> dict:
+    items = ShopConfiguration.objects.all()
+    return {item.key: item.clean_value() for item in items}
