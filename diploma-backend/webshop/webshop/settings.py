@@ -42,9 +42,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     #
     'frontend',
+    'configurations.apps.ConfigurationsConfig',
     'account.apps.AccountConfig',
     'products.apps.ProductsConfig',
-    'configurations.apps.ConfigurationsConfig',
+    'payments.apps.PaymentsConfig',
     # 'debug_toolbar',
 ]
 
