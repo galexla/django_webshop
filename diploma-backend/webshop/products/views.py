@@ -1,4 +1,5 @@
 import logging
+from random import randint
 
 import django_filters
 from account.models import User
@@ -29,6 +30,7 @@ from .models import (
 )
 from .serializers import (
     OrderSerializer,
+    PaymentSerializer,
     ProductCountSerializer,
     ProductDetailSerializer,
     ProductShortSerializer,
@@ -593,4 +595,40 @@ class PaymentView(LoginRequiredMixin, APIView):
     def post(self, request: Request, pk):
         log.debug('request=%s', request.data)
         order = get_object_or_404(Order, pk=pk, user=request.user)
+        if order.status != order.STATUS_PROCESSING:
+            return Response(
+                {
+                    'status': [
+                        f'You can only pay for orders with status "{Order.STATUS_PROCESSING}".'
+                    ]
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = PaymentSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        errors = (
+            'Insufficient funds in your account',
+            'Card has expired',
+            'Card is blocked',
+            'Incorrect card information',
+            'Payment system is unavailable',
+        )
+        number = serializer.validated_data['number']
+        if number % 2 == 0 or number % 10 == 0:
+            i_error = randint(0, len(errors) - 1)
+            status_ = (
+                status.HTTP_400_BAD_REQUEST
+                if i_error <= 3
+                else status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+            return Response(
+                {'non_field_errors': [errors[i_error]]},
+                status=status_,
+            )
+
         return Response()
