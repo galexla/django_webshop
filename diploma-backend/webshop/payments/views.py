@@ -2,7 +2,7 @@ import logging
 from random import randint
 
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from products.models import Order
 from rest_framework import status
@@ -35,17 +35,43 @@ class PaymentView(LoginRequiredMixin, APIView):
             msg, status_ = error
             return Response({'non_field_errors': [msg]}, status=status_)
 
-        with transaction.atomic():
-            order.status = Order.STATUS_PAID
-            order.save()
-            request.data['paid_sum'] = order.total_cost
-            srlz_model = PaymentModelSerializer(data=request.data)
-            srlz_model.save()
-            log.info('Order %s has been paid', order.id)
+        request.data['paid_sum'] = order.total_cost
+        srlzr_model = PaymentModelSerializer(data=request.data)
+        if not srlzr_model.is_valid():
+            return Response(
+                srlzr_model.errors, status=status.HTTP_400_BAD_REQUEST
+            )
 
+        try:
+            with transaction.atomic():
+                order.status = Order.STATUS_PAID
+                order.save()
+                srlzr_model.save()
+            msg = 'Order %s has been paid from card %s'
+            log.info(msg, order.id, srlzr_model.validated_data['number'])
             return Response()
+        except IntegrityError:
+            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def _save(self, order, request):
+        # TODO: finish!
+        request.data['paid_sum'] = order.total_cost
+        srlzr_model = PaymentModelSerializer(data=request.data)
+        if not srlzr_model.is_valid():
+            return Response(
+                srlzr_model.errors, status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            with transaction.atomic():
+                order.status = Order.STATUS_PAID
+                order.save()
+                srlzr_model.save()
+            msg = 'Order %s has been paid from card %s'
+            log.info(msg, order.id, srlzr_model.validated_data['number'])
+            return True
+        except IntegrityError:
+            return False
 
     def _get_random_error(self, number) -> tuple[str, int] | None:
         """Return error message and HTTP status or None"""
