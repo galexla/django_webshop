@@ -613,7 +613,8 @@ class PaymentView(LoginRequiredMixin, APIView):
 
         return Response()
 
-    def _get_random_error(self, number) -> tuple[int, str] | None:
+    def _get_random_error(self, number) -> tuple[str, int] | None:
+        """Return error message and HTTP status or None"""
         errors = (
             'Insufficient funds in your account',
             'Card has expired',
