@@ -4,7 +4,7 @@ import django_filters
 from account.models import User
 from configurations.models import get_all_shop_configurations
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.http.request import QueryDict
 from django.shortcuts import get_object_or_404
@@ -475,20 +475,28 @@ class OrdersView(LoginRequiredMixin, APIView):
         product_counts_dict = {
             item['id']: item['count'] for item in serializer.validated_data
         }
-        with transaction.atomic():
-            if self._are_available(product_counts_dict):
-                order = self._create_order(product_counts_dict, request.user)
-                basket = Basket.objects.filter(user=request.user).first()
-                if basket:
-                    basket_decrement(basket.id, product_counts_dict)
-                return Response({'orderId': order.id})
-            else:
-                return Response(
-                    {'count': ['Product quantities are not available.']},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
 
-        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        response_body, status_ = self._creare_order_if_avail(
+            product_counts_dict, request.user
+        )
+        return Response(response_body, status=status_)
+
+    def _creare_order_if_avail(self, product_counts_dict, user):
+        """Create order if products are available"""
+        try:
+            with transaction.atomic():
+                if self._are_available(product_counts_dict):
+                    order = self._create_order(product_counts_dict, user)
+                    basket = Basket.objects.filter(user=user).first()
+                    if basket:
+                        basket_decrement(basket.id, product_counts_dict)
+                    return {'orderId': order.id}, status.HTTP_200_OK
+                else:
+                    return {
+                        'count': ['Product quantities are not available']
+                    }, status.HTTP_400_BAD_REQUEST
+        except IntegrityError:
+            return None, status.HTTP_500_INTERNAL_SERVER_ERROR
 
     def _create_order(self, product_counts: dict[str, int], user: User):
         """Must always be used inside transaction.atomic block"""

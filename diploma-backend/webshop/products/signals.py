@@ -2,7 +2,7 @@ import logging
 
 from account.models import User
 from django.contrib.auth.signals import user_logged_in
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.dispatch import receiver
 from rest_framework.request import Request
 
@@ -36,13 +36,17 @@ def process_basket_on_login(user: User, signal, request: Request, **kwargs):
             switch_user_basket(
                 user, from_basket=basket_of_user, to_basket=basket_by_cookie
             )
-            log.info(
-                'Switched user %s basket to %s', user.id, basket_by_cookie.id
-            )
 
 
-def switch_user_basket(user: User, from_basket: Basket, to_basket: Basket):
-    with transaction.atomic():
-        from_basket.delete()
-        to_basket.user = user
-        to_basket.save()
+def switch_user_basket(
+    user: User, from_basket: Basket, to_basket: Basket
+) -> bool:
+    try:
+        with transaction.atomic():
+            from_basket.delete()
+            to_basket.user = user
+            to_basket.save()
+        log.info('Switched user %s basket to %s', user.id, to_basket.id)
+        return True
+    except IntegrityError:
+        return False
