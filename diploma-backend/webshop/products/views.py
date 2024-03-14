@@ -550,20 +550,16 @@ class OrderView(LoginRequiredMixin, APIView):
     def post(self, request, pk):
         order = get_object_or_404(Order, pk=pk, user=request.user)
 
-        if order.status == Order.STATUS_PROCESSING:
+        if order.status == Order.STATUS_PROCESSING:  # return unmodified order
             serializer = OrderSerializer(order)
             data = serializer.data
-            data['orderId'] = data['id']
+            data['orderId'] = data['id']  # fix bug in frontend
             return Response(data)
 
         if order.status != Order.STATUS_NEW:
+            msg = f'Only orders with status "{Order.STATUS_NEW}" can be modified.'
             return Response(
-                {
-                    'status': [
-                        f'You can only modify orders with status "{Order.STATUS_NEW}".'
-                    ]
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+                {'status': [msg]}, status=status.HTTP_400_BAD_REQUEST
             )
 
         request.data['status'] = Order.STATUS_PROCESSING
@@ -593,16 +589,11 @@ class OrderView(LoginRequiredMixin, APIView):
 
 class PaymentView(LoginRequiredMixin, APIView):
     def post(self, request: Request, pk):
-        log.debug('request=%s', request.data)
         order = get_object_or_404(Order, pk=pk, user=request.user)
         if order.status != order.STATUS_PROCESSING:
+            msg = f'You can only pay for orders with status "{Order.STATUS_PROCESSING}".'
             return Response(
-                {
-                    'status': [
-                        f'You can only pay for orders with status "{Order.STATUS_PROCESSING}".'
-                    ]
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+                {'status': [msg]}, status=status.HTTP_400_BAD_REQUEST
             )
 
         serializer = PaymentSerializer(data=request.data)
@@ -611,6 +602,18 @@ class PaymentView(LoginRequiredMixin, APIView):
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
             )
 
+        error = self._get_random_error(serializer.validated_data['number'])
+        if error is not None:
+            msg, status_ = error
+            return Response({'non_field_errors': [msg]}, status=status_)
+
+        order.status = Order.STATUS_PAID
+        order.save()
+        log.info('Order %s has been paid', order.id)
+
+        return Response()
+
+    def _get_random_error(self, number) -> tuple[int, str] | None:
         errors = (
             'Insufficient funds in your account',
             'Card has expired',
@@ -618,7 +621,6 @@ class PaymentView(LoginRequiredMixin, APIView):
             'Incorrect card information',
             'Payment system is unavailable',
         )
-        number = serializer.validated_data['number']
         if number % 2 == 0 or number % 10 == 0:
             i_error = randint(0, len(errors) - 1)
             status_ = (
@@ -626,9 +628,6 @@ class PaymentView(LoginRequiredMixin, APIView):
                 if i_error <= 3
                 else status.HTTP_500_INTERNAL_SERVER_ERROR
             )
-            return Response(
-                {'non_field_errors': [errors[i_error]]},
-                status=status_,
-            )
+            return errors[i_error], status_
 
-        return Response()
+        return None
