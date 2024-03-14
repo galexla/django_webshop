@@ -2,6 +2,7 @@ import logging
 from random import randint
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from products.models import Order
 from rest_framework import status
@@ -9,7 +10,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .serializers import PaymentSerializer
+from .serializers import PaymentModelSerializer, PaymentSerializer
 
 log = logging.getLogger(__name__)
 
@@ -34,11 +35,17 @@ class PaymentView(LoginRequiredMixin, APIView):
             msg, status_ = error
             return Response({'non_field_errors': [msg]}, status=status_)
 
-        order.status = Order.STATUS_PAID
-        order.save()
-        log.info('Order %s has been paid', order.id)
+        with transaction.atomic():
+            order.status = Order.STATUS_PAID
+            order.save()
+            request.data['paid_sum'] = order.total_cost
+            srlz_model = PaymentModelSerializer(data=request.data)
+            srlz_model.save()
+            log.info('Order %s has been paid', order.id)
 
-        return Response()
+            return Response()
+
+        return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _get_random_error(self, number) -> tuple[str, int] | None:
         """Return error message and HTTP status or None"""

@@ -8,6 +8,8 @@ from django.core.validators import (
 from django.forms import ValidationError
 from rest_framework import serializers
 
+from .models import Payment
+
 log = logging.getLogger(__name__)
 
 
@@ -43,3 +45,29 @@ class PaymentSerializer(serializers.Serializer):
             )
 
         return value
+
+
+class PaymentModelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        feilds = ['number', 'name', 'paid_sum']
+
+    number = serializers.IntegerField(
+        required=True,
+        write_only=True,
+        source='card_number',
+        validators=[MinValueValidator(1), MaxValueValidator(99_999_999)],
+    )
+    name = serializers.CharField(
+        required=True,
+        write_only=True,
+        max_length=255,
+        validators=[MinLengthValidator(1)],
+    )
+    paid_sum = serializers.DecimalField(
+        required=True,
+        write_only=True,
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+    )
