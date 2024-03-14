@@ -50,7 +50,7 @@ class PaymentSerializer(serializers.Serializer):
 class PaymentModelSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        feilds = ['number', 'name', 'paid_sum']
+        fields = ['number', 'name', 'paid_sum']
 
     number = serializers.IntegerField(
         required=True,

@@ -1,5 +1,6 @@
 import logging
 from random import randint
+from typing import Any
 
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import IntegrityError, transaction
@@ -24,7 +25,8 @@ class PaymentView(LoginRequiredMixin, APIView):
                 {'status': [msg]}, status=status.HTTP_400_BAD_REQUEST
             )
 
-        serializer = PaymentSerializer(data=request.data)
+        data = request.data
+        serializer = PaymentSerializer(data=data)
         if not serializer.is_valid():
             return Response(
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
@@ -35,43 +37,27 @@ class PaymentView(LoginRequiredMixin, APIView):
             msg, status_ = error
             return Response({'non_field_errors': [msg]}, status=status_)
 
-        request.data['paid_sum'] = order.total_cost
-        srlzr_model = PaymentModelSerializer(data=request.data)
-        if not srlzr_model.is_valid():
-            return Response(
-                srlzr_model.errors, status=status.HTTP_400_BAD_REQUEST
-            )
+        data['paid_sum'] = order.total_cost
+        response_body, status_ = self._try_save(order, data)
+
+        return Response(response_body, status=status_)
+
+    def _try_save(self, order, data) -> tuple[Any, int]:
+        """Try to save. Return response body and HTTP status"""
+        serializer = PaymentModelSerializer(data=data)
+        if not serializer.is_valid():
+            serializer.errors, status.HTTP_400_BAD_REQUEST
 
         try:
             with transaction.atomic():
                 order.status = Order.STATUS_PAID
                 order.save()
-                srlzr_model.save()
+                serializer.save()
             msg = 'Order %s has been paid from card %s'
-            log.info(msg, order.id, srlzr_model.validated_data['number'])
-            return Response()
+            log.info(msg, order.id, serializer.validated_data['card_number'])
+            return None, status.HTTP_200_OK
         except IntegrityError:
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def _save(self, order, request):
-        # TODO: finish!
-        request.data['paid_sum'] = order.total_cost
-        srlzr_model = PaymentModelSerializer(data=request.data)
-        if not srlzr_model.is_valid():
-            return Response(
-                srlzr_model.errors, status=status.HTTP_400_BAD_REQUEST
-            )
-
-        try:
-            with transaction.atomic():
-                order.status = Order.STATUS_PAID
-                order.save()
-                srlzr_model.save()
-            msg = 'Order %s has been paid from card %s'
-            log.info(msg, order.id, srlzr_model.validated_data['number'])
-            return True
-        except IntegrityError:
-            return False
+            return None, status.HTTP_500_INTERNAL_SERVER_ERROR
 
     def _get_random_error(self, number) -> tuple[str, int] | None:
         """Return error message and HTTP status or None"""
