@@ -283,7 +283,7 @@ class ReviewCreateView(APIView):
 def basket_decrement(basket_id, product_counts: dict[str, int]) -> bool:
     product_ids = list(product_counts.keys())
     basket_products = BasketProduct.objects.filter(
-        basket_id=basket_id, product__in=product_ids
+        basket_id=basket_id, product__in=product_ids, product__archived=False
     ).all()
 
     if basket_products is None:
@@ -383,7 +383,7 @@ class BasketView(
         product = get_object_or_404(Product, id=product_id, archived=False)
 
         basket_product = BasketProduct.objects.filter(
-            basket_id=basket_id, product_id=product_id
+            basket_id=basket_id, product_id=product_id, product__archived=False
         ).first()
 
         if basket_product is None:
