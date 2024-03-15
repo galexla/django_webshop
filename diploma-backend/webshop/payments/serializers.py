@@ -6,6 +6,7 @@ from django.core.validators import (
     MinValueValidator,
 )
 from django.forms import ValidationError
+from products.models import Order
 from rest_framework import serializers
 
 from .models import Payment
@@ -13,7 +14,7 @@ from .models import Payment
 log = logging.getLogger(__name__)
 
 
-class PaymentSerializer(serializers.Serializer):
+class PlasticCardSerializer(serializers.Serializer):
     number = serializers.IntegerField(
         required=True,
         validators=[MinValueValidator(1), MaxValueValidator(99_999_999)],
@@ -47,11 +48,16 @@ class PaymentSerializer(serializers.Serializer):
         return value
 
 
-class PaymentModelSerializer(serializers.ModelSerializer):
+class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        fields = ['number', 'name', 'paid_sum']
+        fields = ['order_id', 'number', 'name', 'paid_sum']
 
+    order_id = serializers.IntegerField(
+        required=True,
+        write_only=True,
+        validators=[MinValueValidator(1)],
+    )
     number = serializers.IntegerField(
         required=True,
         write_only=True,
@@ -71,3 +77,11 @@ class PaymentModelSerializer(serializers.ModelSerializer):
         decimal_places=2,
         validators=[MinValueValidator(0)],
     )
+
+    def create(self, validated_data):
+        order = Order.objects.filter(id=validated_data['order_id']).first()
+        if order is None:
+            raise ValidationError({'order_id': 'Order does not exist'})
+        payment = Payment.objects.create(**validated_data)
+
+        return payment

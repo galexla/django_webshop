@@ -4,9 +4,13 @@ from django.core.validators import (
     MinValueValidator,
 )
 from django.db import models
+from products.models import Order
 
 
 class Payment(models.Model):
+    order = models.OneToOneField(
+        Order, null=True, on_delete=models.CASCADE, related_name='payment'
+    )
     card_number = models.IntegerField(
         blank=False,
         validators=[MinValueValidator(1), MaxValueValidator(99_999_999)],
@@ -20,4 +24,4 @@ class Payment(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(0)],
     )
-    date = models.DateTimeField(blank=False, auto_now_add=True)
+    paid_at = models.DateTimeField(blank=False, auto_now_add=True)
