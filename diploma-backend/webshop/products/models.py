@@ -38,6 +38,7 @@ class Category(models.Model):
         verbose_name_plural = _('categories')
         indexes = [
             models.Index(fields=['parent'], name='idx_category_parent'),
+            models.Index(fields=['archived'], name='idx_category_archived'),
         ]
 
     title = models.CharField(max_length=200)
