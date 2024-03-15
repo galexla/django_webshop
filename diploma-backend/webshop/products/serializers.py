@@ -156,7 +156,7 @@ class ReviewCreateSerializer(serializers.Serializer):
     date = serializers.DateTimeField(read_only=True)
 
     def save(self, product_id, **kwargs):
-        product = get_object_or_404(Product, pk=product_id)
+        product = get_object_or_404(Product, pk=product_id, archived=False)
         kwargs['product'] = product
 
         return super().save(**kwargs)
