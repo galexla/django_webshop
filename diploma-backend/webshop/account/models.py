@@ -5,8 +5,6 @@ from django.core.validators import FileExtensionValidator, RegexValidator
 from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 
-ALLOWED_AVATAR_EXTENSIONS = 'png,jpg,gif'.split(',')
-
 
 def get_avatar_upload_path(instance: 'Profile', filename: str) -> str:
     return f'users/user{instance.user.pk}/avatar/{filename}'
@@ -18,6 +16,8 @@ class Profile(models.Model):
     neccessary because a user is created with an empty phone, but users cannot
     have same phone, blank included.
     """
+
+    ALLOWED_AVATAR_EXTENSIONS = 'png,jpg,gif'.split(',')
 
     user = models.OneToOneField(
         'User', on_delete=models.CASCADE, related_name='profile'
