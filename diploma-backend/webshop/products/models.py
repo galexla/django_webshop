@@ -14,21 +14,15 @@ from django.utils.translation import gettext_lazy as _
 
 
 class Tag(models.Model):
-    name = models.CharField(
-        max_length=100,
-    )
+    name = models.CharField(max_length=100)
 
     def __str__(self) -> str:
         return self.name
 
 
 class Specification(models.Model):
-    name = models.CharField(
-        max_length=200,
-    )
-    value = models.CharField(
-        max_length=200,
-    )
+    name = models.CharField(max_length=200)
+    value = models.CharField(max_length=200)
 
     def __str__(self) -> str:
         return f'{self.name}: {self.value}'
@@ -46,9 +40,7 @@ class Category(models.Model):
             models.Index(fields=['parent'], name='idx_category_parent'),
         ]
 
-    title = models.CharField(
-        max_length=200,
-    )
+    title = models.CharField(max_length=200)
     parent = models.ForeignKey(
         'Category',
         blank=True,
@@ -57,17 +49,10 @@ class Category(models.Model):
         related_name='subcategories',
     )
     image = models.ImageField(
-        blank=True,
-        null=True,
-        upload_to=category_image_upload_path,
+        blank=True, null=True, upload_to=category_image_upload_path
     )
-    image_alt = models.CharField(
-        max_length=200,
-        blank=True,
-    )
-    archived = models.BooleanField(
-        default=False,
-    )
+    image_alt = models.CharField(max_length=200, blank=True)
+    archived = models.BooleanField(default=False)
 
     def clean(self) -> None:
         if self.parent is not None:
@@ -109,9 +94,7 @@ class Product(models.Model):
             models.Index(fields=['archived'], name='idx_product_archived'),
         ]
 
-    title = models.CharField(
-        max_length=200,
-    )
+    title = models.CharField(max_length=200)
     price = models.DecimalField(
         default=0,
         max_digits=8,
@@ -127,41 +110,17 @@ class Product(models.Model):
         on_delete=models.SET_NULL,
         related_name='products',
     )
-    count = models.PositiveIntegerField(
-        default=0,
-    )
-    sold_count = models.PositiveIntegerField(
-        default=0,
-    )
-    date = models.DateTimeField(
-        auto_now_add=True,
-    )
-    description = models.CharField(
-        blank=True,
-        max_length=3000,
-    )
-    full_description = models.CharField(
-        blank=True,
-        max_length=20000,
-    )
-    free_delivery = models.BooleanField(
-        default=True,
-    )
-    is_limited_edition = models.BooleanField(
-        default=False,
-    )
-    is_banner = models.BooleanField(
-        default=False,
-    )
-    tags = models.ManyToManyField(
-        Tag,
-        blank=True,
-        related_name='products',
-    )
+    count = models.PositiveIntegerField(default=0)
+    sold_count = models.PositiveIntegerField(default=0)
+    date = models.DateTimeField(auto_now_add=True)
+    description = models.CharField(blank=True, max_length=3000)
+    full_description = models.CharField(blank=True, max_length=20000)
+    free_delivery = models.BooleanField(default=True)
+    is_limited_edition = models.BooleanField(default=False)
+    is_banner = models.BooleanField(default=False)
+    tags = models.ManyToManyField(Tag, blank=True, related_name='products')
     specifications = models.ManyToManyField(
-        Specification,
-        blank=True,
-        related_name='products',
+        Specification, blank=True, related_name='products'
     )
     rating = models.DecimalField(
         blank=True,
@@ -173,9 +132,7 @@ class Product(models.Model):
             MaxValueValidator(5),
         ],
     )
-    archived = models.BooleanField(
-        default=False,
-    )
+    archived = models.BooleanField(default=False)
 
     def __str__(self) -> str:
         return self.title
@@ -183,26 +140,18 @@ class Product(models.Model):
 
 def product_image_upload_path(instance: 'ProductImage', filename: str) -> str:
     return 'products/product{pk}/images/{filename}'.format(
-        pk=instance.product.pk,
-        filename=filename,
+        pk=instance.product.pk, filename=filename
     )
 
 
 class ProductImage(models.Model):
     product = models.ForeignKey(
-        Product,
-        on_delete=models.CASCADE,
-        related_name='images',
+        Product, on_delete=models.CASCADE, related_name='images'
     )
     image = models.ImageField(
-        blank=True,
-        null=True,
-        upload_to=product_image_upload_path,
+        blank=True, null=True, upload_to=product_image_upload_path
     )
-    image_alt = models.CharField(
-        max_length=200,
-        blank=True,
-    )
+    image_alt = models.CharField(max_length=200, blank=True)
 
 
 def get_products_queryset():
@@ -220,9 +169,7 @@ def get_products_queryset():
 
 class Sale(models.Model):
     product = models.ForeignKey(
-        Product,
-        on_delete=models.CASCADE,
-        related_name='sales',
+        Product, on_delete=models.CASCADE, related_name='sales'
     )
     date_from = models.DateTimeField()
     date_to = models.DateTimeField()
@@ -238,26 +185,18 @@ class Sale(models.Model):
 
 class Review(models.Model):
     product = models.ForeignKey(
-        Product,
-        on_delete=models.CASCADE,
-        related_name='reviews',
+        Product, on_delete=models.CASCADE, related_name='reviews'
     )
-    author = models.CharField(
-        max_length=200,
-    )
+    author = models.CharField(max_length=200)
     email = models.EmailField()
-    text = models.CharField(
-        max_length=2000,
-    )
+    text = models.CharField(max_length=2000)
     rate = models.IntegerField(
         validators=[
             MinValueValidator(1),
             MaxValueValidator(5),
         ],
     )
-    date = models.DateTimeField(
-        auto_now_add=True,
-    )
+    date = models.DateTimeField(auto_now_add=True)
 
 
 class BasketProduct(models.Model):
@@ -270,11 +209,7 @@ class BasketProduct(models.Model):
 
 
 class Basket(models.Model):
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-    )
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
         User,
         blank=True,
@@ -283,13 +218,8 @@ class Basket(models.Model):
         on_delete=models.CASCADE,
         related_name='basket',
     )
-    products = models.ManyToManyField(
-        Product,
-        through=BasketProduct,
-    )
-    last_accessed = models.DateTimeField(
-        auto_now=True,
-    )
+    products = models.ManyToManyField(Product, through=BasketProduct)
+    last_accessed = models.DateTimeField(auto_now=True)
 
 
 class OrderProduct(models.Model):
@@ -346,22 +276,16 @@ class Order(models.Model):
         validators=[RegexValidator(r'^\+\d{5,}(\#\d+)?$')],
     )
     delivery_type = models.CharField(
-        blank=True,
-        max_length=15,
-        choices=DELIVERY_TYPES,
+        blank=True, max_length=15, choices=DELIVERY_TYPES
     )
     payment_type = models.CharField(
-        blank=True,
-        max_length=15,
-        choices=PAYMENT_TYPES,
+        blank=True, max_length=15, choices=PAYMENT_TYPES
     )
     total_cost = models.DecimalField(
         max_digits=10, decimal_places=2, default=0
     )
     status = models.CharField(
-        max_length=15,
-        choices=STATUSES,
-        default=STATUS_NEW,
+        max_length=15, choices=STATUSES, default=STATUS_NEW
     )
     city = models.CharField(blank=True, max_length=150)
     address = models.CharField(blank=True, max_length=300)
