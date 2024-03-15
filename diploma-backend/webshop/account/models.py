@@ -11,17 +11,12 @@ def get_avatar_upload_path(instance: 'Profile', filename: str) -> str:
 
 
 class Profile(models.Model):
-    """
-    Arguments null=True, blank=False, unique=True for phone field are
-    neccessary because a user is created with an empty phone, but users cannot
-    have same phone, blank included.
-    """
-
     ALLOWED_AVATAR_EXTENSIONS = 'png,jpg,gif'.split(',')
 
     user = models.OneToOneField(
         'User', on_delete=models.CASCADE, related_name='profile'
     )
+    # to make phone unique & allow null: null=True, blank=False, unique=True
     phone = models.CharField(
         verbose_name=_('phone number'),
         null=True,
@@ -77,13 +72,8 @@ class CustomUserManager(UserManager):
 
 
 class User(AbstractUser):
-    """
-    Arguments null=True, blank=False, unique=True for email field are
-    neccessary because a user is created with an empty email, but users cannot
-    have same email, blank included.
-    """
-
     objects = CustomUserManager()
+    # to make email unique & allow null: null=True, blank=False, unique=True
     email = models.EmailField(
         verbose_name=_('email address'),
         null=True,
@@ -92,3 +82,4 @@ class User(AbstractUser):
             'unique': _('Email address belongs to another user.'),
         },
     )
+    archived = models.BooleanField(default=False)
