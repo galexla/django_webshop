@@ -20,9 +20,7 @@ class Profile(models.Model):
     """
 
     user = models.OneToOneField(
-        'User',
-        on_delete=models.CASCADE,
-        related_name='profile',
+        'User', on_delete=models.CASCADE, related_name='profile'
     )
     phone = models.CharField(
         verbose_name=_('phone number'),
@@ -52,9 +50,7 @@ class Profile(models.Model):
         upload_to=get_avatar_upload_path,
     )
     avatar_alt = models.CharField(
-        verbose_name=_('avatar description'),
-        blank=True,
-        max_length=100,
+        verbose_name=_('avatar description'), blank=True, max_length=100
     )
 
 

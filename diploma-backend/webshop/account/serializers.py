@@ -10,10 +10,7 @@ from .models import Profile, User
 
 
 class SignUpSerializer(serializers.ModelSerializer):
-    name = serializers.CharField(
-        max_length=150,
-        write_only=True,
-    )
+    name = serializers.CharField(max_length=150, write_only=True)
 
     class Meta:
         model = User
@@ -65,9 +62,7 @@ class SetPasswordSerializer(serializers.Serializer):
 
 class ProfileSerializer(serializers.Serializer):
     fullName = serializers.CharField(
-        required=True,
-        allow_blank=False,
-        max_length=150,
+        required=True, allow_blank=False, max_length=150
     )
     email = serializers.EmailField(
         required=True,
