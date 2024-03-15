@@ -3,14 +3,15 @@ import logging
 import django_filters
 from account.models import User
 from configurations.models import get_all_shop_configurations
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import IntegrityError, transaction
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.http.request import QueryDict
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import generics, mixins, pagination, status, viewsets
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.filters import OrderingFilter
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -443,7 +444,10 @@ class BasketView(
         return basket_decrement(basket_id, {product_id: product_count})
 
 
-class OrdersView(LoginRequiredMixin, APIView):
+class OrdersView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, *args, **kwargs):
         user = request.user
         orders = (
@@ -547,7 +551,10 @@ class OrdersView(LoginRequiredMixin, APIView):
         return True
 
 
-class OrderView(LoginRequiredMixin, APIView):
+class OrderView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def get(self, request, pk):
         order = get_object_or_404(
             Order, pk=pk, user=request.user, archived=False

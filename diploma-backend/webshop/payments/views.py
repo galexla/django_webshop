@@ -2,11 +2,12 @@ import logging
 from random import randint
 from typing import Any
 
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import IntegrityError, transaction
 from django.shortcuts import get_object_or_404
 from products.models import Order
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,7 +17,10 @@ from .serializers import PaymentSerializer, PlasticCardSerializer
 log = logging.getLogger(__name__)
 
 
-class PaymentView(LoginRequiredMixin, APIView):
+class PaymentView(APIView):
+    authentication_classes = [SessionAuthentication]
+    permission_classes = [IsAuthenticated]
+
     def post(self, request: Request, pk):
         order = get_object_or_404(
             Order, pk=pk, user=request.user, archived=False
