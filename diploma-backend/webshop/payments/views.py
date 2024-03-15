@@ -18,7 +18,9 @@ log = logging.getLogger(__name__)
 
 class PaymentView(LoginRequiredMixin, APIView):
     def post(self, request: Request, pk):
-        order = get_object_or_404(Order, pk=pk, user=request.user)
+        order = get_object_or_404(
+            Order, pk=pk, user=request.user, archived=False
+        )
         if order.status != order.STATUS_PROCESSING:
             msg = f'You can only pay for orders with status "{Order.STATUS_PROCESSING}".'
             return Response(

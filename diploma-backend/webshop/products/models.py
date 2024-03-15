@@ -289,3 +289,4 @@ class Order(models.Model):
     )
     city = models.CharField(blank=True, max_length=150)
     address = models.CharField(blank=True, max_length=300)
+    archived = models.BooleanField(default=False)

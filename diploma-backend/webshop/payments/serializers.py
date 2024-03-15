@@ -79,7 +79,9 @@ class PaymentSerializer(serializers.ModelSerializer):
     )
 
     def create(self, validated_data):
-        order = Order.objects.filter(id=validated_data['order_id']).first()
+        order = Order.objects.filter(
+            id=validated_data['order_id'], archived=False
+        ).first()
         if order is None:
             raise ValidationError({'order_id': 'Order does not exist'})
         payment = Payment.objects.create(**validated_data)

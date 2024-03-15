@@ -448,7 +448,7 @@ class OrdersView(LoginRequiredMixin, APIView):
         user = request.user
         orders = (
             Order.objects.prefetch_related('products')
-            .filter(user=user)
+            .filter(user=user, archived=False)
             .order_by('-created_at')
             .all()
         )
@@ -549,12 +549,16 @@ class OrdersView(LoginRequiredMixin, APIView):
 
 class OrderView(LoginRequiredMixin, APIView):
     def get(self, request, pk):
-        order = get_object_or_404(Order, pk=pk, user=request.user)
+        order = get_object_or_404(
+            Order, pk=pk, user=request.user, archived=False
+        )
         serializer = OrderSerializer(order)
         return Response(serializer.data)
 
     def post(self, request, pk):
-        order = get_object_or_404(Order, pk=pk, user=request.user)
+        order = get_object_or_404(
+            Order, pk=pk, user=request.user, archived=False
+        )
 
         if order.status == Order.STATUS_PROCESSING:  # return unmodified order
             serializer = OrderSerializer(order)
