@@ -88,7 +88,7 @@ class ProductShortSerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields = ['id', 'author', 'email', 'text', 'rate', 'date']
+        fields = ['id', 'author', 'email', 'text', 'rate', 'created_at']
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
@@ -121,7 +121,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     freeDelivery = serializers.CharField(source='free_delivery')
 
     def get_reviews(self, obj):
-        reviews = Review.objects.filter(product=obj).order_by('-date')[
+        reviews = Review.objects.filter(product=obj).order_by('-created_at')[
             : self.REVIEWS_COUNT
         ]
         serializer = ReviewSerializer(reviews, many=True)
@@ -153,7 +153,7 @@ class ReviewCreateSerializer(serializers.Serializer):
             MaxValueValidator(5),
         ],
     )
-    date = serializers.DateTimeField(read_only=True)
+    created_at = serializers.DateTimeField(read_only=True)
 
     def save(self, product_id, **kwargs):
         product = get_object_or_404(Product, pk=product_id, archived=False)

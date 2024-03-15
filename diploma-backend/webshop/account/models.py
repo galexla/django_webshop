@@ -82,4 +82,3 @@ class User(AbstractUser):
             'unique': _('Email address belongs to another user.'),
         },
     )
-    archived = models.BooleanField(default=False)

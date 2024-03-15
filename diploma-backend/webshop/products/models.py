@@ -184,6 +184,11 @@ class Sale(models.Model):
 
 
 class Review(models.Model):
+    class Meta:
+        indexes = [
+            models.Index(fields=['created_at'], name='idx_review_created_at'),
+        ]
+
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name='reviews'
     )
@@ -196,7 +201,7 @@ class Review(models.Model):
             MaxValueValidator(5),
         ],
     )
-    date = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class BasketProduct(models.Model):
@@ -235,6 +240,7 @@ class Order(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['created_at'], name='idx_order_created_at'),
+            models.Index(fields=['archived'], name='idx_order_archived'),
         ]
 
     DELIVERY_ORDINARY = 'ordinary'
