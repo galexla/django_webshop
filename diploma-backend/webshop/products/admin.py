@@ -54,10 +54,11 @@ class CategoryAdmin(admin.ModelAdmin):
         mark_unarchived,
     ]
     list_display = ['pk', 'title', 'get_parent_title', 'archived']
+    list_display_links = ['pk', 'title']
     search_fields = ['title', 'parent__title']
-    list_filter = (ParentCategoryListFilter,)
-    ordering = 'parent__title', 'title', 'pk'
-    sortable_by = ()
+    list_filter = [ParentCategoryListFilter]
+    ordering = ['parent__title', 'title', 'pk']
+    sortable_by = []
     form = CategoryAdminForm
     inlines = [SubcategoryInline]
 
@@ -87,7 +88,7 @@ class ProductAdmin(admin.ModelAdmin):
         mark_archived,
         mark_unarchived,
     ]
-    list_display = (
+    list_display = [
         'pk',
         'title',
         'price',
@@ -100,10 +101,10 @@ class ProductAdmin(admin.ModelAdmin):
         'banner',
         'rating',
         'archived',
-    )
-    list_display_links = 'pk', 'title'
-    ordering = 'title', 'pk'
-    search_fields = 'title', 'description', 'full_description', 'price'
+    ]
+    list_display_links = ['pk', 'title']
+    ordering = ['title', 'pk']
+    search_fields = ['title', 'description', 'full_description', 'price']
     readonly_fields = ['created_at', 'sold_count']
     form = ProductAdminForm
     inlines = [ProductImagesInline]
@@ -187,12 +188,12 @@ class ProductChoiceField(forms.ModelChoiceField):
 
 @admin.register(Sale)
 class SaleAdmin(admin.ModelAdmin):
-    list_display = (
+    list_display = [
         'product',
         'date_from',
         'date_to',
         'sale_price',
-    )
+    ]
     search_fields = ['product__title', 'date_from', 'date_to', 'sale_price']
     ordering = ['product', 'date_from', 'date_to']
     sortable_by = []
