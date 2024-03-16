@@ -10,6 +10,20 @@ from .forms import CategoryAdminForm, ProductAdminForm
 from .models import Category, Product, ProductImage, Sale, Specification, Tag
 
 
+@admin.action(description='Archive items')
+def mark_archived(
+    modeladmin: admin.ModelAdmin, request: HttpRequest, queryset: QuerySet
+):
+    queryset.update(archived=True)
+
+
+@admin.action(description='Unarchive items')
+def mark_unarchived(
+    modeladmin: admin.ModelAdmin, request: HttpRequest, queryset: QuerySet
+):
+    queryset.update(archived=False)
+
+
 class SubcategoryInline(admin.TabularInline):
     model = Category
     verbose_name = _('Subcategory')
@@ -35,7 +49,7 @@ class ParentCategoryListFilter(admin.SimpleListFilter):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ['title', 'get_parent_title', 'archived']
+    list_display = ['pk', 'title', 'get_parent_title', 'archived']
     search_fields = ['title', 'parent__title']
     list_filter = (ParentCategoryListFilter,)
     sortable_by = ()
@@ -61,7 +75,12 @@ class ProductImagesInline(admin.TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
+    actions = [
+        mark_archived,
+        mark_unarchived,
+    ]
     list_display = (
+        'pk',
         'title',
         'price',
         'category',
@@ -74,9 +93,55 @@ class ProductAdmin(admin.ModelAdmin):
         'rating',
         'archived',
     )
+    list_display_links = 'pk', 'title'
+    ordering = 'title', 'pk'
+    search_fields = 'title', 'description', 'full_description', 'price'
     readonly_fields = ['created_at', 'sold_count']
     form = ProductAdminForm
     inlines = [ProductImagesInline]
+    fieldsets = [
+        (
+            None,
+            {
+                'fields': (
+                    'title',
+                    'category',
+                    'price',
+                    'count',
+                    'sold_count',
+                    'free_delivery',
+                    'description',
+                    'full_description',
+                    'created_at',
+                ),
+            },
+        ),
+        (
+            _('Marketing options'),
+            {
+                'fields': (
+                    'rating',
+                    'is_limited_edition',
+                    'is_banner',
+                ),
+            },
+        ),
+        (
+            _('Tags & specifications'),
+            {
+                'fields': ('tags', 'specifications'),
+                'classes': ('collapse',),
+            },
+        ),
+        (
+            _('Soft deletion'),
+            {
+                'fields': ('archived',),
+                'classes': ('collapse',),
+                'description': _('Field "archived" is for soft delete'),
+            },
+        ),
+    ]
 
     def short_description(self, obj):
         return obj.description[:20] + '...'
@@ -92,6 +157,9 @@ class ProductAdmin(admin.ModelAdmin):
         return obj.is_banner
 
     banner.short_description = _('Banner')
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(Tag)

@@ -1,4 +1,5 @@
 from django import forms
+from django.utils.translation import gettext_lazy as _
 
 from .models import Category, Product
 
@@ -24,7 +25,21 @@ class CategoryAdminForm(forms.ModelForm):
 class ProductAdminForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = '__all__'
+        fields = [
+            'title',
+            'price',
+            'category',
+            'count',
+            'description',
+            'full_description',
+            'free_delivery',
+            'is_limited_edition',
+            'is_banner',
+            'tags',
+            'specifications',
+            'rating',
+            'archived',
+        ]
 
     description = forms.CharField(
         required=False,
