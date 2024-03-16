@@ -66,7 +66,6 @@ class ProductAdmin(admin.ModelAdmin):
         'price',
         'category',
         'count',
-        'created_at',
         'short_description',
         'free_delivery',
         'sold_count',
@@ -75,7 +74,7 @@ class ProductAdmin(admin.ModelAdmin):
         'rating',
         'archived',
     )
-    readonly_fields = ['created_at']
+    readonly_fields = ['created_at', 'sold_count']
     form = ProductAdminForm
     inlines = [ProductImagesInline]
 
