@@ -2,11 +2,8 @@ import uuid
 
 from account.models import User
 from django.core.exceptions import ValidationError
-from django.core.validators import (
-    MaxValueValidator,
-    MinValueValidator,
-    RegexValidator,
-)
+from django.core.validators import (MaxValueValidator, MinValueValidator,
+                                    RegexValidator)
 from django.db import models
 from django.db.models import Count
 from django.db.models.functions import Lower
@@ -248,6 +245,15 @@ class Order(models.Model):
     class Meta:
         indexes = [
             models.Index(fields=['created_at'], name='idx_order_created_at'),
+            models.Index(fields=['full_name'], name='idx_order_full_name'),
+            models.Index(fields=['address'], name='idx_order_address'),
+            models.Index(fields=['city'], name='idx_order_city'),
+            models.Index(fields=['email'], name='idx_order_email'),
+            models.Index(fields=['phone'], name='idx_order_phone'),
+            models.Index(fields=['total_cost'], name='idx_order_total_cost'),
+            models.Index(fields=['status'], name='idx_order_status'),
+            models.Index(fields=['delivery_type'], name='idx_order_delivery_type'),
+            models.Index(fields=['payment_type'], name='idx_order_payment_type'),
             models.Index(fields=['archived'], name='idx_order_archived'),
         ]
 

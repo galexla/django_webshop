@@ -7,7 +7,16 @@ from django.http.request import HttpRequest
 from django.utils.translation import gettext_lazy as _
 
 from .forms import CategoryAdminForm, ProductAdminForm
-from .models import Category, Product, ProductImage, Sale, Specification, Tag
+from .models import (
+    Category,
+    Order,
+    OrderProduct,
+    Product,
+    ProductImage,
+    Sale,
+    Specification,
+    Tag,
+)
 
 
 @admin.action(description='Archive items')
@@ -95,8 +104,8 @@ class ProductAdmin(admin.ModelAdmin):
         'category',
         'count',
         'short_description',
-        'free_delivery',
-        'sold_count',
+        'free_dlvr',
+        'sold',
         'limited',
         'banner',
         'rating',
@@ -105,8 +114,9 @@ class ProductAdmin(admin.ModelAdmin):
     list_display_links = ['pk', 'title']
     ordering = ['title', 'pk']
     search_fields = ['title', 'description', 'full_description', 'price']
-    readonly_fields = ['created_at', 'sold_count']
+    list_filter = ['is_limited_edition', 'is_banner', 'archived']
     form = ProductAdminForm
+    readonly_fields = ['created_at', 'sold_count']
     inlines = [ProductImagesInline]
     fieldsets = [
         (
@@ -167,6 +177,16 @@ class ProductAdmin(admin.ModelAdmin):
 
     banner.short_description = _('Banner')
 
+    def sold(self, obj):
+        return obj.sold_count
+
+    sold.short_description = _('Sold')
+
+    def free_dlvr(self, obj):
+        return obj.free_delivery
+
+    free_dlvr.short_description = _('Free dlvr')
+
     def has_delete_permission(self, request, obj=None):
         return False
 
@@ -202,3 +222,49 @@ class SaleAdmin(admin.ModelAdmin):
         if db_field.name == "product":
             return ProductChoiceField(queryset=Product.objects.all())
         return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+
+class OrderProductsInline(admin.TabularInline):
+    model = OrderProduct
+    verbose_name = _('Order product')
+
+
+@admin.register(Order)
+class OrderAdmin(admin.ModelAdmin):
+    actions = [
+        mark_archived,
+        mark_unarchived,
+    ]
+    list_display = [
+        'pk',
+        'created_at',
+        'user',
+        'total_cost',
+        'full_name',
+        'status',
+        'delivery_type',
+        'archived',
+    ]
+    list_display_links = ['pk', 'created_at']
+    ordering = ['-created_at', 'pk']
+    search_fields = [
+        'full_name',
+        'city',
+        'address',
+        'email',
+        'phone',
+        'user__username',
+        'total_cost',
+        'created_at',
+    ]
+    list_filter = [
+        'status',
+        'delivery_type',
+        'payment_type',
+        'archived',
+    ]
+    readonly_fields = ['created_at', 'user']
+    inlines = [OrderProductsInline]
+
+    def has_delete_permission(self, request, obj=None):
+        return False
