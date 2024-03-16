@@ -37,7 +37,7 @@ class Category(models.Model):
         verbose_name = _('category')
         verbose_name_plural = _('categories')
         indexes = [
-            models.Index(fields=['parent'], name='idx_category_parent'),
+            models.Index(fields=['title'], name='idx_category_title'),
             models.Index(fields=['archived'], name='idx_category_archived'),
         ]
 
@@ -169,6 +169,13 @@ def get_products_queryset():
 
 
 class Sale(models.Model):
+    class Meta:
+        indexes = [
+            models.Index(fields=['date_from'], name='idx_sale_date_from'),
+            models.Index(fields=['date_to'], name='idx_sale_date_to'),
+            models.Index(fields=['sale_price'], name='idx_sale_sale_price'),
+        ]
+
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name='sales'
     )

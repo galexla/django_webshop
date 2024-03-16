@@ -49,9 +49,14 @@ class ParentCategoryListFilter(admin.SimpleListFilter):
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
+    actions = [
+        mark_archived,
+        mark_unarchived,
+    ]
     list_display = ['pk', 'title', 'get_parent_title', 'archived']
     search_fields = ['title', 'parent__title']
     list_filter = (ParentCategoryListFilter,)
+    ordering = 'parent__title', 'title', 'pk'
     sortable_by = ()
     form = CategoryAdminForm
     inlines = [SubcategoryInline]
@@ -66,6 +71,9 @@ class CategoryAdmin(admin.ModelAdmin):
         return obj.parent.title if obj.parent else None
 
     get_parent_title.short_description = _('Parent')
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class ProductImagesInline(admin.TabularInline):
@@ -185,6 +193,9 @@ class SaleAdmin(admin.ModelAdmin):
         'date_to',
         'sale_price',
     )
+    search_fields = ['product__title', 'date_from', 'date_to', 'sale_price']
+    ordering = ['product', 'date_from', 'date_to']
+    sortable_by = []
 
     def formfield_for_foreignkey(self, db_field, request, **kwargs):
         if db_field.name == "product":
