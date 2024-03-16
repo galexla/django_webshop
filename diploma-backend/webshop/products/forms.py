@@ -24,7 +24,7 @@ class CategoryAdminForm(forms.ModelForm):
 class ProductAdminForm(forms.ModelForm):
     class Meta:
         model = Product
-        exclude = ['date']
+        fields = '__all__'
 
     description = forms.CharField(
         required=False,

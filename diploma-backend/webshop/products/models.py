@@ -82,7 +82,7 @@ class Product(models.Model):
             models.Index(Lower('title'), name='idx_product_title_lower'),
             models.Index(fields=['price'], name='idx_product_price'),
             models.Index(fields=['count'], name='idx_product_count'),
-            models.Index(fields=['date'], name='idx_product_date'),
+            models.Index(fields=['created_at'], name='idx_product_created_at'),
             models.Index(
                 fields=['free_delivery'], name='idx_product_free_delivery'
             ),
@@ -113,7 +113,7 @@ class Product(models.Model):
     )
     count = models.PositiveIntegerField(default=0)
     sold_count = models.PositiveIntegerField(default=0)
-    date = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     description = models.CharField(blank=True, max_length=3000)
     full_description = models.CharField(blank=True, max_length=20000)
     free_delivery = models.BooleanField(default=True)

@@ -79,6 +79,7 @@ class ProductShortSerializer(serializers.ModelSerializer):
             'rating',
         ]
 
+    date = serializers.DateTimeField(source='created_at', read_only=True)
     images = ImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     reviews = serializers.IntegerField(source='reviews_count')
@@ -113,6 +114,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
     REVIEWS_COUNT = 10
 
+    date = serializers.DateTimeField(source='created_at', read_only=True)
     images = ImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     specifications = SpecificationSerializer(many=True, read_only=True)
