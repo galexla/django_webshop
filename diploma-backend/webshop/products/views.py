@@ -520,7 +520,8 @@ class OrdersView(APIView):
         for product in products:
             count = product_counts[product.id]
             product.count -= count
-        Product.objects.bulk_update(products, fields=['count'])
+            product.sold_count += count
+        Product.objects.bulk_update(products, fields=['count', 'sold_count'])
 
         order.total_cost = 0
         for product in products:
