@@ -480,27 +480,26 @@ class OrdersView(APIView):
             item['id']: item['count'] for item in serializer.validated_data
         }
 
-        response_body, status_ = self._creare_order_if_avail(
+        data, success = self._creare_order_if_avail(
             product_counts_dict, request.user
         )
-        return Response(response_body, status=status_)
+        if success:
+            return Response(data)
+        return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
-    def _creare_order_if_avail(self, product_counts_dict, user):
+    @transaction.atomic
+    def _creare_order_if_avail(
+        self, product_counts_dict, user
+    ) -> tuple[dict, bool]:
         """Create order if products are available"""
-        try:
-            with transaction.atomic():
-                if self._are_available(product_counts_dict):
-                    order = self._create_order(product_counts_dict, user)
-                    basket = Basket.objects.filter(user=user).first()
-                    if basket:
-                        basket_decrement(basket.id, product_counts_dict)
-                    return {'orderId': order.id}, status.HTTP_200_OK
-                else:
-                    return {
-                        'count': ['Product quantities are not available']
-                    }, status.HTTP_400_BAD_REQUEST
-        except IntegrityError:
-            return None, status.HTTP_500_INTERNAL_SERVER_ERROR
+        if self._are_available(product_counts_dict):
+            order = self._create_order(product_counts_dict, user)
+            basket = Basket.objects.filter(user=user).first()
+            if basket:
+                basket_decrement(basket.id, product_counts_dict)
+            return {'orderId': order.id}, True
+        else:
+            return {'count': ['Product quantities are not available']}, False
 
     def _create_order(self, product_counts: dict[str, int], user: User):
         """Must always be used inside transaction.atomic block"""
@@ -511,30 +510,35 @@ class OrdersView(APIView):
         order.status = order.STATUS_NEW
         order.save()
 
-        order_products = []
-        for product_id, count in product_counts.items():
-            order_product = OrderProduct(
-                order_id=order.id,
-                product_id=product_id,
-                count=count,
-            )
-            order_products.append(order_product)
-        OrderProduct.objects.bulk_create(order_products)
+        self._bulk_create_order_products(product_counts, order.id)
 
         product_ids = list(product_counts.keys())
         log.debug('product_ids: %s', product_ids)
         products = list(
             Product.objects.filter(id__in=product_ids, archived=False).all()
         )
-        order.total_cost = 0
         for product in products:
             count = product_counts[product.id]
             product.count -= count
-            order.total_cost += product.price * count
-        order.save()
         Product.objects.bulk_update(products, fields=['count'])
 
+        order.total_cost = 0
+        for product in products:
+            order.total_cost += product.price * count
+        order.save()
+
         return order
+
+    def _bulk_create_order_products(self, product_counts, order_id):
+        order_products = []
+        for product_id, count in product_counts.items():
+            order_product = OrderProduct(
+                order_id=order_id,
+                product_id=product_id,
+                count=count,
+            )
+            order_products.append(order_product)
+        return OrderProduct.objects.bulk_create(order_products)
 
     def _are_available(self, product_counts_dict: dict[str, int]) -> bool:
         ids = set(product_counts_dict.keys())
