@@ -452,7 +452,7 @@ class OrdersView(APIView):
         user = request.user
         orders = (
             Order.objects.prefetch_related('products')
-            .filter(user=user, archived=False)
+            .filter(user=user)
             .order_by('-created_at')
             .all()
         )
@@ -501,6 +501,20 @@ class OrdersView(APIView):
         else:
             return {'count': ['Product quantities are not available']}, False
 
+    def _are_available(self, product_counts_dict: dict[str, int]) -> bool:
+        ids = set(product_counts_dict.keys())
+        products = Product.objects.filter(id__in=ids, archived=False).all()
+        ids_fetched = set(product.id for product in products)
+
+        if ids_fetched != ids:
+            return False
+
+        for product in products:
+            if product.count < product_counts_dict[product.id]:
+                return False
+
+        return True
+
     def _create_order(self, product_counts: dict[str, int], user: User):
         """Must always be used inside transaction.atomic block"""
         order = Order(user=user)
@@ -540,20 +554,6 @@ class OrdersView(APIView):
             )
             order_products.append(order_product)
         return OrderProduct.objects.bulk_create(order_products)
-
-    def _are_available(self, product_counts_dict: dict[str, int]) -> bool:
-        ids = set(product_counts_dict.keys())
-        products = Product.objects.filter(id__in=ids, archived=False).all()
-        ids_fetched = set(product.id for product in products)
-
-        if ids_fetched != ids:
-            return False
-
-        for product in products:
-            if product.count < product_counts_dict[product.id]:
-                return False
-
-        return True
 
 
 class OrderView(APIView):
