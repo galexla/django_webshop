@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'webshop.middlewares.fix_frontend_bugs_middleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -81,6 +82,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'webshop.wsgi.application'
+APPEND_SLASH = False
 
 
 # Database

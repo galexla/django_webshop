@@ -30,7 +30,7 @@ urlpatterns = [
         name='product-details',
     ),
     path(
-        'product/<int:pk>/reviews',
+        'product/<int:pk>/reviews/',
         ReviewCreateView.as_view(),
         name='create-review',
     ),
@@ -47,7 +47,7 @@ urlpatterns = [
     ),
     path('sales/', SalesView.as_view(), name='sales'),
     path('categories/', TopLevelCategoryListView.as_view(), name='categories'),
-    path('basket', BasketView.as_view(), name='basket'),
-    path('orders', OrdersView.as_view(), name='orders'),
-    path('order/<int:pk>', OrderView.as_view(), name='order'),
+    path('basket/', BasketView.as_view(), name='basket'),
+    path('orders/', OrdersView.as_view(), name='orders'),
+    path('order/<int:pk>/', OrderView.as_view(), name='order'),
 ]

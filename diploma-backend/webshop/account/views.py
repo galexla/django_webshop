@@ -1,5 +1,3 @@
-import json
-
 from django.contrib.auth import authenticate, login, logout
 from rest_framework import status
 from rest_framework.authentication import SessionAuthentication
@@ -20,7 +18,7 @@ from .serializers import (
 
 class SignInView(APIView):
     def post(self, request: Request) -> Response:
-        data = json.loads(request.body)
+        data = request.data
         serializer = SignInSerializer(data=data)
         if serializer.is_valid():
             validated_data = serializer.validated_data
@@ -49,7 +47,7 @@ class SignOutView(APIView):
 
 class SignUpView(APIView):
     def post(self, request: Request) -> Response:
-        data = json.loads(list(request.data.keys())[0])
+        data = request.data
         serializer = SignUpSerializer(data=data)
         if serializer.is_valid():
             validated_data = serializer.validated_data
