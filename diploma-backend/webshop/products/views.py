@@ -158,27 +158,25 @@ class CatalogFilterBackend(DjangoFilterBackend):
 
 
 class CatalogOrderingFilter(OrderingFilter):
-    ordering_fields = [
-        'rating',
-        'price',
-        'reviews',
-        'date',
-    ]
+    sort_fields = {
+        'rating': 'rating',
+        'price': 'price',
+        'reviews': 'reviews_count',
+        'date': 'created_at',
+    }
 
     def filter_queryset(self, request, queryset, view):
         """
         Adds ordering by URL parameter 'sort' and sort direction 'sortType'
         """
         sort_field = request.query_params.get('sort')
-        if not sort_field or sort_field not in self.ordering_fields:
+        if not sort_field or sort_field not in self.sort_fields:
             return queryset.order_by('id')
-
-        if sort_field == 'reviews':
-            sort_field = 'reviews_count'
 
         sort_type = request.query_params.get('sortType')
         sort_sign = '-' if sort_type == 'dec' else ''
 
+        sort_field = self.sort_fields[sort_field]
         return queryset.order_by(sort_sign + sort_field)
 
 
