@@ -1,6 +1,6 @@
 import logging
 
-from django.core.validators import MinValueValidator
+from django.core.validators import DecimalValidator, MinValueValidator
 from django.db import models
 from django.forms import ValidationError
 
@@ -10,7 +10,7 @@ log = logging.getLogger(__name__)
 class ShopConfiguration(models.Model):
     key = models.CharField(max_length=255, unique=True)
     value = models.CharField(max_length=255)
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, max_length=5000)
 
     protected_keys = [
         'ordinary_delivery_price',
@@ -27,11 +27,11 @@ class ShopConfiguration(models.Model):
         validation fails.
         """
         try:
-            int_value = int(self.value)
-            MinValueValidator(0)(int_value)
-            return int_value
+            float_value = float(self.value)
+            MinValueValidator(0)(float_value)
+            return float_value
         except (ValueError, ValidationError) as e:
-            raise ValidationError(f'Value must be a positive integer number')
+            raise ValidationError(f'Value must be a positive float number')
 
     def clean(self) -> None:
         self.clean_value()
