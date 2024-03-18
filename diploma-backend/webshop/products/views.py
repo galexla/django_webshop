@@ -3,7 +3,7 @@ import logging
 import django_filters
 from account.models import User
 from configurations.models import get_all_shop_configurations
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.http.request import QueryDict
 from django.shortcuts import get_object_or_404
@@ -468,7 +468,7 @@ class OrdersView(APIView):
                 'count': item.get('count'),
             }
             for item in request.data
-        ]
+        ] or None
         serializer = ProductCountSerializer(data=product_counts, many=True)
         if not serializer.is_valid():
             return Response(
@@ -480,7 +480,7 @@ class OrdersView(APIView):
             item['id']: item['count'] for item in serializer.validated_data
         }
 
-        data, success = self._creare_order_if_avail(
+        data, success = self._create_order_if_avail(
             product_counts_dict, request.user
         )
         if success:
@@ -488,7 +488,7 @@ class OrdersView(APIView):
         return Response(data, status=status.HTTP_400_BAD_REQUEST)
 
     @transaction.atomic
-    def _creare_order_if_avail(
+    def _create_order_if_avail(
         self, product_counts_dict, user
     ) -> tuple[dict, bool]:
         """Create order if products are available"""
@@ -592,18 +592,32 @@ class OrderView(APIView):
             )
 
         data = serializer.validated_data
-        data['total_cost'] += self.get_delivery_cost(
-            data['delivery_type'], data['total_cost']
+        data['total_cost'] += self._get_delivery_cost(
+            order.id, data['delivery_type'], data['total_cost']
         )
         serializer.save()
 
         return Response(data)
 
-    def get_delivery_cost(self, delivery_type, order_cost):
-        shop_confs = get_all_shop_configurations()
+    def _get_delivery_cost(self, order_id, delivery_type, order_cost):
         if delivery_type == Order.DELIVERY_EXPRESS:
             return shop_confs['express_delivery_price']
         elif delivery_type == Order.DELIVERY_ORDINARY:
+            if self._is_delivery_free(order_id, delivery_type):
+                return 0
+
+            shop_confs = get_all_shop_configurations()
             if order_cost < shop_confs['free_delivery_limit']:
                 return shop_confs['ordinary_delivery_price']
+
         return 0
+
+    def _is_delivery_free(self, order_id, delivery_type) -> bool:
+        if delivery_type == Order.DELIVERY_ORDINARY:
+            free_deliveries = (
+                OrderProduct.objects.prefetch_related('product')
+                .filter(order_id=order_id)
+                .values_list('product__free_delivery')
+            )
+            return all(item[0] for item in free_deliveries)
+        return False
