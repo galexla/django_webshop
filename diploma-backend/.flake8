@@ -1,0 +1,15 @@
+[flake8]
+docstring-style=sphinx
+max-line-length=79
+max-doc-length=79
+max-complexity=10
+extend-exclude=
+    .git
+    .venv
+exclude=
+    */migrations/*
+    *.pyc
+    ./webshop/manage.py
+    ./webshop/webshop/settings.py
+per-file-ignores =
+    ./webshop/urls.py: RST203, RST301, RST201
