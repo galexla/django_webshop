@@ -258,7 +258,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
         if any(is_empty):
             raise serializers.ValidationError(
-                'No field can be empty in a confirmed order'
+                'Empty fields are only allowed in a new order'
             )
 
         return data
