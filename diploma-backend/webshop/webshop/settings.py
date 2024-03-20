@@ -82,7 +82,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'webshop.wsgi.application'
-APPEND_SLASH = False
 
 
 # Database
