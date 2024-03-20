@@ -598,13 +598,12 @@ class OrderView(APIView):
         return Response(data)
 
     def _get_delivery_cost(self, order_id, delivery_type, order_cost):
+        shop_confs = get_all_shop_configurations()
         if delivery_type == Order.DELIVERY_EXPRESS:
             return shop_confs['express_delivery_price']
         elif delivery_type == Order.DELIVERY_ORDINARY:
             if self._is_delivery_free(order_id, delivery_type):
                 return 0
-
-            shop_confs = get_all_shop_configurations()
             if order_cost < shop_confs['free_delivery_limit']:
                 return shop_confs['ordinary_delivery_price']
 

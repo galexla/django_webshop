@@ -1,6 +1,6 @@
 import logging
 
-from django.core.validators import DecimalValidator, MinValueValidator
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.forms import ValidationError
 
@@ -30,8 +30,8 @@ class ShopConfiguration(models.Model):
             float_value = float(self.value)
             MinValueValidator(0)(float_value)
             return float_value
-        except (ValueError, ValidationError) as e:
-            raise ValidationError(f'Value must be a positive float number')
+        except (ValueError, ValidationError):
+            raise ValidationError('Value must be a positive float number')
 
     def clean(self) -> None:
         self.clean_value()
