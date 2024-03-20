@@ -2,8 +2,11 @@ import uuid
 
 from account.models import User
 from django.core.exceptions import ValidationError
-from django.core.validators import (MaxValueValidator, MinValueValidator,
-                                    RegexValidator)
+from django.core.validators import (
+    MaxValueValidator,
+    MinValueValidator,
+    RegexValidator,
+)
 from django.db import models
 from django.db.models import Count
 from django.db.models.functions import Lower
@@ -252,8 +255,12 @@ class Order(models.Model):
             models.Index(fields=['phone'], name='idx_order_phone'),
             models.Index(fields=['total_cost'], name='idx_order_total_cost'),
             models.Index(fields=['status'], name='idx_order_status'),
-            models.Index(fields=['delivery_type'], name='idx_order_delivery_type'),
-            models.Index(fields=['payment_type'], name='idx_order_payment_type'),
+            models.Index(
+                fields=['delivery_type'], name='idx_order_delivery_type'
+            ),
+            models.Index(
+                fields=['payment_type'], name='idx_order_payment_type'
+            ),
             models.Index(fields=['archived'], name='idx_order_archived'),
         ]
 

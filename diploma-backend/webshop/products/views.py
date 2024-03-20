@@ -517,8 +517,8 @@ class OrdersView(APIView):
         """Must always be used inside transaction.atomic block"""
         order = Order(user=user)
         order.full_name = user.get_full_name()
-        order.phone = user.profile.phone
-        order.email = user.email
+        order.phone = user.profile.phone or ''
+        order.email = user.email or ''
         order.status = order.STATUS_NEW
         order.save()
 
