@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from account.models import User
+from django.utils import timezone
 from rest_framework.request import Request
 
 from .models import Basket
@@ -66,7 +67,6 @@ def check_basket_permissions(basket: Basket, request: Request) -> bool:
 def update_basket_access_time(basket: Basket) -> None:
     """Update basket last access time"""
     update_after = timedelta(seconds=120)
-    # TODO: get current timezone?
-    now = datetime.now(timezone(timedelta(0)))
+    now = timezone.now()
     if now - update_after > basket.last_accessed:
         basket.save()  # update basket.last_accessed
