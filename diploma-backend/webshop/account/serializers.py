@@ -109,7 +109,7 @@ class ProfileSerializer(serializers.Serializer):
             'email': user.email,
             'phone': profile.phone,
             'avatar': {
-                'src': profile.avatar.url if profile.avatar else None,
+                'src': profile.avatar.url if profile.avatar else '',
                 'alt': profile.avatar_alt,
             },
         }
