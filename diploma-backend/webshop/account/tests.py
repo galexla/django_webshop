@@ -243,3 +243,34 @@ class ProfileViewTest(TestCase):
                 'avatar': {'src': '', 'alt': ''},
             },
         )
+
+    def test_post(self):
+        url = reverse('account:profile')
+        post_data = {
+            'fullName': 'Annoying Orange',
+            'email': 'no-reply@mail.ru',
+            'phone': '+78002000600',
+            'avatar': {'src': '/3.png', 'alt': 'Image alt string'},
+        }
+
+        response = self.client.post(url, post_data)
+        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_login(self.user1)
+        response = self.client.post(url, post_data)
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(response.data, post_data)
+
+        user = User.objects.filter(
+            username='user1',
+            first_name=post_data['fullName'],
+            email=post_data['email'],
+        )
+        self.assertIsNotNone(user)
+        profile = Profile.objects.filter(
+            user=self.user1,
+            phone=post_data['phone'],
+            avatar=post_data['avatar']['src'],
+            avatar__alt=post_data['avatar']['alt'],
+        )
+        self.assertIsNotNone(profile)
