@@ -201,3 +201,41 @@ class SetPasswordViewTest(TestCase):
         self.assertEquals(response.status_code, status.HTTP_200_OK)
 
         self.client.logout()
+
+
+class ProfileViewTest(TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.user1 = User.objects.create_user(
+            username='user1',
+            first_name='123',
+            password='secret',
+            email='user1@user.com',
+        )
+        cls.user1.profile = Profile.objects.create(
+            user=cls.user1, phone='12345678'
+        )
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.user1.profile.delete()
+        cls.user1.delete()
+
+    def test_get(self):
+        url = reverse('account:profile')
+
+        response = self.client.get(url)
+        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_login(self.user1)
+        response = self.client.get(url)
+        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(
+            response.data,
+            {
+                'fullName': '123',
+                'email': 'user1@user.com',
+                'phone': '12345678',
+                'avatar': {'src': '', 'alt': ''},
+            },
+        )
