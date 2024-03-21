@@ -34,6 +34,7 @@ class SignInViewTest(TestCase):
             url, {'username': 'user1', 'password': 'secret'}
         )
         self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data)
 
         response = self.client.get(reverse('account:profile'))
         self.assertEquals(response.status_code, status.HTTP_200_OK)
@@ -87,6 +88,7 @@ class SignOutViewTest(TestCase):
         self.client.force_login(self.user1)
         response = self.client.post(url)
         self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data)
         response = self.client.get(reverse('account:profile'))
         self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -122,6 +124,7 @@ class SignUpViewTest(TestCase):
         }
         response = self.client.post(url, post_data)
         self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data)
         user = User.objects.filter(username='user2').first()
         self.assertIsNotNone(user)
         self.assertEqual(user.username, post_data['username'])
@@ -197,6 +200,7 @@ class SetPasswordViewTest(TestCase):
             {'username': 'user1', 'password': 'newPass321'},
         )
         self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertIsNone(response.data)
         response = self.client.get(reverse('account:profile'))
         self.assertEquals(response.status_code, status.HTTP_200_OK)
 
