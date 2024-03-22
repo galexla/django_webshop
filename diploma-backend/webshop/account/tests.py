@@ -250,7 +250,7 @@ class ProfileViewTest(TestCase):
             'fullName': 'Annoying Orange',
             'email': 'no-reply@mail.ru',
             'phone': '+78002000600',
-            'avatar': {'src': '/3.png', 'alt': 'Image alt string'},
+            'avatar': {'src': '', 'alt': ''},
         }
 
         response = self.client.post(url, post_data)
@@ -271,6 +271,6 @@ class ProfileViewTest(TestCase):
             user=self.user1,
             phone=post_data['phone'],
             avatar=post_data['avatar']['src'],
-            avatar__alt=post_data['avatar']['alt'],
+            avatar_alt=post_data['avatar']['alt'],
         )
         self.assertIsNotNone(profile)
