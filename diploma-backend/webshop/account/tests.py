@@ -1,5 +1,9 @@
-from django.test import TestCase
+import io
+from random import randint
+
+from django.test import TestCase, override_settings
 from django.urls import reverse
+from PIL import Image
 from rest_framework import status
 
 from .models import Profile, User
@@ -33,37 +37,37 @@ class SignInViewTest(TestCase):
         response = self.client.post(
             url, {'username': 'user1', 'password': 'secret'}
         )
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.data)
 
         response = self.client.get(reverse('account:profile'))
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         response = self.client.post(
             url, {'username': 'user2', 'password': 'secret'}
         )
-        self.assertEquals(
+        self.assertEqual(
             response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
         response = self.client.post(
             url, {'username': 'user3', 'password': 'secret'}
         )
-        self.assertEquals(
+        self.assertEqual(
             response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
         response = self.client.post(
             url, {'username': 'user1', 'password12345': 'secret'}
         )
-        self.assertEquals(
+        self.assertEqual(
             response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
         response = self.client.post(
             url, {'username12345': 'user1', 'password': 'secret'}
         )
-        self.assertEquals(
+        self.assertEqual(
             response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -83,14 +87,14 @@ class SignOutViewTest(TestCase):
         url = reverse('account:sign-out')
 
         response = self.client.post(url)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_login(self.user1)
         response = self.client.post(url)
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.data)
         response = self.client.get(reverse('account:profile'))
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
 
 class SignUpViewTest(TestCase):
@@ -113,7 +117,7 @@ class SignUpViewTest(TestCase):
             url,
             {'username': 'user1', 'password': 'secret', 'name': 'user'},
         )
-        self.assertEquals(
+        self.assertEqual(
             response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -123,20 +127,20 @@ class SignUpViewTest(TestCase):
             'name': 'user',
         }
         response = self.client.post(url, post_data)
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.data)
         user = User.objects.filter(username='user2').first()
         self.assertIsNotNone(user)
         self.assertEqual(user.username, post_data['username'])
         self.assertEqual(user.first_name, post_data['name'])
         response = self.client.get(reverse('account:profile'))
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         response = self.client.post(
             url,
             {'username': 'user1', 'password': 'secret', 'name12345': 'user'},
         )
-        self.assertEquals(
+        self.assertEqual(
             response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -144,12 +148,12 @@ class SignUpViewTest(TestCase):
             url,
             {'username': 'user3', 'password': 'secret', 'name1': 'user'},
         )
-        self.assertEquals(
+        self.assertEqual(
             response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
         response = self.client.post(url, {})
-        self.assertEquals(
+        self.assertEqual(
             response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR
         )
 
@@ -174,7 +178,7 @@ class SetPasswordViewTest(TestCase):
             url,
             {'currentPassword': 'secret', 'newPassword': 'newPass321'},
         )
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_login(self.user1)
 
@@ -182,27 +186,27 @@ class SetPasswordViewTest(TestCase):
             url,
             {'currentPassword': 'secret1', 'newPassword': 'newPass321'},
         )
-        self.assertEquals(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         response = self.client.post(
             url,
             {'currentPassword': 'secret', 'newPassword': 'newPass'},
         )
-        self.assertEquals(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         response = self.client.post(
             url,
             {'currentPassword': 'secret', 'newPassword': 'newPass321'},
         )
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         response = self.client.post(
             reverse('account:sign-in'),
             {'username': 'user1', 'password': 'newPass321'},
         )
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.data)
         response = self.client.get(reverse('account:profile'))
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.client.logout()
 
@@ -229,12 +233,12 @@ class ProfileViewTest(TestCase):
         url = reverse('account:profile')
 
         response = self.client.get(url)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_login(self.user1)
         response = self.client.get(url)
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
             response.data,
             {
                 'fullName': '123',
@@ -254,12 +258,12 @@ class ProfileViewTest(TestCase):
         }
 
         response = self.client.post(url, post_data)
-        self.assertEquals(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_login(self.user1)
         response = self.client.post(url, post_data)
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(response.data, post_data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, post_data)
 
         user = User.objects.filter(
             username='user1',
@@ -274,3 +278,97 @@ class ProfileViewTest(TestCase):
             avatar_alt=post_data['avatar']['alt'],
         )
         self.assertIsNotNone(profile)
+
+
+@override_settings(
+    STORAGES={
+        'default': {
+            'BACKEND': 'django.core.files.storage.memory.InMemoryStorage',
+        },
+    },
+    DEFAULT_FILE_STORAGE='django.core.files.storage.memory.InMemoryStorage',
+    PASSWORD_HASHERS=(
+        'django.contrib.auth.hashers.UnsaltedMD5PasswordHasher',
+    ),
+)
+class AvatarUpdateViewTest(TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.user = User.objects.create(
+            username='user1', password='secret', email='user1@user.com'
+        )
+        cls.rand_pixels = [
+            (
+                randint(0, 255),
+                randint(0, 255),
+                randint(0, 255),
+            )
+            for i in range(500 * 500)
+        ]
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.user.delete()
+
+    def generate_photo_file(
+        self, size=(100, 100), filename='test', extension='png'
+    ):
+        file = io.BytesIO()
+        n_pixels = size[0] * size[1]
+        ratio = n_pixels // len(self.rand_pixels) + 1
+        pixel_data = self.rand_pixels * ratio
+        pixel_data = pixel_data[:n_pixels]
+
+        image = Image.new('RGB', size=size, color=(0, 0, 0))
+        image.putdata(pixel_data)
+
+        image.save(file, extension)
+        file.name = f'{filename}.{extension}'
+        file.seek(0)
+        return file
+
+    def test_post(self):
+        url = reverse('account:avatar')
+
+        photo_file = self.generate_photo_file(size=(100, 100), extension='png')
+        data = {'avatar': photo_file}
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_login(self.user)
+        photo_file = self.generate_photo_file(size=(100, 100), extension='png')
+        data = {'avatar': photo_file}
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        profile = Profile.objects.get(user_id=self.user.id)
+        with open(profile.avatar.path, 'rb') as f:
+            file_data = f.read()
+        self.assertEqual(file_data, photo_file.getvalue())
+
+        photo_file = self.generate_photo_file(
+            size=(1000, 1000), extension='png'
+        )
+        data = {'avatar': photo_file}
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        data = {'avatar': 'dsfvks'}
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        photo_file = self.generate_photo_file(size=(100, 100), extension='bmp')
+        data = {'avatar': photo_file}
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        photo_file = self.generate_photo_file(size=(100, 100), extension='gif')
+        data = {'avatar': photo_file}
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        photo_file = self.generate_photo_file(
+            size=(100, 100), extension='jpeg'
+        )
+        data = {'avatar': photo_file}
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
