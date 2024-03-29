@@ -36,7 +36,6 @@ class Profile(models.Model):
         verbose_name=_('avatar'),
         null=True,
         blank=True,
-        max_length=2 * 1024 * 1024,
         validators=[
             FileExtensionValidator(
                 allowed_extensions=ALLOWED_AVATAR_EXTENSIONS,

@@ -122,3 +122,12 @@ class AvatarUpdateSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ['avatar']
         extra_kwargs = {'avatar': {'write_only': True}}
+
+    MAX_FILE_SIZE = 2 * 1024 * 1024
+
+    def validate_avatar(self, value):
+        if value.size > self.MAX_FILE_SIZE:
+            raise serializers.ValidationError(
+                f'Maximum file size is {self.MAX_FILE_SIZE} bytes'
+            )
+        return value
