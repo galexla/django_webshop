@@ -7,7 +7,7 @@ from django.urls import reverse
 from PIL import Image
 from rest_framework import status
 
-from .models import Profile, User
+from ..models import Profile, User
 
 
 class SignInViewTest(TestCase):

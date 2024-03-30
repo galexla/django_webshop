@@ -1,7 +1,7 @@
 from typing import Any
 
 from django.contrib.auth.models import AbstractUser, UserManager
-from django.core.validators import FileExtensionValidator, RegexValidator
+from django.core.validators import RegexValidator
 from django.db import models, transaction
 from django.utils.translation import gettext_lazy as _
 
