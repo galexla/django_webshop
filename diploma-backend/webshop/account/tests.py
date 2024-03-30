@@ -301,7 +301,7 @@ class AvatarUpdateViewTest(TestCase):
         cls.user.delete()
 
     def generate_photo_file(
-        self, size=(100, 100), filename='test', extension='png'
+        self, size=(100, 100), filename='test', format='png'
     ):
         file = io.BytesIO()
         n_pixels = size[0] * size[1]
@@ -312,25 +312,21 @@ class AvatarUpdateViewTest(TestCase):
         image = Image.new('RGB', size=size, color=(0, 0, 0))
         image.putdata(pixel_data)
 
-        image.save(file, extension)
-        file.name = f'{filename}.{extension}'
+        image.save(file, format)
+        file.name = f'{filename}.{format}'
         file.seek(0)
         return file
 
     def test_post(self):
         url = reverse('account:avatar')
 
-        photo_bytes = self.generate_photo_file(
-            size=(100, 100), extension='png'
-        )
+        photo_bytes = self.generate_photo_file(size=(100, 100), format='png')
         data = {'avatar': photo_bytes}
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_login(self.user)
-        photo_bytes = self.generate_photo_file(
-            size=(100, 100), extension='png'
-        )
+        photo_bytes = self.generate_photo_file(size=(100, 100), format='png')
         data = {'avatar': photo_bytes}
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -338,34 +334,21 @@ class AvatarUpdateViewTest(TestCase):
         file_data = default_storage.open(profile.avatar.path).read()
         self.assertEqual(file_data, photo_bytes.getvalue())
 
-        photo_bytes = self.generate_photo_file(
-            size=(1000, 1000), extension='png'
-        )
+        photo_bytes = self.generate_photo_file(size=(1000, 1000), format='png')
         data = {'avatar': photo_bytes}
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        data = {'avatar': 'dsfvks'}
+        data = {'avatar': b'dsfvks'}
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        photo_bytes = self.generate_photo_file(
-            size=(100, 100), extension='bmp'
-        )
-        data = {'avatar': photo_bytes}
-        response = self.client.post(url, data, format='multipart')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-        photo_bytes = self.generate_photo_file(
-            size=(100, 100), extension='gif'
-        )
+        photo_bytes = self.generate_photo_file(size=(100, 100), format='gif')
         data = {'avatar': photo_bytes}
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # photo_bytes = self.generate_photo_file(
-        #     size=(100, 100), extension='jpeg'
-        # )
-        # data = {'avatar': photo_bytes}
-        # response = self.client.post(url, data, format='multipart')
-        # self.assertEqual(response.status_code, status.HTTP_200_OK)
+        photo_bytes = self.generate_photo_file(size=(100, 100), format='jpeg')
+        data = {'avatar': photo_bytes}
+        response = self.client.post(url, data, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
