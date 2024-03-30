@@ -11,8 +11,6 @@ def get_avatar_upload_path(instance: 'Profile', filename: str) -> str:
 
 
 class Profile(models.Model):
-    ALLOWED_AVATAR_EXTENSIONS = 'png,jpg,gif'.split(',')
-
     user = models.OneToOneField(
         'User', on_delete=models.CASCADE, related_name='profile'
     )
@@ -36,11 +34,6 @@ class Profile(models.Model):
         verbose_name=_('avatar'),
         null=True,
         blank=True,
-        validators=[
-            FileExtensionValidator(
-                allowed_extensions=ALLOWED_AVATAR_EXTENSIONS,
-            ),
-        ],
         upload_to=get_avatar_upload_path,
     )
     avatar_alt = models.CharField(
