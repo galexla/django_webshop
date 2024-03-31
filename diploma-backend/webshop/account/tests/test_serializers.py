@@ -2,10 +2,13 @@ from django.test import TestCase
 
 from ..models import User
 from ..serializers import (
+    AvatarUpdateSerializer,
+    ProfileSerializer,
     SetPasswordSerializer,
     SignInSerializer,
     SignUpSerializer,
 )
+from .common import RandomImage
 
 
 class SignUpSerializerTest(TestCase):
@@ -157,3 +160,72 @@ class SetPasswordSerializerTest(TestCase):
             data={'currentPassword': 'gedfkjdhf', 'newPassword': 'dfdskfjdfa'}
         )
         self.assertTrue(serializer.is_valid())
+
+
+class AvatarUpdateSerializerTest(TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.rand_image = RandomImage(500 * 500)
+        cls.user = User.objects.create(username='test', password='fwfsiuefds')
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.user.delete()
+
+    def test_validate_avatar(self):
+        serializer = AvatarUpdateSerializer(data={'avatar': b'dsfrgk'})
+        self.assertFalse(serializer.is_valid())
+
+    def test_avatar_write_only(self):
+        serializer = AvatarUpdateSerializer(instance=self.user.profile)
+        self.assertIsNone(serializer.data.get('avatar'))
+
+
+class ProfileSerializerTest(TestCase):
+    def test_fields(self):
+        ok_data = {
+            'fullName': 'test',
+            'email': 'test@test.com',
+            'phone': '+24437',
+        }
+
+        self._check_invalid_values(ok_data, 'fullName', [None, '', 'a' * 160])
+
+        self._check_invalid_values(
+            ok_data,
+            'email',
+            [
+                None,
+                '',
+                'a@' + 'a' * 260 + '.com',
+                'test',
+                'test@test',
+                '.test@test.com',
+            ],
+        )
+
+        self._check_invalid_values(
+            ok_data,
+            'phone',
+            [None, '', '+' + '1' * 35, '+1234', '1234567'],
+        )
+
+        serializer = ProfileSerializer(data=ok_data)
+        self.assertTrue(serializer.is_valid())
+
+    def _check_invalid_values(
+        self, valid_data: dict, field_name: str, invalid_values: list[str]
+    ):
+        """
+        Replace a field in the valid data with invalid_values and
+        ensure that serializer.is_valid() always returns False. None
+        in invalid_values means the field is removed.
+        """
+        for value in invalid_values:
+            data = valid_data.copy()
+            if value is None:
+                data.pop(field_name)
+            else:
+                data[field_name] = value
+            serializer = ProfileSerializer(data=data)
+            self.assertFalse(serializer.is_valid())

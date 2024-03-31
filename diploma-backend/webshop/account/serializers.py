@@ -63,18 +63,14 @@ class SetPasswordSerializer(serializers.Serializer):
 
 
 class ProfileSerializer(serializers.Serializer):
-    fullName = serializers.CharField(
-        required=True, allow_blank=False, max_length=150
-    )
+    fullName = serializers.CharField(allow_blank=False, max_length=150)
     email = serializers.EmailField(
-        required=True,
         allow_blank=False,
         validators=[
             UniqueValidator(queryset=User.objects.all()),
         ],
     )
     phone = serializers.CharField(
-        required=True,
         allow_blank=False,
         max_length=32,
         validators=[

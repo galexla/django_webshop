@@ -1,13 +1,10 @@
-import io
-from random import randint
-
 from django.core.files.storage import default_storage
 from django.test import TestCase
 from django.urls import reverse
-from PIL import Image
 from rest_framework import status
 
 from ..models import Profile, User
+from .common import RandomImage
 
 
 class SignInViewTest(TestCase):
@@ -287,46 +284,22 @@ class AvatarUpdateViewTest(TestCase):
         cls.user = User.objects.create(
             username='user1', password='secret', email='user1@user.com'
         )
-        cls.rand_pixels = [
-            (
-                randint(0, 255),
-                randint(0, 255),
-                randint(0, 255),
-            )
-            for i in range(500 * 500)
-        ]
+        cls.rand_image = RandomImage(500 * 500)
 
     @classmethod
     def tearDownClass(cls) -> None:
         cls.user.delete()
 
-    def generate_photo_file(
-        self, size=(100, 100), filename='test', format='png'
-    ):
-        file = io.BytesIO()
-        n_pixels = size[0] * size[1]
-        ratio = n_pixels // len(self.rand_pixels) + 1
-        pixel_data = self.rand_pixels * ratio
-        pixel_data = pixel_data[:n_pixels]
-
-        image = Image.new('RGB', size=size, color=(0, 0, 0))
-        image.putdata(pixel_data)
-
-        image.save(file, format)
-        file.name = f'{filename}.{format}'
-        file.seek(0)
-        return file
-
     def test_post(self):
         url = reverse('account:avatar')
 
-        photo_bytes = self.generate_photo_file(size=(100, 100), format='png')
+        photo_bytes = self.rand_image.get_bytes(size=(100, 100), format='png')
         data = {'avatar': photo_bytes}
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_login(self.user)
-        photo_bytes = self.generate_photo_file(size=(100, 100), format='png')
+        photo_bytes = self.rand_image.get_bytes(size=(100, 100), format='png')
         data = {'avatar': photo_bytes}
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -334,7 +307,9 @@ class AvatarUpdateViewTest(TestCase):
         file_data = default_storage.open(profile.avatar.path).read()
         self.assertEqual(file_data, photo_bytes.getvalue())
 
-        photo_bytes = self.generate_photo_file(size=(1000, 1000), format='png')
+        photo_bytes = self.rand_image.get_bytes(
+            size=(1000, 1000), format='png'
+        )
         data = {'avatar': photo_bytes}
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -343,12 +318,12 @@ class AvatarUpdateViewTest(TestCase):
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        photo_bytes = self.generate_photo_file(size=(100, 100), format='gif')
+        photo_bytes = self.rand_image.get_bytes(size=(100, 100), format='gif')
         data = {'avatar': photo_bytes}
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        photo_bytes = self.generate_photo_file(size=(100, 100), format='jpeg')
+        photo_bytes = self.rand_image.get_bytes(size=(100, 100), format='jpeg')
         data = {'avatar': photo_bytes}
         response = self.client.post(url, data, format='multipart')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
