@@ -189,9 +189,9 @@ class ProfileSerializerTest(TestCase):
             'phone': '+24437',
         }
 
-        self._check_invalid_values(ok_data, 'fullName', [None, '', 'a' * 160])
+        self._assert_invalid_values(ok_data, 'fullName', [None, '', 'a' * 160])
 
-        self._check_invalid_values(
+        self._assert_invalid_values(
             ok_data,
             'email',
             [
@@ -204,7 +204,7 @@ class ProfileSerializerTest(TestCase):
             ],
         )
 
-        self._check_invalid_values(
+        self._assert_invalid_values(
             ok_data,
             'phone',
             [None, '', '+' + '1' * 35, '+1234', '1234567'],
@@ -213,13 +213,13 @@ class ProfileSerializerTest(TestCase):
         serializer = ProfileSerializer(data=ok_data)
         self.assertTrue(serializer.is_valid())
 
-    def _check_invalid_values(
+    def _assert_invalid_values(
         self, valid_data: dict, field_name: str, invalid_values: list[str]
     ):
         """
-        Replace a field in the valid data with invalid_values and
-        ensure that serializer.is_valid() always returns False. None
-        in invalid_values means the field is removed.
+        Ensure that valid_data[field_name] replaced by any value from
+        invalid_values leads to serializer.is_valid() = False. None in
+        invalid_values list means the field is removed.
         """
         for value in invalid_values:
             data = valid_data.copy()
