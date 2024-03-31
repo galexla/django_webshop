@@ -1,7 +1,11 @@
 from django.test import TestCase
 
 from ..models import User
-from ..serializers import SignInSerializer, SignUpSerializer
+from ..serializers import (
+    SetPasswordSerializer,
+    SignInSerializer,
+    SignUpSerializer,
+)
 
 
 class SignUpSerializerTest(TestCase):
@@ -39,6 +43,11 @@ class SignUpSerializerTest(TestCase):
         self.assertFalse(serializer.is_valid())
 
         serializer = SignUpSerializer(
+            data={'name': 'test', 'username': 'test', 'password': 'a' * 130}
+        )
+        self.assertFalse(serializer.is_valid())
+
+        serializer = SignUpSerializer(
             data={'name': 'test', 'username': '#test', 'password': 'dfskdfdd'}
         )
         self.assertFalse(serializer.is_valid())
@@ -60,7 +69,7 @@ class SignUpSerializerTest(TestCase):
             },
         )
 
-    def test_write_only(self):
+    def test_passw_write_only(self):
         serializer = SignUpSerializer(instance=self.user)
         self.assertIsNotNone(serializer.data.get('username'))
         self.assertIsNone(serializer.data.get('password'))
@@ -87,12 +96,17 @@ class SignInSerializerTest(TestCase):
     def tearDownClass(cls) -> None:
         cls.user.delete()
 
-    def test_all(self):
+    def test_fields(self):
         serializer = SignInSerializer(data={'username': '', 'password': ''})
         self.assertFalse(serializer.is_valid())
 
         serializer = SignInSerializer(
             data={'username': 'a' * 160, 'password': 'asggdfsx'}
+        )
+        self.assertFalse(serializer.is_valid())
+
+        serializer = SignInSerializer(
+            data={'username': 'test', 'password': 'a' * 130}
         )
         self.assertFalse(serializer.is_valid())
 
@@ -105,7 +119,41 @@ class SignInSerializerTest(TestCase):
             {'username': 'test', 'password': 'asggdfsx'},
         )
 
-    def test_write_only(self):
+        serializer = SignInSerializer(data={'password': 'asggdfsx'})
+        self.assertFalse(serializer.is_valid())
+
+    def test_passw_write_only(self):
         serializer = SignInSerializer(instance=self.user)
         self.assertIsNotNone(serializer.data.get('username'))
         self.assertIsNone(serializer.data.get('password'))
+
+
+class SetPasswordSerializerTest(TestCase):
+    def test_fields(self):
+        serializer = SetPasswordSerializer(data={})
+        self.assertFalse(serializer.is_valid())
+
+        serializer = SetPasswordSerializer(
+            data={'currentPassword': '', 'newPassword': ''}
+        )
+        self.assertFalse(serializer.is_valid())
+
+        serializer = SetPasswordSerializer(
+            data={'currentPassword': 'a' * 130, 'newPassword': 'dfdskfjdfa'}
+        )
+        self.assertFalse(serializer.is_valid())
+
+        serializer = SetPasswordSerializer(
+            data={'currentPassword': 'gedfkjdhf', 'newPassword': 'gedfkjdhf'}
+        )
+        self.assertFalse(serializer.is_valid())
+
+        serializer = SetPasswordSerializer(
+            data={'currentPassword': 'gedfkjdhf', 'newPassword': 'dfkjdhf'}
+        )
+        self.assertFalse(serializer.is_valid())
+
+        serializer = SetPasswordSerializer(
+            data={'currentPassword': 'gedfkjdhf', 'newPassword': 'dfdskfjdfa'}
+        )
+        self.assertTrue(serializer.is_valid())
