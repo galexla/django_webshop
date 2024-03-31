@@ -20,13 +20,10 @@ class SignUpSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
-        attrs['first_name'] = attrs['name']
+        attrs['first_name'] = attrs.pop('name')
 
         user = User(username=attrs['username'])
-        try:
-            validate_password(attrs['password'], user)
-        except ValidationError as exc:
-            raise serializers.ValidationError(exc.messages)
+        validate_password(attrs['password'], user)
 
         return attrs
 
