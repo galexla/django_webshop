@@ -2,8 +2,8 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import RegexValidator
 from django.db import transaction
+from django.forms import ValidationError
 from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
 from rest_framework.validators import UniqueValidator
 
 from .models import Profile, User
@@ -45,16 +45,21 @@ class SignInSerializer(serializers.Serializer):
             UnicodeUsernameValidator(),
         ],
     )
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(max_length=128, write_only=True)
 
 
 class SetPasswordSerializer(serializers.Serializer):
-    currentPassword = serializers.CharField(required=True)
-    newPassword = serializers.CharField(required=True)
+    currentPassword = serializers.CharField(max_length=128)
+    newPassword = serializers.CharField(max_length=128)
 
     def validate_newPassword(self, value):
         validate_password(value)
         return value
+
+    def validate(self, attrs):
+        if attrs['currentPassword'] == attrs['newPassword']:
+            raise ValidationError('New password must be different')
+        return super().validate(attrs)
 
 
 class ProfileSerializer(serializers.Serializer):
