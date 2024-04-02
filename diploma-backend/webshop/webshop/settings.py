@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+from os import getenv
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -19,16 +20,25 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = getenv('DJANGO_DEBUG', True)
+
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = (
-    'django-insecure-g5v$@2_9ms1(c)2ihe#*+xmjnbo)@9pk34bx(21u5d-bkqi4c6'
+SECRET_KEY = getenv(
+    'DJANGO_SECRET_KEY',
+    'django-insecure-g5v$@2_9ms1(c)2ihe#*+xmjnbo)@9pk34bx(21u5d-bkqi4c6',
 )
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+ALLOWED_HOSTS = [
+    '0.0.0.0',
+    '127.0.0.1',
+] + getenv(
+    'DJANGO_ALLOWED_HOSTS', ''
+).split(',')
 
-# INTERNAL_IPS = ['127.0.0.1']
-ALLOWED_HOSTS = ['127.0.0.1']
+INTERNAL_IPS = [
+    '127.0.0.1',
+]
 
 TEST_RUNNER = 'webshop.test_runner.FastTestRunner'
 
@@ -89,12 +99,21 @@ WSGI_APPLICATION = 'webshop.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
+DATABASES = {}
+if DEBUG:
+    DATABASES['default'] = {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
-}
+else:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': getenv('DJANGO_DB_NAME'),
+        'USER': getenv('DJANGO_DB_USER'),
+        'PASSWORD': getenv('DJANGO_DB_PASSWORD'),
+        'HOST': getenv('DJANGO_DB_HOST'),
+        'PORT': getenv('DJANGO_DB_PORT'),
+    }
 
 
 AUTH_USER_MODEL = 'account.User'
@@ -152,6 +171,8 @@ REST_FRAMEWORK = {
     ],
 }
 
+LOGLEVEL = getenv('DJANGO_LOGLEVEL', 'info').upper()
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -170,9 +191,6 @@ LOGGING = {
     },
     'handlers': {
         'console': {
-            'level': 'DEBUG',
-            # 'formatter': 'verbose',
-            # 'formatter': 'short',
             'filters': ['require_debug_true'],
             'class': 'logging.StreamHandler',
         },
@@ -180,7 +198,6 @@ LOGGING = {
     'loggers': {
         'django.request': {
             'handlers': ['console'],
-            'level': 'DEBUG',
             'propagate': False,
         },
         # 'django.db.backends': {
@@ -193,6 +210,5 @@ LOGGING = {
         'handlers': [
             'console',
         ],
-        'level': 'DEBUG',
     },
 }
