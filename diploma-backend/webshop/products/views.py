@@ -577,7 +577,9 @@ class OrderView(APIView):
             return Response(data)
 
         if order.status != Order.STATUS_NEW:
-            msg = f'Only orders with status "{Order.STATUS_NEW}" can be modified.'
+            msg = 'Only orders with status "{}" can be modified.'.format(
+                Order.STATUS_NEW
+            )
             return Response(
                 {'status': [msg]}, status=status.HTTP_400_BAD_REQUEST
             )

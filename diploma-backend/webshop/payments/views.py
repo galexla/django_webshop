@@ -26,7 +26,9 @@ class PaymentView(APIView):
             Order, pk=pk, user=request.user, archived=False
         )
         if order.status != order.STATUS_PROCESSING:
-            msg = f'You can only pay for orders with status "{Order.STATUS_PROCESSING}".'
+            msg = 'You can only pay for orders with status "{}".'.format(
+                Order.STATUS_PROCESSING
+            )
             return Response(
                 {'status': [msg]}, status=status.HTTP_400_BAD_REQUEST
             )
@@ -60,8 +62,11 @@ class PaymentView(APIView):
                 order.status = Order.STATUS_PAID
                 order.save()
                 serializer.save()
-            msg = 'Order %s has been paid from card %s'
-            log.info(msg, order.id, serializer.validated_data['card_number'])
+            log.info(
+                'Order %s has been paid from card %s',
+                order.id,
+                serializer.validated_data['card_number'],
+            )
             return None, status.HTTP_200_OK
         except IntegrityError:
             return None, status.HTTP_500_INTERNAL_SERVER_ERROR

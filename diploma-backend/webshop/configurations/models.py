@@ -42,7 +42,8 @@ class ShopConfiguration(models.Model):
             original_key = ShopConfiguration.objects.get(pk=self.pk).key
             if self.key != original_key:
                 log.info(
-                    f'Renaming attempt blocked for protected configuration: {self.key}'
+                    'Renaming attempt blocked for protected configuration %s',
+                    self.key,
                 )
                 return
 
@@ -51,7 +52,8 @@ class ShopConfiguration(models.Model):
     def delete(self, *args, **kwargs):
         if self.key in self.protected_keys:
             log.info(
-                f'Deletion attempt blocked for protected configuration: {self.key}'
+                'Deletion attempt blocked for protected configuration %s',
+                self.key,
             )
             return
 

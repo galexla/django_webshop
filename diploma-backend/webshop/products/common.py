@@ -58,7 +58,10 @@ def check_basket_permissions(basket: Basket, request: Request) -> bool:
         ip = get_client_ip(request)
         user_id = user.id if user else None
         log.warning(
-            f'User {user_id} [{ip}] attempts to retrieve basket of user {basket.user_id}'
+            'User %s [%s] attempts to retrieve basket of user %s',
+            user_id,
+            ip,
+            basket.user_id,
         )
         return False
     return True
