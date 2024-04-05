@@ -1,29 +1,39 @@
 services:
   postgres:
     image: postgres:16.2
+    container_name: webshop_postgres
     environment:
       - POSTGRES_USER=${DJANGO_DB_USER}
       - POSTGRES_PASSWORD=${DJANGO_DB_PASSWORD}
       - POSTGRES_DB=${DJANGO_DB_NAME}
     env_file:
       - .env
-    volumes:
-      - ./database/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d webshop"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     ports:
       - "${DJANGO_DB_PORT}:${DJANGO_DB_PORT}"
 
   app:
     build:
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: Dockerfile
+    container_name: webshop_app
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     command:
       - gunicorn
-      - mysite.wsgi:application
+      - webshop.wsgi:application
       - --bind
       - "0.0.0.0:8000"
-    ports:
-      - "8000:8000"
+    volumes:
+      - .:/app
+      - static_volume:/app/diploma-backend/webshop/staticfiles
+    expose:
+      - 8000
     restart: always
     env_file:
       - .env
@@ -32,3 +42,18 @@ services:
       options:
         max-file: "10"
         max-size: "1M"
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    container_name: webshop_nginx
+    depends_on:
+      - app
+    volumes:
+      - static_volume:/app/diploma-backend/webshop/staticfiles
+    ports:
+      - "80:80"
+
+volumes:
+  static_volume:
