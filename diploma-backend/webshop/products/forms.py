@@ -16,13 +16,14 @@ class CategoryAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super(CategoryAdminForm, self).__init__(*args, **kwargs)
-        instance = kwargs['instance']
-        if instance.parent is None:
+        instance = kwargs.get('instance')
+        if instance and instance.parent:
             self.fields['parent'].queryset = Category.objects.none()
         else:
-            self.fields['parent'].queryset = Category.objects.filter(
-                parent__isnull=True
-            ).exclude(pk=instance.pk)
+            queryset = Category.objects.filter(parent__isnull=True)
+            if instance:
+                queryset = queryset.exclude(pk=instance.pk)
+            self.fields['parent'].queryset = queryset
 
 
 class ProductAdminForm(forms.ModelForm):
