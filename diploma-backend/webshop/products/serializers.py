@@ -3,6 +3,7 @@ import logging
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import transaction
 from django.shortcuts import get_object_or_404
+from django.templatetags.static import static
 from rest_framework import serializers
 
 from .models import (
@@ -19,15 +20,38 @@ from .models import (
 log = logging.getLogger(__name__)
 
 
+FOLDER_ICON = 'products/folder_icon.png'
+GOODS_ICON = 'products/goods_icon.png'
+
+
 class ImageSerializer(serializers.Serializer):
     src = serializers.SerializerMethodField()
     alt = serializers.SerializerMethodField()
 
     def get_src(self, instance):
-        return instance.image.url
+        try:
+            return instance.image.url
+        except Exception:
+            return self.default_image_url
+
+    @property
+    def default_image_url(self):
+        return ''
 
     def get_alt(self, instance):
         return getattr(instance, 'image_alt', '')
+
+
+class CategoryImageSerializer(ImageSerializer):
+    @property
+    def default_image_url(self):
+        return static(FOLDER_ICON)
+
+
+class ProductImageSerializer(ImageSerializer):
+    @property
+    def default_image_url(self):
+        return static(FOLDER_ICON)
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -36,7 +60,7 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'image']
         read_only_fields = ['id', 'title', 'image']
 
-    image = ImageSerializer(source='*')
+    image = CategoryImageSerializer(source='*')
 
 
 class TopLevelCategorySerializer(serializers.ModelSerializer):
@@ -45,7 +69,7 @@ class TopLevelCategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'image', 'subcategories']
         read_only_fields = ['id', 'title', 'image', 'subcategories']
 
-    image = ImageSerializer(source='*')
+    image = CategoryImageSerializer(source='*')
     subcategories = CategorySerializer(many=True, read_only=True)
 
 
@@ -80,10 +104,16 @@ class ProductShortSerializer(serializers.ModelSerializer):
         ]
 
     date = serializers.DateTimeField(source='created_at', read_only=True)
-    images = ImageSerializer(many=True, read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     reviews = serializers.IntegerField(source='reviews_count')
     freeDelivery = serializers.CharField(source='free_delivery')
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data['images']:
+            data['images'] = [{'src': static(GOODS_ICON), 'alt': ''}]
+        return data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -115,7 +145,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     REVIEWS_COUNT = 10
 
     date = serializers.DateTimeField(source='created_at', read_only=True)
-    images = ImageSerializer(many=True, read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     specifications = SpecificationSerializer(many=True, read_only=True)
     reviews = serializers.SerializerMethodField(read_only=True)
@@ -129,6 +159,12 @@ class ProductDetailSerializer(serializers.ModelSerializer):
         serializer = ReviewSerializer(reviews, many=True)
 
         return serializer.data
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not data['images']:
+            data['images'] = [{'src': static(GOODS_ICON), 'alt': ''}]
+        return data
 
 
 class SaleSerializer(serializers.Serializer):
