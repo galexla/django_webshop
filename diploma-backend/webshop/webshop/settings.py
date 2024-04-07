@@ -17,7 +17,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -203,7 +203,6 @@ if DEBUG:
             'console': {
                 'level': 'DEBUG',
                 # 'formatter': 'verbose',
-                # 'formatter': 'short',
                 'filters': ['require_debug_true'],
                 'class': 'logging.StreamHandler',
             },
