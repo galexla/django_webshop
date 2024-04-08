@@ -13,6 +13,7 @@ RUN poetry install
 COPY .env ./
 COPY diploma-backend /app/diploma-backend
 WORKDIR /app/diploma-backend/webshop
+RUN rm -rf /app/diploma-backend/webshop/uploads/
 
 COPY entrypoint.sh /app/
 RUN chmod +x /app/entrypoint.sh
