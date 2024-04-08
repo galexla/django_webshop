@@ -63,7 +63,9 @@ class Category(models.Model):
                 )
             if self.parent.parent is not None:
                 raise ValidationError(
-                    _('Category can only be subcategory of top-level category')
+                    _(
+                        'Category can only be subcategory of a top-level category'
+                    )
                 )
             if self.pk is not None and len(self.subcategories.all()) > 0:
                 raise ValidationError(
