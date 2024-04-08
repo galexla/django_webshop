@@ -65,7 +65,7 @@ class CategoryAdmin(admin.ModelAdmin):
     list_display = ['pk', 'title', 'get_parent_title', 'archived']
     list_display_links = ['pk', 'title']
     search_fields = ['title', 'parent__title']
-    list_filter = [ParentCategoryListFilter]
+    list_filter = [ParentCategoryListFilter, 'archived']
     ordering = ['parent__title', 'title', 'pk']
     sortable_by = []
     form = CategoryAdminForm
