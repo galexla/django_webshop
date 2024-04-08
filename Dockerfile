@@ -10,9 +10,12 @@ COPY pyproject.toml poetry.lock ./
 COPY diploma-frontend /app/diploma-frontend
 RUN poetry install
 
+COPY .env ./
 COPY diploma-backend /app/diploma-backend
 WORKDIR /app/diploma-backend/webshop
-RUN python manage.py collectstatic --noinput
-RUN python manage.py migrate
+
+COPY entrypoint.sh /app/
+RUN chmod +x /app/entrypoint.sh
+ENTRYPOINT ["/app/entrypoint.sh"]
 
 CMD ["gunicorn", "webshop.wsgi:application", "--bind", "0.0.0.0:8000"]

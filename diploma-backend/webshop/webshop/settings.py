@@ -17,10 +17,10 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(BASE_DIR.parent.parent / '.env', override=True)
+
 DATABASE_DIR = BASE_DIR / 'database'
 DATABASE_DIR.mkdir(exist_ok=True)
 

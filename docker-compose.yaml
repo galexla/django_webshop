@@ -8,11 +8,6 @@ services:
       - POSTGRES_DB=${DJANGO_DB_NAME}
     env_file:
       - .env
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d webshop"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
     ports:
       - "${DJANGO_DB_PORT}:${DJANGO_DB_PORT}"
 
@@ -22,8 +17,9 @@ services:
       dockerfile: Dockerfile
     container_name: webshop_app
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
+    environment:
+      - WAIT_HOSTS=postgres:${DJANGO_DB_PORT}
     command:
       - gunicorn
       - webshop.wsgi:application
@@ -32,6 +28,7 @@ services:
     volumes:
       - .:/app
       - static_volume:/app/diploma-backend/webshop/staticfiles
+      - media_volume:/app/diploma-backend/webshop/uploads
     expose:
       - 8000
     restart: always
@@ -52,8 +49,10 @@ services:
       - app
     volumes:
       - static_volume:/app/diploma-backend/webshop/staticfiles
+      - media_volume:/app/diploma-backend/webshop/uploads
     ports:
       - "80:80"
 
 volumes:
   static_volume:
+  media_volume:
