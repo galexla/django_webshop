@@ -462,10 +462,7 @@ class OrdersView(APIView):
 
     def post(self, request, *args, **kwargs):
         product_counts = [
-            {
-                'id': item.get('id'),
-                'count': item.get('count'),
-            }
+            {'id': item.get('id'), 'count': item.get('count')}
             for item in request.data
         ] or None
         serializer = ProductCountSerializer(data=product_counts, many=True)
@@ -479,26 +476,18 @@ class OrdersView(APIView):
             item['id']: item['count'] for item in serializer.validated_data
         }
 
-        data, success = self._create_order_if_avail(
-            product_counts_dict, request.user
-        )
-        if success:
-            return Response(data)
-        return Response(data, status=status.HTTP_400_BAD_REQUEST)
-
-    @transaction.atomic
-    def _create_order_if_avail(
-        self, product_counts_dict, user
-    ) -> tuple[dict, bool]:
-        """Create order if products are available"""
-        if self._are_available(product_counts_dict):
-            order = self._create_order(product_counts_dict, user)
-            basket = Basket.objects.filter(user=user).first()
-            if basket:
-                basket_decrement(basket.id, product_counts_dict)
-            return {'orderId': order.id}, True
-        else:
-            return {'count': ['Product quantities are not available']}, False
+        with transaction.atomic():
+            if self._are_available(product_counts_dict):
+                order = self._create_order(product_counts_dict, request.user)
+                basket = Basket.objects.filter(user=request.user).first()
+                if basket:
+                    basket_decrement(basket.id, product_counts_dict)
+                return Response({'orderId': order.id})
+            else:
+                return Response(
+                    {'count': ['Product quantities are not available']},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
     def _are_available(self, product_counts_dict: dict[str, int]) -> bool:
         ids = set(product_counts_dict.keys())
@@ -599,6 +588,10 @@ class OrderView(APIView):
             )
         )
         serializer.save()
+
+        reponse_serializer = OrderSerializer(serializer.instance)
+        data = reponse_serializer.data
+        data['orderId'] = data.pop('id')  # fix bug in frontend
 
         return Response(data)
 
