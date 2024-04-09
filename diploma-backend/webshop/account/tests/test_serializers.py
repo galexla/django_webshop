@@ -8,7 +8,7 @@ from ..serializers import (
     SignInSerializer,
     SignUpSerializer,
 )
-from .common import RandomImage
+from .common import BaseTestCase, RandomImage
 
 
 class SignUpSerializerTest(TestCase):
@@ -131,34 +131,28 @@ class SignInSerializerTest(TestCase):
         self.assertIsNone(serializer.data.get('password'))
 
 
-class SetPasswordSerializerTest(TestCase):
+class SetPasswordSerializerTest(BaseTestCase):
     def test_fields(self):
+        ok_data = {'currentPassword': 'gedfkjdhf', 'newPassword': 'dfdskfjdfa'}
+
         serializer = SetPasswordSerializer(data={})
         self.assertFalse(serializer.is_valid())
 
-        serializer = SetPasswordSerializer(
-            data={'currentPassword': '', 'newPassword': ''}
+        self.assert_all_invalid(
+            ProfileSerializer,
+            ok_data,
+            'currentPassword',
+            [None, '', 'a' * 130],
         )
-        self.assertFalse(serializer.is_valid())
 
-        serializer = SetPasswordSerializer(
-            data={'currentPassword': 'a' * 130, 'newPassword': 'dfdskfjdfa'}
+        self.assert_all_invalid(
+            ProfileSerializer,
+            ok_data,
+            'newPassword',
+            [None, '', 'gedfkjdhf', 'dfkjdhf'],
         )
-        self.assertFalse(serializer.is_valid())
 
-        serializer = SetPasswordSerializer(
-            data={'currentPassword': 'gedfkjdhf', 'newPassword': 'gedfkjdhf'}
-        )
-        self.assertFalse(serializer.is_valid())
-
-        serializer = SetPasswordSerializer(
-            data={'currentPassword': 'gedfkjdhf', 'newPassword': 'dfkjdhf'}
-        )
-        self.assertFalse(serializer.is_valid())
-
-        serializer = SetPasswordSerializer(
-            data={'currentPassword': 'gedfkjdhf', 'newPassword': 'dfdskfjdfa'}
-        )
+        serializer = SetPasswordSerializer(data=ok_data)
         self.assertTrue(serializer.is_valid())
 
 
@@ -181,7 +175,7 @@ class AvatarUpdateSerializerTest(TestCase):
         self.assertIsNone(serializer.data.get('avatar'))
 
 
-class ProfileSerializerTest(TestCase):
+class ProfileSerializerTest(BaseTestCase):
     def test_fields(self):
         ok_data = {
             'fullName': 'test',
@@ -189,9 +183,12 @@ class ProfileSerializerTest(TestCase):
             'phone': '+24437',
         }
 
-        self._assert_all_invalid(ok_data, 'fullName', [None, '', 'a' * 160])
+        self.assert_all_invalid(
+            ProfileSerializer, ok_data, 'fullName', [None, '', 'a' * 160]
+        )
 
-        self._assert_all_invalid(
+        self.assert_all_invalid(
+            ProfileSerializer,
             ok_data,
             'email',
             [
@@ -204,7 +201,8 @@ class ProfileSerializerTest(TestCase):
             ],
         )
 
-        self._assert_all_invalid(
+        self.assert_all_invalid(
+            ProfileSerializer,
             ok_data,
             'phone',
             [None, '', '+' + '1' * 35, '+1234', '1234567'],
@@ -212,19 +210,3 @@ class ProfileSerializerTest(TestCase):
 
         serializer = ProfileSerializer(data=ok_data)
         self.assertTrue(serializer.is_valid())
-
-    def _assert_all_invalid(
-        self, valid_data: dict, field_name: str, values: list
-    ):
-        """
-        Assert that all values of the specified field are invalid. None
-        in values means the field is missing.
-        """
-        for value in values:
-            data = valid_data.copy()
-            if value is None:
-                data.pop(field_name)
-            else:
-                data[field_name] = value
-            serializer = ProfileSerializer(data=data)
-            self.assertFalse(serializer.is_valid())
