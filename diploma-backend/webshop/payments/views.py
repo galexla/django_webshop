@@ -42,14 +42,14 @@ class PaymentView(APIView):
 
         card_number = serializer.validated_data['number']
         if card_number % 2 == 1 or card_number % 10 == 0:
-            msg, status_ = self._get_card_number_error()
-            return Response({'non_field_errors': [msg]}, status=status_)
+            msg, http_status = self._get_random_error()
+            return Response({'non_field_errors': [msg]}, status=http_status)
 
         data['order_id'] = order.id
         data['paid_sum'] = order.total_cost
-        response_body, status_ = self._save_payment(order, data)
+        response_body, http_status = self._save_payment(order, data)
 
-        return Response(response_body, status=status_)
+        return Response(response_body, status=http_status)
 
     def _save_payment(self, order, data) -> tuple[Any, int]:
         """Try to save. Return response body and HTTP status"""
@@ -71,7 +71,7 @@ class PaymentView(APIView):
         except IntegrityError:
             return None, status.HTTP_500_INTERNAL_SERVER_ERROR
 
-    def _get_card_number_error(self) -> tuple[str, int]:
+    def _get_random_error(self) -> tuple[str, int]:
         """Return random error message and HTTP status"""
         errors = (
             'Insufficient funds in your account',
@@ -81,9 +81,7 @@ class PaymentView(APIView):
             'Payment system is unavailable',
         )
         i_error = randint(0, len(errors) - 1)
-        status_ = (
-            status.HTTP_400_BAD_REQUEST
-            if i_error <= 3
-            else status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
-        return errors[i_error], status_
+        if i_error <= 3:
+            return errors[i_error], status.HTTP_400_BAD_REQUEST
+        else:
+            return errors[i_error], status.HTTP_500_INTERNAL_SERVER_ERROR
