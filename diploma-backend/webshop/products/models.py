@@ -1,4 +1,5 @@
 import uuid
+from decimal import Decimal
 
 from account.models import User
 from django.core.exceptions import ValidationError
@@ -103,7 +104,7 @@ class Product(models.Model):
         max_digits=8,
         decimal_places=2,
         validators=[
-            MinValueValidator(0),
+            MinValueValidator(Decimal(0)),
         ],
     )
     category = models.ForeignKey(
@@ -131,8 +132,8 @@ class Product(models.Model):
         max_digits=2,
         decimal_places=1,
         validators=[
-            MinValueValidator(1),
-            MaxValueValidator(5),
+            MinValueValidator(Decimal(1)),
+            MaxValueValidator(Decimal(5)),
         ],
     )
     archived = models.BooleanField(default=False)
@@ -188,7 +189,7 @@ class Sale(models.Model):
         max_digits=8,
         decimal_places=2,
         validators=[
-            MinValueValidator(0),
+            MinValueValidator(Decimal(0)),
         ],
     )
 

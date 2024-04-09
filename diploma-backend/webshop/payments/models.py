@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.core.validators import (
     MaxValueValidator,
     MinLengthValidator,
@@ -22,6 +24,6 @@ class Payment(models.Model):
         blank=False,
         max_digits=10,
         decimal_places=2,
-        validators=[MinValueValidator(0)],
+        validators=[MinValueValidator(Decimal(0))],
     )
     paid_at = models.DateTimeField(blank=False, auto_now_add=True)
