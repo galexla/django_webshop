@@ -210,3 +210,49 @@ class ProfileSerializerTest(BaseTestCase):
 
         serializer = ProfileSerializer(data=ok_data)
         self.assertTrue(serializer.is_valid())
+
+    def test_update(self):
+        data = {
+            'fullName': 'Test',
+            'email': 'test@test.com',
+            'phone': '+5457636514',
+        }
+        serializer = ProfileSerializer()
+        with self.assertRaises(TypeError):
+            serializer.update('a', data)
+
+        user = User.objects.create(username='a', password='a')
+        serializer = ProfileSerializer()
+        serializer.update(user, data)
+        user.refresh_from_db(fields=['first_name', 'email'])
+        self.assertEqual(user.first_name, data['fullName'])
+        self.assertEqual(user.email, data['email'])
+        self.assertEqual(user.profile.phone, data['phone'])
+
+        user.delete()
+
+    def test_to_representation(self):
+        data = {
+            'fullName': 'Test',
+            'email': 'test@test.com',
+            'phone': '+5457636514',
+        }
+        serializer = ProfileSerializer()
+        with self.assertRaises(TypeError):
+            serializer.update('a', data)
+
+        user = User.objects.create(
+            username='a', password='a', first_name='b', email='test@test.com'
+        )
+        user.profile.phone = '+5457636514'
+        expected_repr = {
+            'fullName': 'b',
+            'email': 'test@test.com',
+            'phone': '+5457636514',
+            'avatar': {'src': '', 'alt': ''},
+        }
+        serializer = ProfileSerializer()
+        representation = serializer.to_representation(user)
+        self.assertEqual(representation, expected_repr)
+
+        user.delete()
