@@ -17,7 +17,7 @@ You can edit other variables in the `.env` file - see [Other .env variables](#-o
 In debug mode, sample data is loaded automatically - see `DJANGO_DEBUG` in [Other .env variables](#-other-.env-variables).
 
 To load sample data into the docker container:
-* Ensure you've done steps from the [Quick start](#-quick-start) section. When the `webshop_app` container has finished with database migrations and collecting static files, you can add sample data to your webshop by running `docker_add_fixtures.sh`
+* Ensure you've done steps from the [Quick start](#-quick-start) section. When the `webshop_app` container has finished with database migrations and collecting static files, you can add sample data to your webshop by running `docker_add_sample_data.sh`
 
 ## Other .env variables
 * `DJANGO_DEBUG` - debug mode (`true` or `false`).
