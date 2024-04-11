@@ -5,7 +5,7 @@ from ..models import Profile, User, get_avatar_upload_path
 from .common import BaseTestCase, RandomImage
 
 
-class TestTopLevel(TestCase):
+class TopLevelTest(TestCase):
     def test_get_avatar_upload_path(self):
         user = User.objects.create(username='a', password='a')
         expected = f'users/user{user.pk}/avatar/test.jpeg'
@@ -14,7 +14,7 @@ class TestTopLevel(TestCase):
         user.delete()
 
 
-class TestUser(TestCase):
+class UserTest(TestCase):
     def test_fields(self):
         user = User.objects.create(username='a', password='a', email='a@a.com')
         with self.assertRaises(IntegrityError):
@@ -22,7 +22,7 @@ class TestUser(TestCase):
         user.delete()
 
 
-class TestCustomUserManager(TestCase):
+class CustomUserManagerTest(TestCase):
     def test_create(self):
         user = User.objects.create(username='a', password='a')
         profile = Profile.objects.get(user_id=user.id)
@@ -38,7 +38,7 @@ class TestCustomUserManager(TestCase):
         user.delete()
 
 
-class TestProfile(TestCase):
+class ProfileTest(TestCase):
     def test_fields(self):
         user = User.objects.create(username='a', password='a')
         user.profile.delete()
