@@ -19,7 +19,7 @@ from .views import (
 app_name = 'products'
 
 routers = DefaultRouter()
-routers.register('catalog', CatalogViewSet)
+routers.register('catalog', CatalogViewSet, basename='catalog')
 routers.register('tags', TagListViewSet, basename='tags')
 
 urlpatterns = [

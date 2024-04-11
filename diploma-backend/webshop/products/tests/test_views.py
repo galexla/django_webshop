@@ -81,6 +81,7 @@ class TagListViewSetTest(TestCase):
 
     def test_all(self):
         url = reverse('products:tags-list')
+
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         expected = [{'id': 1, 'name': 'Tag1'}, {'id': 2, 'name': 'Tag2'}]
@@ -97,3 +98,85 @@ class TagListViewSetTest(TestCase):
 
         response = self.client.get(url + '?category=3')
         self.assertEqual(response.data, [])
+
+
+class CatalogViewSetTest(TestCase):
+    fixtures = ['fixtures/sample_data.json']
+
+    def get_filtered(
+        self,
+        url,
+        name='',
+        minPrice=0,
+        maxPrice=50000,
+        freeDelivery='false',
+        available='true',
+        currentPage=1,
+        sort='price',
+        sortType='inc',
+        tags=[],
+        limit=20,
+    ):
+        """
+        sort values: rating, price, reviews, date
+        sortType values: inc, dec
+        """
+        filters = [
+            f'filter[name]={name}',
+            f'filter[minPrice]={minPrice}',
+            f'filter[maxPrice]={maxPrice}',
+            f'filter[freeDelivery]={freeDelivery}',
+            f'filter[available]={available}',
+            f'currentPage={currentPage}',
+            f'sort={sort}',
+            f'sortType={sortType}',
+            f'limit={limit}',
+        ]
+        if tags:
+            for tag in tags:
+                filters.append(f'tags[]={tag}')
+
+        return self.client.get(url + '?' + '&'.join(filters))
+
+    def get_ids(self, data):
+        return [product['id'] for product in data['items']]
+
+    def test_all(self):
+        url = reverse('products:catalog-list')
+
+        response = self.get_filtered(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        print(response.data)
+        self.assertEqual(response.data['currentPage'], 1)
+        self.assertEqual(response.data['lastPage'], 1)
+        self.assertEqual(self.get_ids(response.data), [4, 3, 1])
+
+        response = self.get_filtered(url, name='mon')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.get_ids(response.data), [4])
+
+        response = self.get_filtered(url, name='on')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.get_ids(response.data), [4, 3])
+
+        response = self.get_filtered(
+            url, maxPrice=800, available='false', sort='name', sortType='dec'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.get_ids(response.data), [2, 3, 4])
+
+        response = self.get_filtered(
+            url, minPrice=500, available='false', sort='rating'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.get_ids(response.data), [2, 3, 1])
+
+        response = self.get_filtered(url, available='false', sort='date')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.get_ids(response.data), [1, 2, 3, 4])
+
+        response = self.get_filtered(
+            url, maxPrice=800, available='false', sort='reviews'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(self.get_ids(response.data), [2, 3, 4])
