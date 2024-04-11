@@ -20,7 +20,7 @@ app_name = 'products'
 
 routers = DefaultRouter()
 routers.register('catalog', CatalogViewSet)
-routers.register('tags', TagListViewSet)
+routers.register('tags', TagListViewSet, basename='tags')
 
 urlpatterns = [
     path('', include(routers.urls)),
