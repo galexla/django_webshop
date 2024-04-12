@@ -10,58 +10,6 @@ def category_img_path(id, file_name):
     return f'/media/categories/category{id}/image/{file_name}'
 
 
-def product_img_path(id, file_name):
-    return f'/media/products/product{id}/images/{file_name}'
-
-
-MONITOR_SHORT = {
-    'id': 4,
-    'title': 'Monitor',
-    'price': '490.00',
-    'count': 2,
-    'date': '2024-01-30T15:30:48.823000Z',
-    'description': 'Maecenas in nisi in eros sagittis sagittis eget in purus.',
-    'freeDelivery': 'False',
-    'rating': '4.0',
-    'category': 4,
-    'reviews': 3,
-    'images': [
-        {
-            'src': product_img_path(4, 'monitor.png'),
-            'alt': '',
-        }
-    ],
-    'tags': [{'id': 1, 'name': 'Tag1'}, {'id': 2, 'name': 'Tag2'}],
-}
-
-MONITOR_SHORT_DB = {
-    'title': 'Monitor',
-    'price': '490.00',
-    'count': 2,
-    'created_at': '2024-01-30T15:30:48.823000Z',
-    'description': 'Maecenas in nisi in eros sagittis sagittis eget in purus.',
-    'free_delivery': 'False',
-    'rating': '4.0',
-}
-
-MONITOR_SHORT_SRLZ = {
-    'category': None,
-    'title': 'Monitor',
-    'price': '490.00',
-    'count': 2,
-    'description': 'Maecenas in nisi in eros sagittis sagittis eget in purus.',
-    'freeDelivery': 'False',
-    'rating': '4.0',
-    'reviews': 0,
-    'tags': [],
-    'images': [{'src': '/media/products/goods_icon.png', 'alt': ''}],
-}
-
-
-def get_ids(data):
-    return [product['id'] for product in data]
-
-
 class TopLevelCategoryListViewTest(TestCase):
     fixtures = ['fixtures/sample_data.json']
 
@@ -155,6 +103,58 @@ class TagListViewSetTest(TestCase):
 
         response = self.client.get(url + '?category=3')
         self.assertEqual(response.data, [])
+
+
+def get_ids(data):
+    return [product['id'] for product in data]
+
+
+def product_img_path(id, file_name):
+    return f'/media/products/product{id}/images/{file_name}'
+
+
+MONITOR_SHORT = {
+    'id': 4,
+    'title': 'Monitor',
+    'price': '490.00',
+    'count': 2,
+    'date': '2024-01-30T15:30:48.823000Z',
+    'description': 'Maecenas in nisi in eros sagittis sagittis eget in purus.',
+    'freeDelivery': 'False',
+    'rating': '4.0',
+    'category': 4,
+    'reviews': 3,
+    'images': [
+        {
+            'src': product_img_path(4, 'monitor.png'),
+            'alt': '',
+        }
+    ],
+    'tags': [{'id': 1, 'name': 'Tag1'}, {'id': 2, 'name': 'Tag2'}],
+}
+
+MONITOR_SHORT_DB = {
+    'title': 'Monitor',
+    'price': '490.00',
+    'count': 2,
+    'created_at': '2024-01-30T15:30:48.823000Z',
+    'description': 'Maecenas in nisi in eros sagittis sagittis eget in purus.',
+    'free_delivery': 'False',
+    'rating': '4.0',
+}
+
+MONITOR_SHORT_SRLZD = {
+    'category': None,
+    'title': 'Monitor',
+    'price': '490.00',
+    'count': 2,
+    'description': 'Maecenas in nisi in eros sagittis sagittis eget in purus.',
+    'freeDelivery': 'False',
+    'rating': '4.0',
+    'reviews': 0,
+    'tags': [],
+    'images': [{'src': '/media/products/goods_icon.png', 'alt': ''}],
+}
 
 
 class CatalogViewSetTest(TestCase):
@@ -261,11 +261,11 @@ class PopularProductsListViewTest(TestCase):
         response = self.client.get(reverse('products:popular-products'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3, 4, 2] + ids_added[:4])
-        monitor_srlz = MONITOR_SHORT_SRLZ.copy()
-        monitor_srlz['rating'] = '2.9'
+        monitor_srlzd = MONITOR_SHORT_SRLZD.copy()
+        monitor_srlzd['rating'] = '2.9'
         response.data[7].pop('date')
         response.data[7].pop('id')
-        self.assertEqual(response.data[7], monitor_srlz)
+        self.assertEqual(response.data[7], monitor_srlzd)
 
         Product.objects.filter(id__in=ids_added).delete()
 
@@ -291,7 +291,7 @@ class LimitedProductsListViewTest(TestCase):
         self.assertEqual(get_ids(response.data), [3, 4] + ids_added[:14])
         response.data[15].pop('date')
         response.data[15].pop('id')
-        self.assertEqual(response.data[15], MONITOR_SHORT_SRLZ)
+        self.assertEqual(response.data[15], MONITOR_SHORT_SRLZD)
 
         Product.objects.filter(id__in=ids_added).delete()
 
@@ -326,9 +326,7 @@ class BannerProductsListViewTest(TestCase):
         response = self.client.get(reverse('products:banners'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3] + ids_added[:1])
-        response.data[2].pop('date')
-        response.data[2].pop('id')
-        self.assertEqual(response.data[2], MONITOR_SHORT_SRLZ)
+        self.assertDictContainsSubset(MONITOR_SHORT_SRLZD, response.data[2])
 
         Product.objects.filter(id__in=ids_added).delete()
 
@@ -381,3 +379,60 @@ class SalesViewTest(TestCase):
         self.assertEqual(get_ids(response.data['items']), ids[:10])
 
         Sale.objects.filter(id__in=ids_added).delete()
+
+
+class ProductDetailViewTest(TestCase):
+    fixtures = ['fixtures/sample_data.json']
+    monitor_srlzd = {
+        'id': 4,
+        'category': 4,
+        'title': 'Monitor',
+        'date': '2024-01-30T15:30:48.823000Z',
+        'price': '490.00',
+        'count': 2,
+        'description': 'Maecenas in nisi in eros sagittis sagittis eget in purus.',
+        'freeDelivery': 'False',
+        'rating': '4.0',
+        'tags': [{'id': 1, 'name': 'Tag1'}, {'id': 2, 'name': 'Tag2'}],
+        'images': [{'src': product_img_path(4, 'monitor.png'), 'alt': ''}],
+        'specifications': [{'name': 'Screen diagonal', 'value': '21"'}],
+        'reviews': [
+            {
+                'id': 3,
+                'author': 'Somebody',
+                'email': 'somebody@email.net',
+                'text': 'Has dead pixels',
+                'rate': 1,
+                'created_at': '2024-02-13T17:19:03.059000Z',
+            },
+            {
+                'id': 2,
+                'author': 'Susan',
+                'email': 'susan@email.org',
+                'text': 'Not bad',
+                'rate': 4,
+                'created_at': '2024-02-13T17:06:00.558000Z',
+            },
+            {
+                'id': 1,
+                'author': 'Jack',
+                'email': 'jack@email.com',
+                'text': 'An amazing monitor',
+                'rate': 5,
+                'created_at': '2024-02-13T17:04:23.462000Z',
+            },
+        ],
+    }
+
+    def test_all(self):
+        response = self.client.get(
+            reverse('products:product-details', kwargs={'pk': 4})
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictContainsSubset(self.monitor_srlzd, response.data)
+        full_description = response.data.pop('fullDescription')
+        self.assertEqual(response.data, self.monitor_srlzd)
+        self.assertTrue(
+            'sodales. Nam imperdiet quam at ullamcorper ullamcorper. Nulla'
+            in full_description
+        )
