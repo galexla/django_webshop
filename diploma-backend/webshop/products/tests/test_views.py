@@ -7,7 +7,7 @@ from ..models import Product, Sale
 
 
 def category_img_path(id, file_name):
-    return f'/media/categories/category{id}/images/{file_name}'
+    return f'/media/categories/category{id}/image/{file_name}'
 
 
 def product_img_path(id, file_name):
@@ -258,14 +258,16 @@ class PopularProductsListViewTest(TestCase):
             product = Product.objects.create(**monitor)
             ids_added.append(product.id)
 
-        response = self.client.get(reverse('products:limited-products'))
+        response = self.client.get(reverse('products:popular-products'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3, 4, 2] + ids_added[:4])
         monitor_srlz = MONITOR_SHORT_SRLZ.copy()
         monitor_srlz['rating'] = '2.9'
-        response.data[3].pop('date')
-        response.data[3].pop('id')
-        self.assertEqual(response.data[3], monitor_srlz)
+        response.data[7].pop('date')
+        response.data[7].pop('id')
+        self.assertEqual(response.data[7], monitor_srlz)
+
+        Product.objects.filter(id__in=ids_added).delete()
 
 
 class LimitedProductsListViewTest(TestCase):
@@ -290,6 +292,8 @@ class LimitedProductsListViewTest(TestCase):
         response.data[15].pop('date')
         response.data[15].pop('id')
         self.assertEqual(response.data[15], MONITOR_SHORT_SRLZ)
+
+        Product.objects.filter(id__in=ids_added).delete()
 
 
 class BannerProductsListViewTest(TestCase):
@@ -326,6 +330,8 @@ class BannerProductsListViewTest(TestCase):
         response.data[2].pop('id')
         self.assertEqual(response.data[2], MONITOR_SHORT_SRLZ)
 
+        Product.objects.filter(id__in=ids_added).delete()
+
 
 class SalesViewTest(TestCase):
     fixtures = ['fixtures/sample_data.json']
@@ -351,15 +357,17 @@ class SalesViewTest(TestCase):
         self.assertEqual(response.data['currentPage'], 1)
         self.assertEqual(response.data['lastPage'], 1)
 
-        added_ids = []
+        id_products_added = []
+        ids_added = []
         sale = Sale.objects.get(id=3)
         for i in range(10):
             sale.id = None
             sale.product_id = 1
             sale.save()
-            added_ids.append(sale.product_id)
+            id_products_added.append(sale.product_id)
+            ids_added.append(sale.id)
 
-        ids = [1, 3, 4] + added_ids
+        ids = [1, 3, 4] + id_products_added
         response = self.client.get(
             reverse('products:sales') + '?' + 'currentPage=2'
         )
@@ -371,3 +379,5 @@ class SalesViewTest(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data['items']), ids[:10])
+
+        Sale.objects.filter(id__in=ids_added).delete()
