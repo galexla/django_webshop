@@ -1,9 +1,10 @@
 from django.test import TestCase
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from rest_framework import status
 from rest_framework.response import Response
 
-from ..models import Product, Sale
+from ..models import Basket, BasketProduct, Product, Review, Sale
+from ..views import basket_decrement
 
 
 def category_img_path(id, file_name):
@@ -436,3 +437,127 @@ class ProductDetailViewTest(TestCase):
             'sodales. Nam imperdiet quam at ullamcorper ullamcorper. Nulla'
             in full_description
         )
+
+
+class PostTestCase(TestCase):
+    def assert_all_invalid(
+        self,
+        url_lazy,
+        ok_data: dict,
+        field_name: str,
+        values: list,
+        expected_status,
+    ):
+        """
+        Assert that all values of the specified field are invalid. None
+        in values means the field is missing.
+        """
+        for value in values:
+            data = ok_data.copy()
+            if value is None:
+                data.pop(field_name)
+            else:
+                data[field_name] = value
+            response = self.client.post(url_lazy, data)
+            self.assertEqual(response.status_code, expected_status)
+
+
+class ReviewCreateViewTest(PostTestCase):
+    fixtures = ['fixtures/sample_data.json']
+
+    def test_post(self):
+        ok_data = {
+            'author': 'test',
+            'email': 'test@test.com',
+            'text': 'test',
+            'rate': '5',
+        }
+
+        response = self.client.post(
+            reverse('products:create-review', kwargs={'pk': 1}), ok_data
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assert_all_invalid(
+            reverse_lazy('products:create-review', kwargs={'pk': 1}),
+            ok_data,
+            'author',
+            [None, '', 'a' * 201],
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.assert_all_invalid(
+            reverse_lazy('products:create-review', kwargs={'pk': 1}),
+            ok_data,
+            'email',
+            [
+                None,
+                '',
+                '@test.com',
+                '#.,s@test.com',
+                'test@',
+                '@',
+                'a' * 600 + '@test.com',
+            ],
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.assert_all_invalid(
+            reverse_lazy('products:create-review', kwargs={'pk': 1}),
+            ok_data,
+            'text',
+            [None, '', 'a' * 2001],
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        self.assert_all_invalid(
+            reverse_lazy('products:create-review', kwargs={'pk': 1}),
+            ok_data,
+            'rate',
+            [None, '', 0, 6, 4.5],
+            status.HTTP_400_BAD_REQUEST,
+        )
+
+        data = ok_data.copy()
+        data['created_at'] = '2024-01-01T15:30:48.823000Z'
+        self.client.post(
+            reverse('products:create-review', kwargs={'pk': 1}), data
+        )
+        self.assertFalse(
+            Review.objects.filter(
+                created_at='2024-01-01T15:30:48.823000Z'
+            ).exists()
+        )
+
+        Review.objects.filter(product_id=1).delete()
+
+
+class TopLevelFunctionsTest(TestCase):
+    fixtures = ['fixtures/sample_data.json']
+
+    def test_basket_decrement(self):
+        basket_id = Basket.objects.get(user_id=1).id
+        success = basket_decrement(basket_id, {3: 1, 4: 1})
+        self.assertTrue(success)
+        basket_products = BasketProduct.objects.filter(basket_id=basket_id)
+        self.assertEqual(len(basket_products), 1)
+        self.assertEqual(basket_products[0].product_id, 4)
+        self.assertEqual(basket_products[0].count, 1)
+
+        basket_id = Basket.objects.get(user_id=1).id
+        success = basket_decrement(basket_id, {3: 5, 4: 5})
+        self.assertTrue(success)
+        basket_products = BasketProduct.objects.filter(basket_id=basket_id)
+        self.assertEqual(len(basket_products), 0)
+
+    def test_basket_decrement2(self):
+        basket_id = Basket.objects.get(user_id=1).id
+        success = basket_decrement(basket_id, {3: 1, 4: 2})
+        self.assertTrue(success)
+        basket_products = BasketProduct.objects.filter(basket_id=basket_id)
+        self.assertEqual(len(basket_products), 0)
+
+    def test_basket_decrement_non_existent(self):
+        basket_id = Basket.objects.get(user_id=1).id
+        success = basket_decrement(basket_id, {1: 3, 2: 3})
+        self.assertFalse(success)
