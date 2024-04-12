@@ -9,6 +9,9 @@ class FastTestRunner(DiscoverRunner):
             'default': {
                 'BACKEND': 'django.core.files.storage.memory.InMemoryStorage',
             },
+            'staticfiles': {
+                'BACKEND': 'django.core.files.storage.memory.InMemoryStorage',
+            },
         }
         settings.DEFAULT_FILE_STORAGE = (
             'django.core.files.storage.memory.InMemoryStorage'
