@@ -280,13 +280,13 @@ class ReviewCreateView(APIView):
         return Response([serializer.data])
 
 
-def basket_decrement(basket_id, product_counts: dict[str, int]) -> bool:
+def basket_decrement(basket_id, product_counts: dict[int, int]) -> bool:
     product_ids = list(product_counts.keys())
     basket_products = BasketProduct.objects.filter(
         basket_id=basket_id, product__in=product_ids, product__archived=False
     ).all()
 
-    if basket_products is None:
+    if len(basket_products) == 0:
         log.info(
             'Unable to delete, products %s are not in basket %s',
             product_ids,
