@@ -146,7 +146,6 @@ class CatalogViewSetTest(TestCase):
 
         response = self.get_filtered(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        print(response.data)
         self.assertEqual(response.data['currentPage'], 1)
         self.assertEqual(response.data['lastPage'], 1)
         self.assertEqual(self.get_ids(response.data), [4, 3, 1])
@@ -158,6 +157,32 @@ class CatalogViewSetTest(TestCase):
         response = self.get_filtered(url, name='on')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(self.get_ids(response.data), [4, 3])
+        self.maxDiff = None
+        expected_monitor = {
+            'id': 4,
+            'title': 'Monitor',
+            'price': '490.00',
+            'count': 2,
+            'date': '2024-01-30T15:30:48.823000Z',
+            'description': 'Maecenas in nisi in eros sagittis sagittis eget in purus.',
+            'freeDelivery': 'False',
+            'rating': '4.0',
+            'category': 4,
+            'reviews': 3,
+            'images': [
+                {
+                    'src': '/media/products/product4/images/monitor.png',
+                    'alt': '',
+                }
+            ],
+            'tags': [{'id': 1, 'name': 'Tag1'}, {'id': 2, 'name': 'Tag2'}],
+        }
+        self.assertEqual(response.data['items'][0], expected_monitor)
+        self.assertEqual(response.data['items'][1]['title'], 'Smartphone')
+        self.assertEqual(
+            response.data['items'][1]['description'],
+            'Nulla in libero volutpat, pellentesque erat eget, viverra nisi.',
+        )
 
         response = self.get_filtered(
             url, maxPrice=800, available='false', sort='name', sortType='dec'
