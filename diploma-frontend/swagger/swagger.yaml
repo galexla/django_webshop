@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Swagger Diploma Project
+  title: Swagger Project
   version: 1.0.0
 tags:
   - name: auth

@@ -1,5 +1,5 @@
 asgiref==3.7.2
-diploma-frontend @ file:///../diploma-frontend/dist/diploma-frontend-0.6.tar.gz#sha256=3a6b1203724b256946919b4d65b362b005ae6a9e1e93d8d765e96aa6a92764ac
+frontend @ file:///../frontend/dist/frontend-0.6.tar.gz
 Django==4.2.10
 django-debug-toolbar==4.2.0
 django-filter==23.5

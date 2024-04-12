@@ -27,8 +27,8 @@ services:
       - "0.0.0.0:8000"
     volumes:
       - .:/app
-      - static_volume:/app/diploma-backend/webshop/staticfiles
-      - media_volume:/app/diploma-backend/webshop/uploads
+      - static_volume:/app/backend/webshop/staticfiles
+      - media_volume:/app/backend/webshop/uploads
     expose:
       - 8000
     restart: always
@@ -48,8 +48,8 @@ services:
     depends_on:
       - app
     volumes:
-      - static_volume:/app/diploma-backend/webshop/staticfiles
-      - media_volume:/app/diploma-backend/webshop/uploads
+      - static_volume:/app/backend/webshop/staticfiles
+      - media_volume:/app/backend/webshop/uploads
     ports:
       - "80:80"
 
