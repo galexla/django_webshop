@@ -550,7 +550,7 @@ class TopLevelFunctionsTest(TestCase):
         basket_products = BasketProduct.objects.filter(basket_id=basket_id)
         self.assertEqual(len(basket_products), 0)
 
-    def test_basket_decrement2(self):
+    def test_basket_remove_all(self):
         basket_id = Basket.objects.get(user_id=1).id
         success = basket_decrement(basket_id, {3: 1, 4: 2})
         self.assertTrue(success)
