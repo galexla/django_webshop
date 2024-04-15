@@ -92,6 +92,20 @@ files = [
 django = ">=3.0"
 
 [[package]]
+name = "frontend"
+version = "0.6"
+description = "Frontend for the project"
+optional = false
+python-versions = "*"
+files = [
+    {file = "frontend-0.6.tar.gz", hash = "sha256:9bf6a89c44eb98e63dca7a76eb82d3064ef38d7c34ab98aa68bf5afa6c567180"},
+]
+
+[package.source]
+type = "file"
+url = "frontend/dist/frontend-0.6.tar.gz"
+
+[[package]]
 name = "gunicorn"
 version = "21.2.0"
 description = "WSGI HTTP Server for UNIX"
@@ -333,4 +347,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "4c9ed17a9707590f27cdca5b5472667d3deefdf7bd26672556a7393714ca46f1"
+content-hash = "700f6cc19c602dc78a40bd5acac8f335eff895bc2c614a4910863f0aa2144310"
