@@ -14,9 +14,17 @@ log = logging.getLogger(__name__)
 def get_basket(request: Request) -> Basket | None:
     user: User = request.user
     basket = get_basket_by_user(user)
-    if basket is None:
+    if not basket:
         basket = get_basket_by_cookie(request)
-        if not check_basket_permissions(basket, request):
+        if not basket:
+            return None
+        elif not is_basket_owner(basket, user):
+            log.warning(
+                'User %s [%s] attempts to retrieve basket of user %s',
+                getattr(user, 'id', None),
+                get_client_ip(request),
+                basket.user_id,
+            )
             return None
 
     if basket:
@@ -25,7 +33,7 @@ def get_basket(request: Request) -> Basket | None:
     return basket
 
 
-def get_basket_by_user(user: User) -> Basket | None:
+def get_basket_by_user(user: User | None) -> Basket | None:
     if user is None or user.is_anonymous:
         return None
 
@@ -52,19 +60,10 @@ def get_client_ip(request: Request):
     return ip
 
 
-def check_basket_permissions(basket: Basket, request: Request) -> bool:
-    user = request.user
-    if basket and basket.user and basket.user != user:
-        ip = get_client_ip(request)
-        user_id = user.id if user else None
-        log.warning(
-            'User %s [%s] attempts to retrieve basket of user %s',
-            user_id,
-            ip,
-            basket.user_id,
-        )
-        return False
-    return True
+def is_basket_owner(basket: Basket, user: User) -> bool:
+    if user.is_anonymous:
+        return basket.user is None
+    return basket.user == user
 
 
 def update_basket_access_time(basket: Basket) -> None:
