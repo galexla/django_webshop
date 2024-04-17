@@ -13,7 +13,7 @@ django-filter = "^24.2"
 django-debug-toolbar = "^4.3.0"
 django-request-logging = "^0.7.5"
 pillow = "^10.3.0"
-gunicorn = "^21.2.0"
+gunicorn = "^22.0.0"
 diploma-frontend = {path = "diploma-frontend/dist/diploma-frontend-0.6.tar.gz"}
 psycopg2-binary = "^2.9.9"
 python-dotenv = "^1.0.1"
