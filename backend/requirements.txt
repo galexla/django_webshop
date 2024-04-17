@@ -1,6 +1,6 @@
 asgiref==3.7.2
 frontend @ file:///../frontend/dist/frontend-0.6.tar.gz
-Django==4.2.10
+Django==4.2.11
 django-debug-toolbar==4.2.0
 django-filter==23.5
 django-request-logging==0.7.5
