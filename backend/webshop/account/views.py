@@ -42,7 +42,9 @@ class SignOutView(APIView):
 
     def post(self, request: Request) -> Response:
         logout(request)
-        return Response()
+        response = Response()
+        response.delete_cookie('basket_id')
+        return response
 
 
 class SignUpView(APIView):

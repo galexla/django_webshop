@@ -1,7 +1,7 @@
 import logging
 
 from account.models import User
-from django.contrib.auth.signals import user_logged_in, user_logged_out
+from django.contrib.auth.signals import user_logged_in
 from django.db import IntegrityError, transaction
 from django.dispatch import receiver
 from rest_framework.request import Request
@@ -57,8 +57,3 @@ def switch_user_basket(
         return True
     except IntegrityError:
         return False
-
-
-@receiver(user_logged_out)
-def remove_basket_cookie(user: User, signal, request: Request, **kwargs):
-    request.COOKIES.pop('basket_id')

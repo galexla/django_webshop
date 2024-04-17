@@ -2,6 +2,7 @@ from django.core.files.storage import default_storage
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.response import Response
 
 from ..models import Profile, User
 from .common import RandomImage
@@ -84,13 +85,16 @@ class SignOutViewTest(TestCase):
     def test_post(self):
         url = reverse('account:sign-out')
 
-        response = self.client.post(url)
+        response: Response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
         self.client.force_login(self.user1)
         response = self.client.post(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.data)
+        basket_id_cookie = response.cookies.get('basket_id', None)
+        basket_id_cookie = basket_id_cookie.value if basket_id_cookie else ''
+        self.assertEqual(basket_id_cookie, '')
         response = self.client.get(reverse('account:profile'))
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 

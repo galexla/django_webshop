@@ -319,7 +319,9 @@ class BasketView(
             products = self._get_products(basket)
             return self._get_response(products, basket.id)
 
-        return Response([])
+        response = Response([])
+        response.delete_cookie('basket_id')
+        return response
 
     def _get_products(self, basket: Basket) -> list[Product]:
         """Get products in basket"""
@@ -327,6 +329,10 @@ class BasketView(
         product_counts = {}
         for basket_product in basketproduct_set:
             product_counts[basket_product.product_id] = basket_product.count
+
+        if not product_counts:
+            return []
+
         log.debug(
             'Got product counts %s in basket %s', product_counts, basket.id
         )
@@ -352,7 +358,9 @@ class BasketView(
         """Add some quantity of a product to basket"""
         serializer = ProductCountSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            )
 
         basket = get_basket(request)
         if not basket:
@@ -420,7 +428,9 @@ class BasketView(
 
         basket = get_basket(request)
         if not basket:
-            return Response([])
+            response = Response([])
+            response.delete_cookie('basket_id')
+            return response
 
         basket_id = basket.id.hex
 
