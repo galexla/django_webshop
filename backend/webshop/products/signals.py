@@ -1,7 +1,7 @@
 import logging
 
 from account.models import User
-from django.contrib.auth.signals import user_logged_in
+from django.contrib.auth.signals import user_logged_in, user_logged_out
 from django.db import IntegrityError, transaction
 from django.dispatch import receiver
 from rest_framework.request import Request
@@ -13,7 +13,9 @@ log = logging.getLogger(__name__)
 
 
 @receiver(user_logged_in)
-def process_basket_on_login(user: User, signal, request: Request, **kwargs):
+def switch_user_basket_if_needed(
+    user: User, signal, request: Request, **kwargs
+):
     """
     Set an existing basket as user's basket if user's basket
     doesn't exist or is empty.
@@ -24,7 +26,7 @@ def process_basket_on_login(user: User, signal, request: Request, **kwargs):
     if basket_of_user is None and basket_by_cookie is not None:
         basket_by_cookie.user = user
         basket_by_cookie.save()
-        log.info('Switched user %s basket to %s', user.id, basket_by_cookie.id)
+        log.info('Set user %s basket to %s', user.id, basket_by_cookie.id)
     elif (
         basket_of_user is not None
         and basket_by_cookie is not None
@@ -46,7 +48,17 @@ def switch_user_basket(
             from_basket.delete()
             to_basket.user = user
             to_basket.save()
-        log.info('Switched user %s basket to %s', user.id, to_basket.id)
+        log.info(
+            'Switched user %s basket from %s to %s',
+            user.id,
+            from_basket.id,
+            to_basket.id,
+        )
         return True
     except IntegrityError:
         return False
+
+
+@receiver(user_logged_out)
+def remove_basket_cookie(user: User, signal, request: Request, **kwargs):
+    request.COOKIES.pop('basket_id')
