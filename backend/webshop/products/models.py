@@ -225,6 +225,13 @@ class BasketProduct(models.Model):
 
 
 class Basket(models.Model):
+    class Meta:
+        indexes = [
+            models.Index(
+                fields=['last_accessed'], name='idx_basket_last_accessed'
+            ),
+        ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.OneToOneField(
         User,

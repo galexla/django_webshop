@@ -18,7 +18,7 @@ def get_basket(request: Request) -> Basket | None:
         basket = get_basket_by_cookie(request)
         if not basket:
             return None
-        elif not is_basket_owner(basket, user):
+        elif not check_basket_permissions(basket, user):
             log.warning(
                 'User %s [%s] attempts to retrieve basket of user %s',
                 getattr(user, 'id', None),
@@ -60,10 +60,10 @@ def get_client_ip(request: Request):
     return ip
 
 
-def is_basket_owner(basket: Basket, user: User) -> bool:
-    if user.is_anonymous:
-        return basket.user is None
-    return basket.user == user
+def check_basket_permissions(basket: Basket, user: User) -> bool:
+    if basket.user and basket.user != user:
+        return False
+    return True
 
 
 def update_basket_access_time(basket: Basket) -> None:
@@ -72,3 +72,11 @@ def update_basket_access_time(basket: Basket) -> None:
     now = timezone.now()
     if now - update_after > basket.last_accessed:
         basket.save()  # update basket.last_accessed
+
+
+def delete_unused_baskets(max_age: int):
+    """max_age - max age in seconds"""
+    Basket.objects.filter(
+        last_accessed__lt=timezone.now() - timedelta(seconds=max_age),
+        user__isnull=True,
+    )

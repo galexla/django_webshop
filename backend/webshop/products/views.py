@@ -17,7 +17,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .common import get_basket
+from .common import delete_unused_baskets, get_basket
 from .models import (
     Basket,
     BasketProduct,
@@ -314,14 +314,15 @@ class BasketView(
     def get(self, request, *args, **kwargs):
         """Get basket contents"""
         basket = get_basket(request)
+        delete_unused_baskets(self.COOKIE_MAX_AGE)
         if basket:
             log.debug('Got basket: %s', basket.id)
             products = self._get_products(basket)
             return self._get_response(products, basket.id)
-
-        response = Response([])
-        response.delete_cookie('basket_id')
-        return response
+        else:
+            response = Response([])
+            response.delete_cookie('basket_id')
+            return response
 
     def _get_products(self, basket: Basket) -> list[Product]:
         """Get products in basket"""
@@ -428,9 +429,7 @@ class BasketView(
 
         basket = get_basket(request)
         if not basket:
-            response = Response([])
-            response.delete_cookie('basket_id')
-            return response
+            return Response([])
 
         basket_id = basket.id.hex
 
