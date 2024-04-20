@@ -122,7 +122,9 @@ def product_img_path(id, file_name):
     return f'/media/products/product{id}/images/{file_name}'
 
 
-MONITOR_SHORT = {
+# a version of monitor entity serialized with ProductShortSerializer,
+# 'fullDescription' is omitted
+MONITOR_SHORT_SRLZD = {
     'id': 4,
     'title': 'Monitor',
     'price': '490.00',
@@ -142,6 +144,7 @@ MONITOR_SHORT = {
     'tags': [{'id': 1, 'name': 'Tag1'}, {'id': 2, 'name': 'Tag2'}],
 }
 
+# template based on monitor, field names are taken from the database
 MONITOR_SHORT_DB_TMPL = {
     'title': 'Monitor',
     'price': '490.00',
@@ -152,6 +155,7 @@ MONITOR_SHORT_DB_TMPL = {
     'rating': '4.0',
 }
 
+# template based on monitor, serialized with ProductShortSerializer
 MONITOR_SHORT_SRLZD_TMPL = {
     'category': None,
     'title': 'Monitor',
@@ -164,6 +168,15 @@ MONITOR_SHORT_SRLZD_TMPL = {
     'tags': [],
     'images': [{'src': '/media/products/goods_icon.png', 'alt': ''}],
 }
+
+
+def assertDictEqualExclude(test_case: TestCase, dict1, dict2, exclude_keys):
+    dict1 = dict1.copy()
+    dict2 = dict2.copy()
+    for key in exclude_keys:
+        dict1.pop(key, None)
+        dict2.pop(key, None)
+    test_case.assertDictEqual(dict1, dict2)
 
 
 class CatalogViewSetTest(TestCase):
@@ -220,7 +233,7 @@ class CatalogViewSetTest(TestCase):
         response = self.get_filtered(url, name='on')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data['items']), [4, 3])
-        self.assertEqual(response.data['items'][0], MONITOR_SHORT)
+        self.assertEqual(response.data['items'][0], MONITOR_SHORT_SRLZD)
         self.assertEqual(response.data['items'][1]['title'], 'Smartphone')
         self.assertEqual(
             response.data['items'][1]['description'],
@@ -257,7 +270,7 @@ class PopularProductsListViewTest(TestCase):
         response = self.client.get(reverse('products:popular-products'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3, 4, 2])
-        self.assertEqual(response.data[2], MONITOR_SHORT)
+        self.assertEqual(response.data[2], MONITOR_SHORT_SRLZD)
 
         monitor = MONITOR_SHORT_DB_TMPL.copy()
         monitor['rating'] = '2.9'
@@ -270,11 +283,12 @@ class PopularProductsListViewTest(TestCase):
         response = self.client.get(reverse('products:popular-products'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3, 4, 2] + ids_added[:4])
-        monitor_srlzd = MONITOR_SHORT_SRLZD_TMPL.copy()
-        monitor_srlzd['rating'] = '2.9'
-        response.data[7].pop('date')
-        response.data[7].pop('id')
-        self.assertEqual(response.data[7], monitor_srlzd)
+        assertDictEqualExclude(
+            self,
+            MONITOR_SHORT_SRLZD_TMPL,
+            response.data[7],
+            ('id', 'date', 'rating'),
+        )
 
         Product.objects.filter(id__in=ids_added).delete()
 
@@ -286,7 +300,7 @@ class LimitedProductsListViewTest(TestCase):
         response = self.client.get(reverse('products:limited-products'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [3, 4])
-        self.assertEqual(response.data[1], MONITOR_SHORT)
+        self.assertEqual(response.data[1], MONITOR_SHORT_SRLZD)
 
         monitor = MONITOR_SHORT_DB_TMPL.copy()
         monitor['is_limited_edition'] = True
@@ -298,9 +312,12 @@ class LimitedProductsListViewTest(TestCase):
         response = self.client.get(reverse('products:limited-products'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [3, 4] + ids_added[:14])
-        response.data[15].pop('date')
-        response.data[15].pop('id')
-        self.assertEqual(response.data[15], MONITOR_SHORT_SRLZD_TMPL)
+        assertDictEqualExclude(
+            self,
+            MONITOR_SHORT_SRLZD_TMPL,
+            response.data[15],
+            ('id', 'date'),
+        )
 
         Product.objects.filter(id__in=ids_added).delete()
 
@@ -319,7 +336,7 @@ class BannerProductsListViewTest(TestCase):
         response = self.client.get(reverse('products:banners'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3, 4])
-        self.assertEqual(response.data[2], MONITOR_SHORT)
+        self.assertEqual(response.data[2], MONITOR_SHORT_SRLZD)
 
         product = Product.objects.get(id=4)
         product.is_banner = False
