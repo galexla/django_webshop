@@ -1,10 +1,14 @@
+from typing import Iterable
+
+from account.models import User
 from django.test import TestCase
 from django.urls import reverse, reverse_lazy
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 
 from ..models import Basket, BasketProduct, Product, Review, Sale
-from ..views import basket_decrement
+from ..views import BasketView, basket_decrement
 
 
 def category_img_path(id, file_name):
@@ -106,8 +110,12 @@ class TagListViewSetTest(TestCase):
         self.assertEqual(response.data, [])
 
 
-def get_ids(data):
-    return [product['id'] for product in data]
+def get_ids(data: Iterable[dict]) -> list:
+    return [item['id'] for item in data]
+
+
+def get_obj_ids(data: Iterable[object]) -> list:
+    return [item.id for item in data]
 
 
 def product_img_path(id, file_name):
@@ -537,6 +545,7 @@ class TopLevelFunctionsTest(TestCase):
 
     def test_basket_decrement(self):
         basket_id = Basket.objects.get(user_id=1).id
+
         success = basket_decrement(basket_id, {3: 1, 4: 1})
         self.assertTrue(success)
         basket_products = BasketProduct.objects.filter(basket_id=basket_id)
@@ -544,7 +553,6 @@ class TopLevelFunctionsTest(TestCase):
         self.assertEqual(basket_products[0].product_id, 4)
         self.assertEqual(basket_products[0].count, 1)
 
-        basket_id = Basket.objects.get(user_id=1).id
         success = basket_decrement(basket_id, {3: 5, 4: 5})
         self.assertTrue(success)
         basket_products = BasketProduct.objects.filter(basket_id=basket_id)
@@ -561,3 +569,127 @@ class TopLevelFunctionsTest(TestCase):
         basket_id = Basket.objects.get(user_id=1).id
         success = basket_decrement(basket_id, {1: 3, 2: 3})
         self.assertFalse(success)
+
+
+def get_keys(data: Iterable[dict], keys: Iterable) -> list[dict]:
+    result = []
+    for item in data:
+        elem = {}
+        for key in keys:
+            elem[key] = item.get(key)
+        result.append(elem)
+    return result
+
+
+def get_obj_keys(data: Iterable[object], keys: Iterable) -> list[dict]:
+    result = []
+    for item in data:
+        elem = {}
+        for key in keys:
+            elem[key] = getattr(item, key, None)
+        result.append(elem)
+    return result
+
+
+class BasketViewTest(TestCase):
+    fixtures = ['fixtures/sample_data.json']
+
+    def test_get(self):
+        url = reverse('products:basket')
+        user = User.objects.create(username='test', password='test')
+
+        self.client.force_login(user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
+        self.client.logout()
+
+        admin = User.objects.get(username='admin')
+        self.client.force_login(admin)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = get_keys(response.data, ['id', 'count'])
+        self.assertListEqual(
+            data, [{'id': 3, 'count': 1}, {'id': 4, 'count': 2}]
+        )
+        self.client.logout()
+
+        user.delete()
+
+    def test_post(self):
+        url = reverse('products:basket')
+        user = User.objects.create(username='test', password='test')
+
+        response = self.client.post(url, {'i': 4, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(url, {'id': 4, 'count': -1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(url, {'id': 0, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        response = self.client.post(url, {'id': 4, 'count': 100})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIsNotNone(response.cookies.get('basket_id'))
+        basket_id = response.cookies['basket_id'].value
+        self.assertNotEqual(basket_id, '')
+        self.assertTrue(Basket.objects.filter(id=basket_id).exists())
+        basket: Basket = Basket.objects.get(id=basket_id)
+        self.assertIsNone(basket.user)
+        self.assertAlmostEqual(
+            basket.last_accessed.timestamp(),
+            timezone.now().timestamp(),
+            delta=3,
+        )
+
+        response = self.client.post(url, {'id': 3, 'count': 5})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.cookies['basket_id'].value, basket_id)
+        self.assertListEqual(
+            get_keys(response.data, ['id', 'count']),
+            [{'id': 3, 'count': 5}],
+        )
+        basket.refresh_from_db()
+        self.assertListEqual(
+            list(basket.basketproduct_set.values('product_id', 'count')),
+            [{'product_id': 3, 'count': 5}],
+        )
+
+        response = self.client.post(url, {'id': 1, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertListEqual(
+            get_keys(response.data, ['id', 'count']),
+            [{'id': 1, 'count': 1}, {'id': 3, 'count': 5}],
+        )
+        basket.refresh_from_db()
+        self.assertListEqual(
+            list(basket.basketproduct_set.values('product_id', 'count')),
+            [{'product_id': 1, 'count': 1}, {'product_id': 3, 'count': 5}],
+        )
+
+        response = self.client.post(
+            reverse('account:sign-in'),
+            {'username': 'test', 'password': 'test'},
+        )
+        response = self.client.get(url)
+        self.assertListEqual(
+            get_keys(response.data, ['id', 'count']),
+            [{'id': 1, 'count': 1}, {'id': 3, 'count': 5}],
+        )
+        response = self.client.post(reverse('account:sign-out'))
+
+        response = self.client.post(
+            reverse('account:sign-in'),
+            {'username': 'test', 'password': 'test'},
+        )
+        response = self.client.get(url)
+        self.assertListEqual(
+            get_keys(response.data, ['id', 'count']),
+            [{'id': 1, 'count': 1}, {'id': 3, 'count': 5}],
+        )
+        basket.refresh_from_db()
+        self.assertListEqual(
+            list(basket.basketproduct_set.values('product_id', 'count')),
+            [{'product_id': 1, 'count': 1}, {'product_id': 3, 'count': 5}],
+        )
+
+        user.delete()
