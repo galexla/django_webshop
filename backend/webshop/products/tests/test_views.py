@@ -142,7 +142,7 @@ MONITOR_SHORT = {
     'tags': [{'id': 1, 'name': 'Tag1'}, {'id': 2, 'name': 'Tag2'}],
 }
 
-MONITOR_SHORT_DB = {
+MONITOR_SHORT_DB_TMPL = {
     'title': 'Monitor',
     'price': '490.00',
     'count': 2,
@@ -152,7 +152,7 @@ MONITOR_SHORT_DB = {
     'rating': '4.0',
 }
 
-MONITOR_SHORT_SRLZD = {
+MONITOR_SHORT_SRLZD_TMPL = {
     'category': None,
     'title': 'Monitor',
     'price': '490.00',
@@ -259,7 +259,7 @@ class PopularProductsListViewTest(TestCase):
         self.assertEqual(get_ids(response.data), [1, 3, 4, 2])
         self.assertEqual(response.data[2], MONITOR_SHORT)
 
-        monitor = MONITOR_SHORT_DB.copy()
+        monitor = MONITOR_SHORT_DB_TMPL.copy()
         monitor['rating'] = '2.9'
         monitor['sold_count'] = 0
         ids_added = []
@@ -270,7 +270,7 @@ class PopularProductsListViewTest(TestCase):
         response = self.client.get(reverse('products:popular-products'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3, 4, 2] + ids_added[:4])
-        monitor_srlzd = MONITOR_SHORT_SRLZD.copy()
+        monitor_srlzd = MONITOR_SHORT_SRLZD_TMPL.copy()
         monitor_srlzd['rating'] = '2.9'
         response.data[7].pop('date')
         response.data[7].pop('id')
@@ -288,7 +288,7 @@ class LimitedProductsListViewTest(TestCase):
         self.assertEqual(get_ids(response.data), [3, 4])
         self.assertEqual(response.data[1], MONITOR_SHORT)
 
-        monitor = MONITOR_SHORT_DB.copy()
+        monitor = MONITOR_SHORT_DB_TMPL.copy()
         monitor['is_limited_edition'] = True
         ids_added = []
         for i in range(20):
@@ -300,7 +300,7 @@ class LimitedProductsListViewTest(TestCase):
         self.assertEqual(get_ids(response.data), [3, 4] + ids_added[:14])
         response.data[15].pop('date')
         response.data[15].pop('id')
-        self.assertEqual(response.data[15], MONITOR_SHORT_SRLZD)
+        self.assertEqual(response.data[15], MONITOR_SHORT_SRLZD_TMPL)
 
         Product.objects.filter(id__in=ids_added).delete()
 
@@ -325,7 +325,7 @@ class BannerProductsListViewTest(TestCase):
         product.is_banner = False
         product.save()
 
-        monitor = MONITOR_SHORT_DB.copy()
+        monitor = MONITOR_SHORT_DB_TMPL.copy()
         monitor['is_banner'] = True
         ids_added = []
         for i in range(2):
@@ -335,7 +335,9 @@ class BannerProductsListViewTest(TestCase):
         response = self.client.get(reverse('products:banners'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3] + ids_added[:1])
-        self.assertDictContainsSubset(MONITOR_SHORT_SRLZD, response.data[2])
+        self.assertDictContainsSubset(
+            MONITOR_SHORT_SRLZD_TMPL, response.data[2]
+        )
 
         Product.objects.filter(id__in=ids_added).delete()
 
@@ -581,11 +583,11 @@ def get_keys(data: Iterable[dict], keys: Iterable) -> list[dict]:
     return result
 
 
-def get_obj_keys(data: Iterable[object], keys: Iterable) -> list[dict]:
+def get_attrs(data: Iterable[object], attrs: Iterable) -> list[dict]:
     result = []
     for item in data:
         elem = {}
-        for key in keys:
+        for key in attrs:
             elem[key] = getattr(item, key, None)
         result.append(elem)
     return result
@@ -693,3 +695,17 @@ class BasketViewTest(TestCase):
         )
 
         user.delete()
+
+    def test_get_products(self):
+        basket = Basket.objects.get(user__username='admin')
+        view = BasketView()
+        products = view._get_products(basket)
+        self.assertListEqual(
+            get_attrs(products, ['id', 'count']),
+            [{'id': 3, 'count': 1}, {'id': 4, 'count': 2}],
+        )
+
+        basket = Basket(user_id=10)
+        products = view._get_products(basket)
+        self.assertListEqual(products, [])
+
