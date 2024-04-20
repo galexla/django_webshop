@@ -726,3 +726,22 @@ class BasketViewTest(TestCase):
         products = view._get_products(basket)
         self.assertListEqual(products, [])
 
+    def test_get_response(self):
+        basket = Basket.objects.get(user__username='admin')
+        view = BasketView()
+        products = view._get_products(basket)
+        response = view._get_response(products, basket.id.hex)
+        self.assertEqual(response.cookies['basket_id'].value, basket.id.hex)
+        assertDictEqualExclude(
+            self,
+            response.data[1],
+            MONITOR_SHORT_SRLZD_TMPL,
+            ('id', 'category', 'date', 'tags', 'reviews', 'images'),
+        )
+
+        response = view._get_response([], basket.id.hex)
+        self.assertEqual(response.data, [])
+
+        response = view._get_response([], '')
+        self.assertEqual(response.data, [])
+
