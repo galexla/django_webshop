@@ -320,9 +320,7 @@ class BasketView(
             products = self._get_products(basket)
             return self._get_response(products, basket.id)
         else:
-            response = Response([])
-            response.delete_cookie('basket_id')
-            return response
+            return Response([])
 
     def _get_products(self, basket: Basket) -> list[Product]:
         """Get products in basket"""
@@ -346,12 +344,15 @@ class BasketView(
 
         return products
 
-    def _get_response(self, products, basket_id) -> Response:
-        serializer = ProductShortSerializer(products, many=True)
-        response = Response(serializer.data)
+    def _set_cookie(self, response: Response, basket_id):
         response.set_cookie(
             'basket_id', basket_id, max_age=self.COOKIE_MAX_AGE
         )
+
+    def _get_response(self, products, basket_id) -> Response:
+        serializer = ProductShortSerializer(products, many=True)
+        response = Response(serializer.data)
+        self._set_cookie(response, basket_id)
 
         return response
 
@@ -363,15 +364,16 @@ class BasketView(
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST
             )
 
+        product_id = serializer.validated_data['id']
+        product_count = serializer.validated_data['count']
+        product = get_object_or_404(Product, id=product_id, archived=False)
+
         basket = get_basket(request)
         if not basket:
             user = request.user if not request.user.is_anonymous else None
             basket = Basket.objects.create(user=user)
 
         basket_id = basket.id.hex
-
-        product_id = serializer.validated_data['id']
-        product_count = serializer.validated_data['count']
         log.debug(
             'To add %s of product %s to basket %s',
             product_count,
@@ -379,20 +381,20 @@ class BasketView(
             basket_id,
         )
 
-        if not self._increment(basket_id, product_id, product_count):
-            return Response(
+        if not self._increment(basket_id, product, product_count):
+            response = Response(
                 {'count': ['Product quantity is not available.']},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+            self._set_cookie(response, basket_id)
+            return response
 
         products = self._get_products(basket)
         return self._get_response(products, basket_id)
 
-    def _increment(self, basket_id, product_id, product_count):
-        product = get_object_or_404(Product, id=product_id, archived=False)
-
+    def _increment(self, basket_id, product, product_count):
         basket_product = BasketProduct.objects.filter(
-            basket_id=basket_id, product_id=product_id, product__archived=False
+            basket_id=basket_id, product_id=product.id, product__archived=False
         ).first()
 
         if basket_product is None:
@@ -401,7 +403,7 @@ class BasketView(
 
             basket_product = BasketProduct(
                 basket_id=basket_id,
-                product_id=product_id,
+                product_id=product.id,
                 count=product_count,
             )
             basket_product.save()
@@ -415,7 +417,7 @@ class BasketView(
         log.info(
             'Added %s item(s) of product %s to basket %s',
             product_count,
-            product_id,
+            product.id,
             basket_id,
         )
 

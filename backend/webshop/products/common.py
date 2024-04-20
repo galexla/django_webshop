@@ -75,7 +75,10 @@ def update_basket_access_time(basket: Basket) -> None:
 
 
 def delete_unused_baskets(max_age: int):
-    """max_age - max age in seconds"""
+    """
+    Delete too old baskets without a user attached
+    max_age - max age in seconds
+    """
     Basket.objects.filter(
         last_accessed__lt=timezone.now() - timedelta(seconds=max_age),
         user__isnull=True,
