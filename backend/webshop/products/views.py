@@ -18,12 +18,27 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .common import delete_unused_baskets, get_basket
-from .models import (Basket, BasketProduct, Category, Order, OrderProduct,
-                     Product, Sale, Tag, get_products_queryset)
-from .serializers import (OrderSerializer, ProductCountSerializer,
-                          ProductDetailSerializer, ProductShortSerializer,
-                          ReviewCreateSerializer, SaleSerializer,
-                          TagSerializer, TopLevelCategorySerializer)
+from .models import (
+    Basket,
+    BasketProduct,
+    Category,
+    Order,
+    OrderProduct,
+    Product,
+    Sale,
+    Tag,
+    get_products_queryset,
+)
+from .serializers import (
+    OrderSerializer,
+    ProductCountSerializer,
+    ProductDetailSerializer,
+    ProductShortSerializer,
+    ReviewCreateSerializer,
+    SaleSerializer,
+    TagSerializer,
+    TopLevelCategorySerializer,
+)
 
 log = logging.getLogger(__name__)
 
@@ -412,11 +427,16 @@ class BasketView(
         """Delete from basket some quantity of a product"""
         serializer = ProductCountSerializer(data=request.data)
         if not serializer.is_valid():
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                serializer.errors, status=status.HTTP_400_BAD_REQUEST
+            )
 
         basket = get_basket(request)
         if not basket:
-            return Response([])
+            return Response(
+                {'non_field_errors': ['Basket not found']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         basket_id = basket.id.hex
 
@@ -429,14 +449,16 @@ class BasketView(
             basket_id,
         )
 
-        if not self._remove_products(basket_id, product_id, product_count):
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+        if not basket_remove_products(basket_id, {product_id: product_count}):
+            msg = 'Unable to delete product {} from basket {}'.format(
+                product_id, basket_id
+            )
+            return Response(
+                {'non_field_errors': [msg]}, status=status.HTTP_400_BAD_REQUEST
+            )
 
         products = self._get_products(basket)
         return self._get_response(products, basket_id)
-
-    def _remove_products(self, basket_id, product_id, product_count):
-        return basket_remove_products(basket_id, {product_id: product_count})
 
 
 class OrdersView(APIView):
