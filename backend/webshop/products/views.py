@@ -530,7 +530,7 @@ class OrdersView(APIView):
         order.status = order.STATUS_NEW
         order.save()
 
-        self._bulk_create_order_products(product_counts, order.id)
+        self._add_products(order.id, product_counts)
 
         product_ids = list(product_counts.keys())
         log.debug('product_ids: %s', product_ids)
@@ -545,12 +545,12 @@ class OrdersView(APIView):
 
         order.total_cost = 0
         for product in products:
-            order.total_cost += product.price * count
+            order.total_cost += product.price * product_counts[product.id]
         order.save()
 
         return order
 
-    def _bulk_create_order_products(self, product_counts, order_id):
+    def _add_products(self, order_id, product_counts):
         order_products = []
         for product_id, count in product_counts.items():
             order_product = OrderProduct(
