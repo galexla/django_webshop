@@ -18,27 +18,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .common import delete_unused_baskets, get_basket
-from .models import (
-    Basket,
-    BasketProduct,
-    Category,
-    Order,
-    OrderProduct,
-    Product,
-    Sale,
-    Tag,
-    get_products_queryset,
-)
-from .serializers import (
-    OrderSerializer,
-    ProductCountSerializer,
-    ProductDetailSerializer,
-    ProductShortSerializer,
-    ReviewCreateSerializer,
-    SaleSerializer,
-    TagSerializer,
-    TopLevelCategorySerializer,
-)
+from .models import (Basket, BasketProduct, Category, Order, OrderProduct,
+                     Product, Sale, Tag, get_products_queryset)
+from .serializers import (OrderSerializer, ProductCountSerializer,
+                          ProductDetailSerializer, ProductShortSerializer,
+                          ReviewCreateSerializer, SaleSerializer,
+                          TagSerializer, TopLevelCategorySerializer)
 
 log = logging.getLogger(__name__)
 
@@ -280,7 +265,7 @@ class ReviewCreateView(APIView):
         return Response([serializer.data])
 
 
-def basket_decrement(basket_id, product_counts: dict[int, int]) -> bool:
+def basket_remove_products(basket_id, product_counts: dict[int, int]) -> bool:
     product_ids = list(product_counts.keys())
     basket_products = BasketProduct.objects.filter(
         basket_id=basket_id, product__in=product_ids, product__archived=False
@@ -381,7 +366,7 @@ class BasketView(
             basket_id,
         )
 
-        if not self._increment(basket_id, product, product_count):
+        if not self._add_products(basket_id, product, product_count):
             response = Response(
                 {'count': ['Product quantity is not available.']},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -392,7 +377,7 @@ class BasketView(
         products = self._get_products(basket)
         return self._get_response(products, basket_id)
 
-    def _increment(self, basket_id, product, product_count):
+    def _add_products(self, basket_id, product, product_count):
         basket_product = BasketProduct.objects.filter(
             basket_id=basket_id, product_id=product.id, product__archived=False
         ).first()
@@ -444,14 +429,14 @@ class BasketView(
             basket_id,
         )
 
-        if not self._decrement(basket_id, product_id, product_count):
+        if not self._remove_products(basket_id, product_id, product_count):
             return Response(status=status.HTTP_400_BAD_REQUEST)
 
         products = self._get_products(basket)
         return self._get_response(products, basket_id)
 
-    def _decrement(self, basket_id, product_id, product_count):
-        return basket_decrement(basket_id, {product_id: product_count})
+    def _remove_products(self, basket_id, product_id, product_count):
+        return basket_remove_products(basket_id, {product_id: product_count})
 
 
 class OrdersView(APIView):
@@ -492,7 +477,7 @@ class OrdersView(APIView):
                 order = self._create_order(product_counts_dict, request.user)
                 basket = Basket.objects.filter(user=request.user).first()
                 if basket:
-                    basket_decrement(basket.id, product_counts_dict)
+                    basket_remove_products(basket.id, product_counts_dict)
                 return Response({'orderId': order.id})
             else:
                 return Response(

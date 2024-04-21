@@ -8,7 +8,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from ..models import Basket, BasketProduct, Product, Review, Sale
-from ..views import BasketView, basket_decrement
+from ..views import BasketView, basket_remove_products
 
 
 def category_img_path(id, file_name):
@@ -559,34 +559,34 @@ class ReviewCreateViewTest(PostTestCase):
         Review.objects.filter(product_id=1).delete()
 
 
-class TopLevelFunctionsTest(TestCase):
+class BasketRemoveProductsTest(TestCase):
     fixtures = ['fixtures/sample_data.json']
 
-    def test_basket_decrement(self):
+    def test_basket_remove_products(self):
         basket_id = Basket.objects.get(user_id=1).id
 
-        success = basket_decrement(basket_id, {3: 1, 4: 1})
+        success = basket_remove_products(basket_id, {3: 1, 4: 1})
         self.assertTrue(success)
         basket_products = BasketProduct.objects.filter(basket_id=basket_id)
         self.assertEqual(len(basket_products), 1)
         self.assertEqual(basket_products[0].product_id, 4)
         self.assertEqual(basket_products[0].count, 1)
 
-        success = basket_decrement(basket_id, {3: 5, 4: 5})
+        success = basket_remove_products(basket_id, {3: 5, 4: 5})
         self.assertTrue(success)
         basket_products = BasketProduct.objects.filter(basket_id=basket_id)
         self.assertEqual(len(basket_products), 0)
 
     def test_basket_remove_all(self):
         basket_id = Basket.objects.get(user_id=1).id
-        success = basket_decrement(basket_id, {3: 1, 4: 2})
+        success = basket_remove_products(basket_id, {3: 1, 4: 2})
         self.assertTrue(success)
         basket_products = BasketProduct.objects.filter(basket_id=basket_id)
         self.assertEqual(len(basket_products), 0)
 
     def test_basket_decrement_non_existent(self):
         basket_id = Basket.objects.get(user_id=1).id
-        success = basket_decrement(basket_id, {1: 3, 2: 3})
+        success = basket_remove_products(basket_id, {1: 3, 2: 3})
         self.assertFalse(success)
 
 
