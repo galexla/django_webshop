@@ -635,6 +635,7 @@ class BasketViewTest(TestCase):
         self.assertListEqual(
             data, [{'id': 3, 'count': 1}, {'id': 4, 'count': 2}]
         )
+        self.assertEqual(response.data[1], MONITOR_SHORT_SRLZD)
         self.client.logout()
 
         user.delete()
@@ -671,22 +672,23 @@ class BasketViewTest(TestCase):
             get_keys(response.data, ['id', 'count']),
             [{'id': 3, 'count': 5}],
         )
-        basket.refresh_from_db()
         self.assertListEqual(
             list(basket.basketproduct_set.values('product_id', 'count')),
             [{'product_id': 3, 'count': 5}],
         )
 
-        response = self.client.post(url, {'id': 1, 'count': 1})
+        response = self.client.post(url, {'id': 4, 'count': 1})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assertDictEqualExclude(
+            self, response.data[1], MONITOR_SHORT_SRLZD, ['count']
+        )
         self.assertListEqual(
             get_keys(response.data, ['id', 'count']),
-            [{'id': 1, 'count': 1}, {'id': 3, 'count': 5}],
+            [{'id': 3, 'count': 5}, {'id': 4, 'count': 1}],
         )
-        basket.refresh_from_db()
         self.assertListEqual(
             list(basket.basketproduct_set.values('product_id', 'count')),
-            [{'product_id': 1, 'count': 1}, {'product_id': 3, 'count': 5}],
+            [{'product_id': 3, 'count': 5}, {'product_id': 4, 'count': 1}],
         )
 
         response = self.client.post(
@@ -696,7 +698,7 @@ class BasketViewTest(TestCase):
         response = self.client.get(url)
         self.assertListEqual(
             get_keys(response.data, ['id', 'count']),
-            [{'id': 1, 'count': 1}, {'id': 3, 'count': 5}],
+            [{'id': 3, 'count': 5}, {'id': 4, 'count': 1}],
         )
         response = self.client.post(reverse('account:sign-out'))
 
@@ -707,12 +709,14 @@ class BasketViewTest(TestCase):
         response = self.client.get(url)
         self.assertListEqual(
             get_keys(response.data, ['id', 'count']),
-            [{'id': 1, 'count': 1}, {'id': 3, 'count': 5}],
+            [{'id': 3, 'count': 5}, {'id': 4, 'count': 1}],
         )
-        basket.refresh_from_db()
+        assertDictEqualExclude(
+            self, response.data[1], MONITOR_SHORT_SRLZD, ['count']
+        )
         self.assertListEqual(
             list(basket.basketproduct_set.values('product_id', 'count')),
-            [{'product_id': 1, 'count': 1}, {'product_id': 3, 'count': 5}],
+            [{'product_id': 3, 'count': 5}, {'product_id': 4, 'count': 1}],
         )
 
         user.delete()
@@ -736,12 +740,7 @@ class BasketViewTest(TestCase):
         products = view._get_products(basket)
         response = view._get_response(products, basket.id.hex)
         self.assertEqual(response.cookies['basket_id'].value, basket.id.hex)
-        assertDictEqualExclude(
-            self,
-            response.data[1],
-            MONITOR_SHORT_SRLZD_TMPL,
-            ('id', 'category', 'date', 'tags', 'reviews', 'images'),
-        )
+        self.assertEqual(response.data[1], MONITOR_SHORT_SRLZD)
 
         response = view._get_response([], basket.id.hex)
         self.assertEqual(response.data, [])
@@ -823,6 +822,9 @@ class BasketViewTest(TestCase):
 
         response = self.client.delete(url, {'id': 4, 'count': 1})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assertDictEqualExclude(
+            self, response.data[1], MONITOR_SHORT_SRLZD, ['count']
+        )
         basket = Basket.objects.get(user_id=admin.id)
         self.assertEqual(basket.basketproduct_set.count(), 2)
         self.assertListEqual(
