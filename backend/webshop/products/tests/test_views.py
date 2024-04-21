@@ -6,6 +6,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.test import APIClient
 
 from ..models import Basket, BasketProduct, Product, Review, Sale
 from ..views import BasketView, basket_remove_products
@@ -613,6 +614,9 @@ def get_attrs(data: Iterable[object], attrs: Iterable) -> list[dict]:
 class BasketViewTest(TestCase):
     fixtures = ['fixtures/sample_data.json']
 
+    def setUp(self):
+        self.client = APIClient()
+
     def test_get(self):
         url = reverse('products:basket')
         user = User.objects.create(username='test', password='test')
@@ -778,3 +782,65 @@ class BasketViewTest(TestCase):
         self.assertEqual(basket.basketproduct_set.count(), 1)
         self.assertEqual(basket.basketproduct_set.all()[0].product_id, 1)
         self.assertEqual(basket.basketproduct_set.all()[0].count, 5)
+
+    def test_delete(self):
+        url = reverse('products:basket')
+
+        response = self.client.delete(url, {'i': 4, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.delete(url, {'id': 4, 'count': -1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.delete(url, {'id': 0, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.delete(url, {'id': 1, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.post(url, {'id': 3, 'count': 5})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.post(url, {'id': 1, 'count': 2})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        basket = Basket.objects.get(id=response.cookies['basket_id'].value)
+        self.assertEqual(basket.basketproduct_set.count(), 2)
+        self.assertListEqual(
+            list(basket.basketproduct_set.values('product_id', 'count')),
+            [{'product_id': 1, 'count': 2}, {'product_id': 3, 'count': 5}],
+        )
+        response = self.client.delete(url, {'id': 1, 'count': 2})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.delete(url, {'id': 3, 'count': 4})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(basket.basketproduct_set.count(), 1)
+        self.assertListEqual(
+            list(basket.basketproduct_set.values('product_id', 'count')),
+            [{'product_id': 3, 'count': 1}],
+        )
+
+        admin = User.objects.get(username='admin')
+        self.client.force_login(admin)
+
+        response = self.client.delete(url, {'id': 0, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.delete(url, {'id': 4, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        basket = Basket.objects.get(user_id=admin.id)
+        self.assertEqual(basket.basketproduct_set.count(), 2)
+        self.assertListEqual(
+            list(basket.basketproduct_set.values('product_id', 'count')),
+            [{'product_id': 3, 'count': 1}, {'product_id': 4, 'count': 1}],
+        )
+
+        response = self.client.delete(url, {'id': 4, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(basket.basketproduct_set.count(), 1)
+        self.assertListEqual(
+            list(basket.basketproduct_set.values('product_id', 'count')),
+            [{'product_id': 3, 'count': 1}],
+        )
+
+        response = self.client.delete(url, {'id': 3, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(basket.basketproduct_set.count(), 0)
+        self.assertListEqual(
+            list(basket.basketproduct_set.values('product_id', 'count')), []
+        )
