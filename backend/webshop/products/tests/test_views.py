@@ -745,3 +745,36 @@ class BasketViewTest(TestCase):
         response = view._get_response([], '')
         self.assertEqual(response.data, [])
 
+    def test_set_cookie(self):
+        view = BasketView()
+        response = Response()
+        view._set_cookie(response, '123')
+        self.assertEqual(response.cookies['basket_id'].value, '123')
+        view._set_cookie(response, 'abc')
+        self.assertEqual(response.cookies['basket_id'].value, 'abc')
+
+    def test_add_products(self):
+        basket = Basket.objects.create()
+        view = BasketView()
+
+        product = Product.objects.get(id=1)
+        self.assertFalse(view._add_products(basket.id.hex, product, 6))
+        self.assertEqual(basket.basketproduct_set.count(), 0)
+
+        self.assertTrue(view._add_products(basket.id.hex, product, 3))
+        basket.refresh_from_db()
+        self.assertEqual(basket.basketproduct_set.count(), 1)
+        self.assertEqual(basket.basketproduct_set.all()[0].product_id, 1)
+        self.assertEqual(basket.basketproduct_set.all()[0].count, 3)
+
+        self.assertFalse(view._add_products(basket.id.hex, product, 3))
+        basket.refresh_from_db()
+        self.assertEqual(basket.basketproduct_set.count(), 1)
+        self.assertEqual(basket.basketproduct_set.all()[0].product_id, 1)
+        self.assertEqual(basket.basketproduct_set.all()[0].count, 3)
+
+        self.assertTrue(view._add_products(basket.id.hex, product, 2))
+        basket.refresh_from_db()
+        self.assertEqual(basket.basketproduct_set.count(), 1)
+        self.assertEqual(basket.basketproduct_set.all()[0].product_id, 1)
+        self.assertEqual(basket.basketproduct_set.all()[0].count, 5)
