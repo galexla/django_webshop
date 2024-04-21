@@ -493,19 +493,22 @@ class OrdersView(APIView):
         product_counts_dict = {
             item['id']: item['count'] for item in serializer.validated_data
         }
-
+        order_created = False
         with transaction.atomic():
             if self._are_available(product_counts_dict):
                 order = self._create_order(product_counts_dict, request.user)
                 basket = Basket.objects.filter(user=request.user).first()
                 if basket:
                     basket_remove_products(basket.id, product_counts_dict)
-                return Response({'orderId': order.id})
-            else:
-                return Response(
-                    {'count': ['Product quantities are not available']},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
+                order_created = True
+
+        if order_created:
+            return Response({'orderId': order.id})
+        else:
+            return Response(
+                {'count': ['Product quantities are not available']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
     def _are_available(self, product_counts_dict: dict[str, int]) -> bool:
         ids = set(product_counts_dict.keys())
@@ -522,7 +525,7 @@ class OrdersView(APIView):
         return True
 
     def _create_order(self, product_counts: dict[str, int], user: User):
-        """Must always be used inside transaction.atomic block"""
+        """Must always be called from within transaction.atomic block"""
         order = Order(user=user)
         order.full_name = user.get_full_name()
         order.phone = user.profile.phone or ''
@@ -530,18 +533,7 @@ class OrdersView(APIView):
         order.status = order.STATUS_NEW
         order.save()
 
-        self._add_products(order.id, product_counts)
-
-        product_ids = list(product_counts.keys())
-        log.debug('product_ids: %s', product_ids)
-        products = list(
-            Product.objects.filter(id__in=product_ids, archived=False).all()
-        )
-        for product in products:
-            count = product_counts[product.id]
-            product.count -= count
-            product.sold_count += count
-        Product.objects.bulk_update(products, fields=['count', 'sold_count'])
+        products = self._add_products(order.id, product_counts)
 
         order.total_cost = 0
         for product in products:
@@ -559,7 +551,20 @@ class OrdersView(APIView):
                 count=count,
             )
             order_products.append(order_product)
-        return OrderProduct.objects.bulk_create(order_products)
+        OrderProduct.objects.bulk_create(order_products)
+
+        product_ids = list(product_counts.keys())
+        log.debug('product_ids: %s', product_ids)
+        products = list(
+            Product.objects.filter(id__in=product_ids, archived=False).all()
+        )
+        for product in products:
+            count = product_counts[product.id]
+            product.count -= count
+            product.sold_count += count
+        Product.objects.bulk_update(products, fields=['count', 'sold_count'])
+
+        return products
 
 
 class OrderView(APIView):
