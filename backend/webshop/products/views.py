@@ -474,16 +474,17 @@ class OrdersView(APIView):
             .all()
         )
         serializer = OrderSerializer(orders, many=True)
-        log.debug('Got %s orders, user=%s', len(serializer.data), user.id)
+        log.debug('Got %s orders of user %s', len(serializer.data), user.id)
 
         return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
-        product_counts = [
-            {'id': item.get('id'), 'count': item.get('count')}
-            for item in request.data
-        ] or None
-        serializer = ProductCountSerializer(data=product_counts, many=True)
+        if request.data == []:
+            return Response(
+                {'non_field_errors': ['Zero products provided']},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        serializer = ProductCountSerializer(data=request.data, many=True)
         if not serializer.is_valid():
             return Response(
                 serializer.errors, status=status.HTTP_400_BAD_REQUEST

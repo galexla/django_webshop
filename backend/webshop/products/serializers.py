@@ -218,7 +218,7 @@ class ProductCountSerializer(serializers.Serializer):
     count = serializers.IntegerField(
         required=True,
         validators=[
-            MinValueValidator(0),
+            MinValueValidator(1),
         ],
     )
 
