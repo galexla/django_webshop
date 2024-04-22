@@ -1,3 +1,4 @@
+from decimal import Decimal
 from typing import Iterable
 
 from account.models import User
@@ -6,9 +7,17 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APITestCase
 
-from ..models import Basket, BasketProduct, Product, Review, Sale
+from ..models import (
+    Basket,
+    BasketProduct,
+    Order,
+    OrderProduct,
+    Product,
+    Review,
+    Sale,
+)
 from ..views import BasketView, basket_remove_products
 
 
@@ -846,3 +855,119 @@ class BasketViewTest(TestCase):
         self.assertListEqual(
             list(basket.basketproduct_set.values('product_id', 'count')), []
         )
+
+
+class OrdersViewTest(APITestCase):
+    fixtures = ['fixtures/sample_data.json']
+
+    def test_get(self):
+        url = reverse('products:orders')
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        admin = User.objects.get(username='admin')
+        self.client.force_login(admin)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(get_ids(response.data), [3, 2])
+        expected_order1 = {
+            'id': 3,
+            'createdAt': '2024.03.02 19:16:12',
+            'fullName': 'Nick',
+            'email': 'kva@kva.com',
+            'phone': '+712334361',
+            'deliveryType': 'ordinary',
+            'paymentType': 'someone',
+            'totalCost': '1979.00',
+            'status': 'processing',
+            'city': 'Moscow',
+            'address': 'Sretensky blvd 1',
+        }
+        assertDictEqualExclude(
+            self, response.data[0], expected_order1, ['products']
+        )
+        assertDictEqualExclude(
+            self,
+            response.data[0]['products'][1],
+            MONITOR_SHORT_SRLZD,
+            ['count'],
+        )
+        self.assertEqual(len(response.data[0]['products']), 2)
+        self.assertEqual(response.data[0]['products'][0]['id'], 3)
+        self.assertEqual(response.data[0]['products'][0]['count'], 1)
+        self.assertEqual(response.data[0]['products'][1]['id'], 4)
+        self.assertEqual(response.data[0]['products'][1]['count'], 2)
+        self.client.logout()
+
+        user = User.objects.create(username='test', password='test')
+        self.client.force_login(user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(get_ids(response.data), [])
+
+        user.delete()
+
+    def test_post(self):
+        url = reverse('products:orders')
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        user = User.objects.create(username='test', password='test')
+        self.client.force_login(user)
+
+        response = self.client.post(url, {'id': 1, 'count': 1})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(url, [{'i': 1, 'count': 1}])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(url, [{'id': 1, 'c': 1}])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(url, [{'id': 1, 'count': 0}])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(url, [])
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        response = self.client.post(
+            url, [{'id': 2, 'count': 2}, {'id': 4, 'count': 2}]
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.post(
+            url, [{'id': 3, 'count': 2}, {'id': 4, 'count': 2}]
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIsNotNone(response.data.get('orderId'))
+        order_id = response.data['orderId']
+        self.assertTrue(Order.objects.filter(id=order_id).exists())
+        order = list(Order.objects.filter(id=order_id).values())
+        expected_value = {
+            'id': 4,
+            'user_id': 3,
+            'full_name': '',
+            'email': '',
+            'phone': '',
+            'delivery_type': '',
+            'payment_type': '',
+            'total_cost': Decimal('2578.00'),
+            'status': 'new',
+            'city': '',
+            'address': '',
+            'archived': False,
+        }
+        assertDictEqualExclude(
+            self, order[0], expected_value, ['user_id', 'created_at']
+        )
+        product_counts = list(
+            OrderProduct.objects.filter(order_id=order_id).values(
+                'product_id', 'count'
+            )
+        )
+        self.assertListEqual(
+            product_counts,
+            [{'product_id': 3, 'count': 2}, {'product_id': 4, 'count': 2}],
+        )
+
+        user.delete()
