@@ -4,7 +4,7 @@ import logging
 import django_filters
 from account.models import User
 from configurations.models import get_all_shop_configurations
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.http.request import QueryDict
 from django.shortcuts import get_object_or_404
@@ -544,12 +544,15 @@ class OrdersView(APIView):
         return order
 
     def _add_products(self, order_id, product_counts):
+        """
+        Add products to an empty order. Must always be called from
+        within transaction.atomic block. All products must be
+        available: not archived and have enough count.
+        """
         order_products = []
         for product_id, count in product_counts.items():
             order_product = OrderProduct(
-                order_id=order_id,
-                product_id=product_id,
-                count=count,
+                order_id=order_id, product_id=product_id, count=count
             )
             order_products.append(order_product)
         OrderProduct.objects.bulk_create(order_products)

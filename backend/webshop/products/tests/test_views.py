@@ -1011,7 +1011,15 @@ class OrdersViewTest(APITestCase):
 
     def test_create_order(self):
         view = OrdersView()
-        user = User.objects.create(username='test', password='test')
+        user = User.objects.create(
+            username='test',
+            password='test',
+            first_name='Kva',
+            last_name='Test',
+            email='test@test.com',
+        )
+        user.profile.phone = '+1234567'
+        user.profile.save()
 
         self.client.force_login(user)
         success = False
@@ -1019,8 +1027,14 @@ class OrdersViewTest(APITestCase):
             order: Order = view._create_order({3: 7, 4: 2}, user)
             success = True
         self.assertTrue(success)
+        order = Order.objects.get(id=order.id)
         expected_order = fill_template(
-            self.NEW_ORDER_TPL, user_id=user.id, total_cost=Decimal('6573.00')
+            self.NEW_ORDER_TPL,
+            user_id=user.id,
+            total_cost=Decimal('6573.00'),
+            full_name=user.get_full_name(),
+            email=user.email,
+            phone=user.profile.phone,
         )
         assertDictEqualExclude(
             self,
@@ -1028,5 +1042,38 @@ class OrdersViewTest(APITestCase):
             expected_order,
             ['id', 'created_at', '_state'],
         )
+        product_counts = list(
+            order.orderproduct_set.values('product_id', 'count')
+        )
+        self.assertListEqual(
+            product_counts,
+            [{'product_id': 3, 'count': 7}, {'product_id': 4, 'count': 2}],
+        )
+        products = Product.objects.filter(id__in=[3, 4])
+        self.assertListEqual(
+            list(products.values('count', 'sold_count')),
+            [{'count': 0, 'sold_count': 12}, {'count': 0, 'sold_count': 6}],
+        )
 
         user.delete()
+
+    def test_add_products(self):
+        view = OrdersView()
+        user = User.objects.get(username='12')
+        self.client.force_login(user)
+
+        order = Order.objects.create(user_id=user.id)
+        products = {3: 3, 4: 2, 1: 1}
+        view._add_products(order.id, products)
+        product_counts = list(
+            order.orderproduct_set.values('product_id', 'count')
+        )
+        expected_product_counts = [
+            {'product_id': 3, 'count': 3},
+            {'product_id': 4, 'count': 2},
+            {'product_id': 1, 'count': 1},
+        ]
+        self.assertListEqual(
+            product_counts,
+            expected_product_counts,
+        )
