@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Iterable
 
 from account.models import User
+from django.db import transaction
 from django.test import TestCase
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
@@ -18,7 +19,7 @@ from ..models import (
     Review,
     Sale,
 )
-from ..views import BasketView, basket_remove_products
+from ..views import BasketView, OrdersView, basket_remove_products
 
 
 def category_img_path(id, file_name):
@@ -155,7 +156,7 @@ MONITOR_SHORT_SRLZD = {
 }
 
 # template based on monitor, field names are taken from the database
-MONITOR_SHORT_DB_TMPL = {
+MONITOR_SHORT_DB_TPL = {
     'title': 'Monitor',
     'price': '490.00',
     'count': 2,
@@ -166,7 +167,7 @@ MONITOR_SHORT_DB_TMPL = {
 }
 
 # template based on monitor, serialized with ProductShortSerializer
-MONITOR_SHORT_SRLZD_TMPL = {
+MONITOR_SHORT_SRLZD_TPL = {
     'category': None,
     'title': 'Monitor',
     'price': '490.00',
@@ -282,7 +283,7 @@ class PopularProductsListViewTest(TestCase):
         self.assertEqual(get_ids(response.data), [1, 3, 4, 2])
         self.assertEqual(response.data[2], MONITOR_SHORT_SRLZD)
 
-        monitor = MONITOR_SHORT_DB_TMPL.copy()
+        monitor = MONITOR_SHORT_DB_TPL.copy()
         monitor['rating'] = '2.9'
         monitor['sold_count'] = 0
         ids_added = []
@@ -295,7 +296,7 @@ class PopularProductsListViewTest(TestCase):
         self.assertEqual(get_ids(response.data), [1, 3, 4, 2] + ids_added[:4])
         assertDictEqualExclude(
             self,
-            MONITOR_SHORT_SRLZD_TMPL,
+            MONITOR_SHORT_SRLZD_TPL,
             response.data[7],
             ('id', 'date', 'rating'),
         )
@@ -312,7 +313,7 @@ class LimitedProductsListViewTest(TestCase):
         self.assertEqual(get_ids(response.data), [3, 4])
         self.assertEqual(response.data[1], MONITOR_SHORT_SRLZD)
 
-        monitor = MONITOR_SHORT_DB_TMPL.copy()
+        monitor = MONITOR_SHORT_DB_TPL.copy()
         monitor['is_limited_edition'] = True
         ids_added = []
         for i in range(20):
@@ -324,7 +325,7 @@ class LimitedProductsListViewTest(TestCase):
         self.assertEqual(get_ids(response.data), [3, 4] + ids_added[:14])
         assertDictEqualExclude(
             self,
-            MONITOR_SHORT_SRLZD_TMPL,
+            MONITOR_SHORT_SRLZD_TPL,
             response.data[15],
             ('id', 'date'),
         )
@@ -352,7 +353,7 @@ class BannerProductsListViewTest(TestCase):
         product.is_banner = False
         product.save()
 
-        monitor = MONITOR_SHORT_DB_TMPL.copy()
+        monitor = MONITOR_SHORT_DB_TPL.copy()
         monitor['is_banner'] = True
         ids_added = []
         for i in range(2):
@@ -363,7 +364,7 @@ class BannerProductsListViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3] + ids_added[:1])
         self.assertDictContainsSubset(
-            MONITOR_SHORT_SRLZD_TMPL, response.data[2]
+            MONITOR_SHORT_SRLZD_TPL, response.data[2]
         )
 
         Product.objects.filter(id__in=ids_added).delete()
@@ -857,8 +858,30 @@ class BasketViewTest(TestCase):
         )
 
 
+def fill_template(template: dict, **kwargs):
+    result = template.copy()
+    for field, value in kwargs.items():
+        result[field] = value
+    return result
+
+
 class OrdersViewTest(APITestCase):
     fixtures = ['fixtures/sample_data.json']
+
+    NEW_ORDER_TPL = {
+        'id': 4,
+        'user_id': 3,
+        'full_name': '',
+        'email': '',
+        'phone': '',
+        'delivery_type': '',
+        'payment_type': '',
+        'total_cost': Decimal('2578.00'),
+        'status': 'new',
+        'city': '',
+        'address': '',
+        'archived': False,
+    }
 
     def test_get(self):
         url = reverse('products:orders')
@@ -943,22 +966,11 @@ class OrdersViewTest(APITestCase):
         order_id = response.data['orderId']
         self.assertTrue(Order.objects.filter(id=order_id).exists())
         order = list(Order.objects.filter(id=order_id).values())
-        expected_value = {
-            'id': 4,
-            'user_id': 3,
-            'full_name': '',
-            'email': '',
-            'phone': '',
-            'delivery_type': '',
-            'payment_type': '',
-            'total_cost': Decimal('2578.00'),
-            'status': 'new',
-            'city': '',
-            'address': '',
-            'archived': False,
-        }
+        expected_order = fill_template(
+            self.NEW_ORDER_TPL, user_id=user.id, total_cost=Decimal('2578.00')
+        )
         assertDictEqualExclude(
-            self, order[0], expected_value, ['user_id', 'created_at']
+            self, order[0], expected_order, ['id', 'created_at']
         )
         product_counts = list(
             OrderProduct.objects.filter(order_id=order_id).values(
@@ -968,6 +980,53 @@ class OrdersViewTest(APITestCase):
         self.assertListEqual(
             product_counts,
             [{'product_id': 3, 'count': 2}, {'product_id': 4, 'count': 2}],
+        )
+        self.client.logout()
+
+        admin = User.objects.get(username='admin')
+        self.client.force_login(admin)
+
+        Product.objects.filter(id__in=[3, 4]).update(count=10)
+        response = self.client.post(
+            url, [{'id': 3, 'count': 1}, {'id': 4, 'count': 1}]
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        basket = Basket.objects.get(user_id=admin.id)
+        product_counts = list(
+            basket.basketproduct_set.values('product_id', 'count')
+        )
+        self.assertListEqual(product_counts, [{'product_id': 4, 'count': 1}])
+
+        user.delete()
+
+    def test_are_available(self):
+        view = OrdersView()
+
+        self.assertFalse(view._are_available({3: 8, 4: 2}))
+        self.assertFalse(view._are_available({3: 7, 4: 3}))
+        self.assertTrue(view._are_available({3: 7, 4: 2}))
+
+        Product.objects.filter(id=3).update(archived=True)
+        self.assertFalse(view._are_available({3: 7, 4: 2}))
+
+    def test_create_order(self):
+        view = OrdersView()
+        user = User.objects.create(username='test', password='test')
+
+        self.client.force_login(user)
+        success = False
+        with transaction.atomic():
+            order: Order = view._create_order({3: 7, 4: 2}, user)
+            success = True
+        self.assertTrue(success)
+        expected_order = fill_template(
+            self.NEW_ORDER_TPL, user_id=user.id, total_cost=Decimal('6573.00')
+        )
+        assertDictEqualExclude(
+            self,
+            order.__dict__,
+            expected_order,
+            ['id', 'created_at', '_state'],
         )
 
         user.delete()
