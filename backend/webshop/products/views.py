@@ -587,11 +587,9 @@ class OrderView(APIView):
             Order, pk=pk, user=request.user, archived=False
         )
 
-        if order.status == Order.STATUS_PROCESSING:  # return unmodified order
-            serializer = OrderSerializer(order)
-            data = serializer.data
-            data['orderId'] = data['id']  # fix bug in frontend
-            return Response(data)
+        if order.status == Order.STATUS_PROCESSING:  # do not modify order
+            # fix bug in swagger.yaml: return 'orderId' instead of empty string
+            return Response({'orderId': order.id})
 
         if order.status != Order.STATUS_NEW:
             msg = 'Only orders with status "{}" can be modified.'.format(
@@ -609,18 +607,13 @@ class OrderView(APIView):
             )
 
         data = serializer.validated_data
-        data['total_cost'] += decimal.Decimal(
-            self._get_delivery_cost(
-                order.id, data['delivery_type'], data['total_cost']
-            )
+        data['total_cost'] += self._get_delivery_cost(
+            order.id, data['delivery_type'], data['total_cost']
         )
         serializer.save()
 
-        reponse_serializer = OrderSerializer(serializer.instance)
-        data = reponse_serializer.data
-        data['orderId'] = data.pop('id')  # fix bug in frontend
-
-        return Response(data)
+        # fix bug in swagger.yaml: return 'orderId' instead of empty string
+        return Response({'orderId': order.id})
 
     def _get_delivery_cost(self, order_id, delivery_type, order_cost):
         shop_confs = get_all_shop_configurations()
