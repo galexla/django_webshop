@@ -2,6 +2,7 @@ from decimal import Decimal
 from typing import Iterable
 
 from account.models import User
+from configurations.models import get_all_shop_configurations
 from django.db import transaction
 from django.test import TestCase
 from django.urls import reverse, reverse_lazy
@@ -10,17 +11,10 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APIClient, APITestCase
 
-from ..models import (
-    Basket,
-    BasketProduct,
-    Order,
-    OrderProduct,
-    Product,
-    Review,
-    Sale,
-)
+from ..models import (Basket, BasketProduct, Order, OrderProduct, Product,
+                      Review, Sale)
 from ..serializers import OrderSerializer
-from ..views import BasketView, OrdersView, basket_remove_products
+from ..views import BasketView, OrdersView, OrderView, basket_remove_products
 
 
 def category_img_path(id, file_name):
@@ -1180,12 +1174,10 @@ class OrderViewTest(APITestCase):
             'address': 'Sretensky blvd 1',
         }
         response = self.client.post(url, order_data)
-        print('###', response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertDictEqual(response.data, {'orderId': order_id})
         order = Order.objects.get(id=order_id)
         serializer = OrderSerializer(instance=order)
-        print('###', serializer.data)
         assertDictEqualExclude(
             self,
             order_data,
@@ -1203,3 +1195,67 @@ class OrderViewTest(APITestCase):
         post_data.pop('fullName')
         response = self.client.post(url, post_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_get_delivery_cost(self):
+        shop_confs = get_all_shop_configurations()
+        order = Order.objects.get(id=3)
+        view = OrderView()
+
+        delivery_cost = view._get_delivery_cost(
+            order.id, Order.DELIVERY_EXPRESS, 200
+        )
+        self.assertEqual(delivery_cost, shop_confs['express_delivery_price'])
+        delivery_cost = view._get_delivery_cost(
+            order.id, Order.DELIVERY_EXPRESS, 0
+        )
+        self.assertEqual(delivery_cost, shop_confs['express_delivery_price'])
+
+        delivery_cost = view._get_delivery_cost(
+            order.id,
+            Order.DELIVERY_ORDINARY,
+            shop_confs['free_delivery_limit'] - 1,
+        )
+        self.assertEqual(delivery_cost, shop_confs['ordinary_delivery_price'])
+        delivery_cost = view._get_delivery_cost(
+            order.id,
+            Order.DELIVERY_ORDINARY,
+            shop_confs['free_delivery_limit'],
+        )
+        self.assertEqual(delivery_cost, 0)
+
+        order.products.update(free_delivery=1)
+        delivery_cost = view._get_delivery_cost(
+            order.id,
+            Order.DELIVERY_ORDINARY,
+            shop_confs['free_delivery_limit'] - 1,
+        )
+        self.assertEqual(delivery_cost, 0)
+        delivery_cost = view._get_delivery_cost(
+            order.id,
+            Order.DELIVERY_ORDINARY,
+            shop_confs['free_delivery_limit'],
+        )
+        self.assertEqual(delivery_cost, 0)
+
+    def test_is_delivery_free(self):
+        order = Order.objects.get(id=3)
+        view = OrderView()
+
+        is_delivery_free = view._is_delivery_free(
+            order.id, Order.DELIVERY_EXPRESS
+        )
+        self.assertEqual(is_delivery_free, False)
+        is_delivery_free = view._is_delivery_free(
+            order.id, Order.DELIVERY_ORDINARY
+        )
+        self.assertEqual(is_delivery_free, False)
+
+        order.products.update(free_delivery=1)
+        is_delivery_free = view._is_delivery_free(
+            order.id, Order.DELIVERY_EXPRESS
+        )
+        self.assertEqual(is_delivery_free, False)
+        is_delivery_free = view._is_delivery_free(
+            order.id, Order.DELIVERY_ORDINARY
+        )
+        self.assertEqual(is_delivery_free, True)
