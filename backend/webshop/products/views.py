@@ -607,8 +607,8 @@ class OrderView(APIView):
             )
 
         data = serializer.validated_data
-        data['total_cost'] += self._get_delivery_cost(
-            order.id, data['delivery_type'], data['total_cost']
+        data['total_cost'] = order.total_cost + self._get_delivery_cost(
+            order.id, data['delivery_type'], order.total_cost
         )
         serializer.save()
 
