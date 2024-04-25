@@ -4,7 +4,7 @@ import logging
 import django_filters
 from account.models import User
 from configurations.models import get_all_shop_configurations
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.http.request import QueryDict
 from django.shortcuts import get_object_or_404
@@ -18,27 +18,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .common import delete_unused_baskets, get_basket
-from .models import (
-    Basket,
-    BasketProduct,
-    Category,
-    Order,
-    OrderProduct,
-    Product,
-    Sale,
-    Tag,
-    get_products_queryset,
-)
-from .serializers import (
-    OrderSerializer,
-    ProductCountSerializer,
-    ProductDetailSerializer,
-    ProductShortSerializer,
-    ReviewCreateSerializer,
-    SaleSerializer,
-    TagSerializer,
-    TopLevelCategorySerializer,
-)
+from .models import (Basket, BasketProduct, Category, Order, OrderProduct,
+                     Product, Sale, Tag, get_products_queryset)
+from .serializers import (OrderSerializer, ProductCountSerializer,
+                          ProductDetailSerializer, ProductShortSerializer,
+                          ReviewCreateSerializer, SaleSerializer,
+                          TagSerializer, TopLevelCategorySerializer)
 
 log = logging.getLogger(__name__)
 
@@ -625,8 +610,10 @@ class OrderView(APIView):
         elif delivery_type == Order.DELIVERY_ORDINARY:
             if self._is_delivery_free(order_id, delivery_type):
                 result = 0
-            if order_cost < shop_confs['free_delivery_limit']:
+            elif order_cost < shop_confs['free_delivery_limit']:
                 result = shop_confs['ordinary_delivery_price']
+            else:
+                result = 0
 
         return decimal.Decimal(result)
 
