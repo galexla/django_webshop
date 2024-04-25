@@ -19,6 +19,7 @@ from ..models import (
     Review,
     Sale,
 )
+from ..serializers import OrderSerializer
 from ..views import BasketView, OrdersView, basket_remove_products
 
 
@@ -877,7 +878,7 @@ class OrdersViewTest(APITestCase):
         'delivery_type': '',
         'payment_type': '',
         'total_cost': Decimal('2578.00'),
-        'status': 'new',
+        'status': Order.STATUS_NEW,
         'city': '',
         'address': '',
         'archived': False,
@@ -901,10 +902,10 @@ class OrdersViewTest(APITestCase):
             'fullName': 'Nick',
             'email': 'kva@kva.com',
             'phone': '+712334361',
-            'deliveryType': 'ordinary',
-            'paymentType': 'someone',
+            'deliveryType': Order.DELIVERY_ORDINARY,
+            'paymentType': Order.PAYMENT_SOMEONE,
             'totalCost': '1979.00',
-            'status': 'processing',
+            'status': Order.STATUS_PROCESSING,
             'city': 'Moscow',
             'address': 'Sretensky blvd 1',
         }
@@ -1077,3 +1078,128 @@ class OrdersViewTest(APITestCase):
             product_counts,
             expected_product_counts,
         )
+
+
+class OrderViewTest(APITestCase):
+    fixtures = ['fixtures/sample_data.json']
+
+    def test_get(self):
+        url = reverse('products:order', kwargs={'pk': 3})
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        admin = User.objects.get(username='admin')
+        self.client.force_login(admin)
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        expected_order = {
+            'id': 3,
+            'createdAt': '2024.03.02 19:16:12',
+            'fullName': 'Nick',
+            'email': 'kva@kva.com',
+            'phone': '+712334361',
+            'deliveryType': Order.DELIVERY_ORDINARY,
+            'paymentType': Order.PAYMENT_SOMEONE,
+            'totalCost': '1979.00',
+            'status': Order.STATUS_PROCESSING,
+            'city': 'Moscow',
+            'address': 'Sretensky blvd 1',
+        }
+        assertDictEqualExclude(
+            self, response.data, expected_order, ['products']
+        )
+        assertDictEqualExclude(
+            self,
+            response.data['products'][1],
+            MONITOR_SHORT_SRLZD,
+            ['count'],
+        )
+        self.assertEqual(len(response.data['products']), 2)
+        self.assertEqual(response.data['products'][0]['id'], 3)
+        self.assertEqual(response.data['products'][0]['count'], 1)
+        self.assertEqual(response.data['products'][1]['id'], 4)
+        self.assertEqual(response.data['products'][1]['count'], 2)
+        self.client.logout()
+
+        user = User.objects.create(username='test', password='test')
+        self.client.force_login(user)
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        user.delete()
+
+    def test_post(self):
+        url = reverse('products:order', kwargs={'pk': 3})
+
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+        user = User.objects.create(username='test', password='test')
+        self.client.force_login(user)
+
+        response = self.client.post(url, {'status': 'new'})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        # create a new order
+        response = self.client.post(
+            reverse('products:orders'), [{'id': 4, 'count': 2}]
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order_id = response.data['orderId']
+        url = reverse('products:order', kwargs={'pk': order_id})
+        order = Order.objects.get(id=order_id)
+
+        # test: if order.status == Order.STATUS_PROCESSING...
+        order.status = Order.STATUS_PROCESSING
+        order.save()
+        order_data_before = order.__dict__
+        post_data = {k: '' for k in order_data_before.keys()}
+        response = self.client.post(url, post_data)
+        order.refresh_from_db()
+        order_data_after = order.__dict__
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        assertDictEqualExclude(
+            self, order_data_before, order_data_after, ['_state']
+        )
+        self.assertEqual(response.data, {'orderId': order_id})
+
+        # test: if order.status != Order.STATUS_NEW...
+        order.status = Order.STATUS_NEW
+        order.save()
+        order_data = {
+            'fullName': 'Nick',
+            'email': 'kva@kva.com',
+            'phone': '+712334361',
+            'deliveryType': Order.DELIVERY_ORDINARY,
+            'paymentType': Order.PAYMENT_SOMEONE,
+            'status': Order.STATUS_PROCESSING,
+            'totalCost': 0,
+            'city': 'Moscow',
+            'address': 'Sretensky blvd 1',
+        }
+        response = self.client.post(url, order_data)
+        print('###', response.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertDictEqual(response.data, {'orderId': order_id})
+        order = Order.objects.get(id=order_id)
+        serializer = OrderSerializer(instance=order)
+        print('###', serializer.data)
+        assertDictEqualExclude(
+            self,
+            order_data,
+            serializer.data,
+            ['id', 'orderId', 'createdAt', 'totalCost', 'products'],
+        )
+        # self.assertDictContainsSubset(order_data, serializer.data)
+        order.refresh_from_db()
+        self.assertEqual(order.total_cost, 1180)
+
+        # test posting invalid data
+        order.status = Order.STATUS_NEW
+        order.save()
+        post_data = order_data.copy()
+        post_data.pop('fullName')
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
