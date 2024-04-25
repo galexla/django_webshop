@@ -294,7 +294,9 @@ class OrderSerializer(serializers.ModelSerializer):
 
         if any(is_empty):
             raise serializers.ValidationError(
-                'Empty fields are only allowed in a new order'
+                'These fields can only be empty in a new order: {}'.format(
+                    ', '.join(fields)
+                )
             )
 
         return data

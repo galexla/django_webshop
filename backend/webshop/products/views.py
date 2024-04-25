@@ -615,17 +615,20 @@ class OrderView(APIView):
         # fix bug in swagger.yaml: return 'orderId' instead of empty string
         return Response({'orderId': order.id})
 
-    def _get_delivery_cost(self, order_id, delivery_type, order_cost):
+    def _get_delivery_cost(
+        self, order_id, delivery_type, order_cost
+    ) -> decimal.Decimal:
+        result = 0
         shop_confs = get_all_shop_configurations()
         if delivery_type == Order.DELIVERY_EXPRESS:
-            return shop_confs['express_delivery_price']
+            result = shop_confs['express_delivery_price']
         elif delivery_type == Order.DELIVERY_ORDINARY:
             if self._is_delivery_free(order_id, delivery_type):
-                return 0
+                result = 0
             if order_cost < shop_confs['free_delivery_limit']:
-                return shop_confs['ordinary_delivery_price']
+                result = shop_confs['ordinary_delivery_price']
 
-        return 0
+        return decimal.Decimal(result)
 
     def _is_delivery_free(self, order_id, delivery_type) -> bool:
         if delivery_type == Order.DELIVERY_ORDINARY:
