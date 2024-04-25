@@ -2,7 +2,6 @@ from django.db import IntegrityError
 from django.test import TestCase
 
 from ..models import Profile, User, get_avatar_upload_path
-from .common import BaseTestCase, RandomImage
 
 
 class TopLevelTest(TestCase):

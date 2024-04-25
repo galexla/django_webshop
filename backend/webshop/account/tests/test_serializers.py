@@ -1,14 +1,11 @@
 from django.test import TestCase
+from webshop.common import SerializerTestCase
 
 from ..models import User
-from ..serializers import (
-    AvatarUpdateSerializer,
-    ProfileSerializer,
-    SetPasswordSerializer,
-    SignInSerializer,
-    SignUpSerializer,
-)
-from .common import BaseTestCase, RandomImage
+from ..serializers import (AvatarUpdateSerializer, ProfileSerializer,
+                           SetPasswordSerializer, SignInSerializer,
+                           SignUpSerializer)
+from .common import RandomImage
 
 
 class SignUpSerializerTest(TestCase):
@@ -131,7 +128,7 @@ class SignInSerializerTest(TestCase):
         self.assertIsNone(serializer.data.get('password'))
 
 
-class SetPasswordSerializerTest(BaseTestCase):
+class SetPasswordSerializerTest(SerializerTestCase):
     def test_fields(self):
         ok_data = {'currentPassword': 'gedfkjdhf', 'newPassword': 'dfdskfjdfa'}
 
@@ -175,7 +172,7 @@ class AvatarUpdateSerializerTest(TestCase):
         self.assertIsNone(serializer.data.get('avatar'))
 
 
-class ProfileSerializerTest(BaseTestCase):
+class ProfileSerializerTest(SerializerTestCase):
     def test_fields(self):
         ok_data = {
             'fullName': 'test',
