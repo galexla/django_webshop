@@ -248,7 +248,7 @@ class OrderSerializer(serializers.ModelSerializer):
     createdAt = serializers.DateTimeField(
         source='created_at', read_only=True, format='%Y.%m.%d %H:%M:%S'
     )
-    fullName = serializers.CharField(source='full_name')
+    fullName = serializers.CharField(source='full_name', max_length=120)
     deliveryType = serializers.ChoiceField(
         source='delivery_type', choices=Order.DELIVERY_TYPES
     )
