@@ -9,10 +9,17 @@ from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.test import APIClient, APITestCase
+from rest_framework.test import APITestCase
 
-from ..models import (Basket, BasketProduct, Order, OrderProduct, Product,
-                      Review, Sale)
+from ..models import (
+    Basket,
+    BasketProduct,
+    Order,
+    OrderProduct,
+    Product,
+    Review,
+    Sale,
+)
 from ..serializers import OrderSerializer
 from ..views import BasketView, OrdersView, OrderView, basket_remove_products
 
@@ -417,6 +424,7 @@ class SalesViewTest(TestCase):
 
 class ProductDetailViewTest(TestCase):
     fixtures = ['fixtures/sample_data.json']
+
     monitor_srlzd = {
         'id': 4,
         'category': 4,
@@ -616,11 +624,8 @@ def get_attrs(data: Iterable[object], attrs: Iterable) -> list[dict]:
     return result
 
 
-class BasketViewTest(TestCase):
+class BasketViewTest(APITestCase):
     fixtures = ['fixtures/sample_data.json']
-
-    def setUp(self):
-        self.client = APIClient()
 
     def test_get(self):
         url = reverse('products:basket')

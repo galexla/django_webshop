@@ -1,5 +1,4 @@
 from account.models import User
-from django.test import TestCase
 from webshop.common import SerializerTestCase
 
 from ..models import Order
