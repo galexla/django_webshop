@@ -17,6 +17,11 @@ gunicorn = "^21.2.0"
 psycopg2-binary = "^2.9.9"
 python-dotenv = "^1.0.1"
 frontend = {path = "frontend/dist/frontend-0.6.tar.gz"}
+django-pytest = "^0.2.0"
+pytest = "^8.1.1"
+pytest-django = "^4.8.0"
+pytest-cov = "^5.0.0"
+flake8 = "^7.0.0"
 
 
 [build-system]

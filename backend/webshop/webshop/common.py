@@ -1,7 +1,7 @@
-from django.test import TestCase
+from rest_framework.test import APITestCase
 
 
-class SerializerTestCase(TestCase):
+class SerializerTestCase(APITestCase):
     def assert_all_invalid(
         self, serializer_class, ok_data: dict, field_name: str, values: list
     ):

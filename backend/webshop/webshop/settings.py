@@ -48,8 +48,6 @@ INTERNAL_IPS = [
     '127.0.0.1',
 ]
 
-TEST_RUNNER = 'webshop.test_runner.FastTestRunner'
-
 
 # Application definition
 
