@@ -18,12 +18,27 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .common import delete_unused_baskets, get_basket
-from .models import (Basket, BasketProduct, Category, Order, OrderProduct,
-                     Product, Sale, Tag, get_products_queryset)
-from .serializers import (OrderSerializer, ProductCountSerializer,
-                          ProductDetailSerializer, ProductShortSerializer,
-                          ReviewCreateSerializer, SaleSerializer,
-                          TagSerializer, TopLevelCategorySerializer)
+from .models import (
+    Basket,
+    BasketProduct,
+    Category,
+    Order,
+    OrderProduct,
+    Product,
+    Sale,
+    Tag,
+    get_products_queryset,
+)
+from .serializers import (
+    OrderSerializer,
+    ProductCountSerializer,
+    ProductDetailSerializer,
+    ProductShortSerializer,
+    ReviewCreateSerializer,
+    SaleSerializer,
+    TagSerializer,
+    TopLevelCategorySerializer,
+)
 
 log = logging.getLogger(__name__)
 
@@ -575,8 +590,7 @@ class OrderView(APIView):
         if order.status == Order.STATUS_PROCESSING:  # do not modify order
             # fix bug in swagger.yaml: return 'orderId' instead of empty string
             return Response({'orderId': order.id})
-
-        if order.status != Order.STATUS_NEW:
+        elif order.status != Order.STATUS_NEW:
             msg = 'Only orders with status "{}" can be modified.'.format(
                 Order.STATUS_NEW
             )
