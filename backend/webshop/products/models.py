@@ -103,9 +103,7 @@ class Product(models.Model):
         default=0,
         max_digits=8,
         decimal_places=2,
-        validators=[
-            MinValueValidator(Decimal(0)),
-        ],
+        validators=[MinValueValidator(Decimal(0))],
     )
     category = models.ForeignKey(
         Category,
@@ -188,9 +186,7 @@ class Sale(models.Model):
         blank=False,
         max_digits=8,
         decimal_places=2,
-        validators=[
-            MinValueValidator(Decimal(0)),
-        ],
+        validators=[MinValueValidator(Decimal(0))],
     )
 
 
@@ -319,7 +315,10 @@ class Order(models.Model):
         blank=True, max_length=15, choices=PAYMENT_TYPES
     )
     total_cost = models.DecimalField(
-        max_digits=10, decimal_places=2, default=0
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(Decimal(0))],
     )
     status = models.CharField(
         max_length=15, choices=STATUSES, default=STATUS_NEW
