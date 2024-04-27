@@ -365,8 +365,8 @@ class BannerProductsListViewTest(TestCase):
         response = self.client.get(reverse('products:banners'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3] + ids_added[:1])
-        self.assertDictContainsSubset(
-            MONITOR_SHORT_SRLZD_TPL, response.data[2]
+        self.assertTrue(
+            MONITOR_SHORT_SRLZD_TPL.items() <= response.data[2].items()
         )
 
         Product.objects.filter(id__in=ids_added).delete()
@@ -471,7 +471,7 @@ class ProductDetailViewTest(TestCase):
             reverse('products:product-details', kwargs={'pk': 4})
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertDictContainsSubset(self.monitor_srlzd, response.data)
+        self.assertTrue(self.monitor_srlzd.items() <= response.data.items())
         full_description = response.data.pop('fullDescription')
         self.assertEqual(response.data, self.monitor_srlzd)
         self.assertTrue(
@@ -1189,7 +1189,6 @@ class OrderViewTest(APITestCase):
             serializer.data,
             ['id', 'orderId', 'createdAt', 'totalCost', 'products'],
         )
-        # self.assertDictContainsSubset(order_data, serializer.data)
         order.refresh_from_db()
         self.assertEqual(order.total_cost, 1180)
 
