@@ -1,7 +1,6 @@
 import io
 from random import randint
 
-from django.test import TestCase
 from PIL import Image
 
 

@@ -6,17 +6,10 @@ from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
-from .models import (
-    Category,
-    Order,
-    OrderProduct,
-    Product,
-    Review,
-    Specification,
-    Tag,
-    get_products_queryset,
-)
+from .models import (Category, Order, OrderProduct, Product, Review,
+                     Specification, Tag, get_products_queryset)
 
 log = logging.getLogger(__name__)
 
@@ -293,11 +286,10 @@ class OrderSerializer(serializers.ModelSerializer):
             'city',
             'address',
         ]
-        values = (data.get(field, '') for field in fields)
-        is_empty = (str(value).strip() == '' for value in values)
+        is_empty = (str(data.get(field, '')).strip() == '' for field in fields)
 
         if any(is_empty):
-            raise serializers.ValidationError(
+            raise ValidationError(
                 'These fields can only be empty in a new order: {}'.format(
                     ', '.join(fields)
                 )
