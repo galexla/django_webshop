@@ -8,15 +8,6 @@ from ..models import Order
 from ..serializers import OrderSerializer
 
 
-def assert_dict_equal_excl(dict1, dict2, exclude_keys):
-    dict1 = dict1.copy()
-    dict2 = dict2.copy()
-    for key in exclude_keys:
-        dict1.pop(key, None)
-        dict2.pop(key, None)
-    assert dict1 == dict2, f'Dict {dict1} should be equal to {dict2}'
-
-
 def camelcase_keys_to_underscore(d: dict[str, Any]):
     result = {}
     for key, value in d.items():
@@ -80,9 +71,7 @@ class TestOrderSerializer:
             (True, 'address', ['a' * 300]),
         ],
     )
-    def test_valid_invalid_values(
-        self, is_valid: bool, field: str, values: list
-    ):
+    def test_fields(self, is_valid: bool, field: str, values: list):
         statuses = [Order.STATUS_PROCESSING, Order.STATUS_NEW]
         values_w_none_empty = values.copy()
         values_w_none_empty.extend([None, ''])
@@ -163,7 +152,7 @@ class TestOrderSerializer:
             (True, Order.STATUS_PROCESSING, 'address', ['abc']),
         ],
     )
-    def test_valid_new_order(self, is_valid, status, field, values):
+    def test_validate(self, is_valid, status, field, values):
         for value in values:
             data = self.base_ok_data_undscr.copy()
             data['status'] = status

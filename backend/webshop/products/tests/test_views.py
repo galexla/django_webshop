@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Iterable
 
 from account.models import User
 from configurations.models import get_all_shop_configurations
@@ -10,6 +9,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
+from webshop.common import get_attrs, get_ids, get_keys
 
 from ..models import (
     Basket,
@@ -121,14 +121,6 @@ class TagListViewSetTest(TestCase):
 
         response = self.client.get(url + '?category=3')
         self.assertEqual(response.data, [])
-
-
-def get_ids(data: Iterable[dict]) -> list:
-    return [item['id'] for item in data]
-
-
-def get_obj_ids(data: Iterable[object]) -> list:
-    return [item.id for item in data]
 
 
 def product_img_path(id, file_name):
@@ -602,26 +594,6 @@ class BasketRemoveProductsTest(TestCase):
         basket_id = Basket.objects.get(user_id=1).id
         success = basket_remove_products(basket_id, {1: 3, 2: 3})
         self.assertFalse(success)
-
-
-def get_keys(data: Iterable[dict], keys: Iterable) -> list[dict]:
-    result = []
-    for item in data:
-        elem = {}
-        for key in keys:
-            elem[key] = item.get(key)
-        result.append(elem)
-    return result
-
-
-def get_attrs(data: Iterable[object], attrs: Iterable) -> list[dict]:
-    result = []
-    for item in data:
-        elem = {}
-        for key in attrs:
-            elem[key] = getattr(item, key, None)
-        result.append(elem)
-    return result
 
 
 class BasketViewTest(APITestCase):

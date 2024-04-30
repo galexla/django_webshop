@@ -1,3 +1,5 @@
+from typing import Iterable
+
 from rest_framework.test import APITestCase
 
 
@@ -33,3 +35,31 @@ class SerializerTestCase(APITestCase):
                 data[field_name] = value
             serializer = serializer_class(data=data)
             self.assertTrue(serializer.is_valid())
+
+
+def get_ids(data: Iterable[dict]) -> list:
+    return [item['id'] for item in data]
+
+
+def get_obj_ids(data: Iterable[object]) -> list:
+    return [item.id for item in data]
+
+
+def get_keys(data: Iterable[dict], keys: Iterable) -> list[dict]:
+    result = []
+    for item in data:
+        elem = {}
+        for key in keys:
+            elem[key] = item.get(key)
+        result.append(elem)
+    return result
+
+
+def get_attrs(data: Iterable[object], attrs: Iterable) -> list[dict]:
+    result = []
+    for item in data:
+        elem = {}
+        for key in attrs:
+            elem[key] = getattr(item, key, None)
+        result.append(elem)
+    return result
