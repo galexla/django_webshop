@@ -1,11 +1,14 @@
 from django.test import TestCase
-from webshop.common import SerializerTestCase
+from tests.common import RandomImage, SerializerTestCase
 
 from ..models import User
-from ..serializers import (AvatarUpdateSerializer, ProfileSerializer,
-                           SetPasswordSerializer, SignInSerializer,
-                           SignUpSerializer)
-from .common import RandomImage
+from ..serializers import (
+    AvatarUpdateSerializer,
+    ProfileSerializer,
+    SetPasswordSerializer,
+    SignInSerializer,
+    SignUpSerializer,
+)
 
 
 class SignUpSerializerTest(TestCase):

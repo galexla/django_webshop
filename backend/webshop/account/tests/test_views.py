@@ -3,9 +3,9 @@ from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.response import Response
+from tests.common import RandomImage
 
 from ..models import Profile, User
-from .common import RandomImage
 
 
 class SignInViewTest(TestCase):

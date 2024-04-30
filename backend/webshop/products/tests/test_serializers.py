@@ -3,6 +3,8 @@ from typing import Any
 
 import pytest
 from rest_framework.exceptions import ValidationError
+from tests.common import slice_to_dict
+from tests.fixtures.products import MONITOR_SHORT_SRLZD
 
 from ..models import Order
 from ..serializers import OrderSerializer
@@ -173,3 +175,38 @@ class TestOrderSerializer:
             elif is_valid and exception_raised:
                 msg = 'Raised exception for status {}, field {} = {}'
                 assert False, msg.format(data['status'], field, value)
+
+    @pytest.mark.parametrize(
+        'order_id, expected_result',
+        [
+            (3, {3: {'id': 3, 'count': 1}, 4: {'id': 4, 'count': 2}}),
+            (
+                2,
+                {
+                    3: {'id': 3, 'count': 1},
+                    4: {'id': 4, 'count': 2},
+                    2: {'id': 2, 'count': 1},
+                },
+            ),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_get_products(self, db_data, order_id, expected_result):
+        order = Order.objects.get(id=order_id)
+        serializer = OrderSerializer()
+        products = serializer.get_products(order)
+        product_counts = slice_to_dict(products, ['id', 'count'], 'id')
+        assert product_counts == expected_result
+
+    @pytest.mark.django_db(transaction=True)
+    def test_get_product_fields(self, db_data):
+        order = Order.objects.get(id=3)
+        serializer = OrderSerializer()
+        products = serializer.get_products(order)
+        found_product = None
+        for product in products:
+            if product['id'] == MONITOR_SHORT_SRLZD['id']:
+                found_product = product
+                break
+        assert found_product is not None
+        assert found_product == MONITOR_SHORT_SRLZD
