@@ -48,3 +48,21 @@ MONITOR_SHORT_SRLZD_TPL = {
     'tags': [],
     'images': [{'src': '/media/products/goods_icon.png', 'alt': ''}],
 }
+
+INVALID_EMAILS = [
+    'a@' + 'a' * 260 + '.com',
+    'test',
+    'test@test',
+    '.test@test.com',
+]
+
+VALID_EMAILS = [
+    'test@test.com',
+    'a@a.com',
+    'test.test@test.com',
+    'a_test@test.com',
+]
+
+INVALID_PHONES = ['+' + '1' * 32, '+1234', '1234567']
+
+VALID_PHONES = ['+' + '1' * 31, '+12345', '+1234567']

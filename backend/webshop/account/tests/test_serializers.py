@@ -1,5 +1,6 @@
 from django.test import TestCase
 from tests.common import RandomImage, SerializerTestCase
+from tests.fixtures.products import INVALID_EMAILS, INVALID_PHONES
 
 from ..models import User
 from ..serializers import (
@@ -188,24 +189,11 @@ class ProfileSerializerTest(SerializerTestCase):
         )
 
         self.assert_all_invalid(
-            ProfileSerializer,
-            ok_data,
-            'email',
-            [
-                None,
-                '',
-                'a@' + 'a' * 260 + '.com',
-                'test',
-                'test@test',
-                '.test@test.com',
-            ],
+            ProfileSerializer, ok_data, 'email', [None, ''] + INVALID_EMAILS
         )
 
         self.assert_all_invalid(
-            ProfileSerializer,
-            ok_data,
-            'phone',
-            [None, '', '+' + '1' * 35, '+1234', '1234567'],
+            ProfileSerializer, ok_data, 'phone', [None, ''] + INVALID_PHONES
         )
 
         serializer = ProfileSerializer(data=ok_data)

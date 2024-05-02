@@ -1,14 +1,54 @@
 import pytest
 from rest_framework.exceptions import ValidationError
 from tests.common import camelcase_keys_to_underscore, slice_to_dict
-from tests.fixtures.products import MONITOR_SHORT_SRLZD
+from tests.fixtures.products import (
+    INVALID_EMAILS,
+    INVALID_PHONES,
+    MONITOR_SHORT_SRLZD,
+    VALID_EMAILS,
+    VALID_PHONES,
+)
 
 from ..models import Order
 from ..serializers import (
     BasketIdSerializer,
     OrderSerializer,
     ProductCountSerializer,
+    ReviewCreateSerializer,
 )
+
+
+class TestReviewCreateSerializer:
+    base_ok_data = {
+        'author': 'Nick',
+        'email': 'test@test.com',
+        'text': 'text',
+        'rate': 5,
+    }
+
+    @pytest.mark.parametrize(
+        'is_valid, field, values',
+        [
+            (False, 'author', [None, '', 'a' * 201]),
+            (False, 'email', [None, ''] + INVALID_EMAILS),
+            (True, 'email', VALID_EMAILS),
+            (False, 'author', [None, '', 'a' * 201]),
+            (True, 'author', ['a' * 200]),
+        ],
+    )
+    def test_fields(self, is_valid, field, values):
+        for value in values:
+            data = self.base_ok_data.copy()
+            data[field] = value
+            if value is None:
+                data.pop(field, None)
+            serializer = ReviewCreateSerializer(data=data)
+            valid_str = 'valid' if is_valid else 'invalid'
+            assert (
+                serializer.is_valid() == is_valid
+            ), 'Data should be {} for field {} = {}'.format(
+                valid_str, field, value
+            )
 
 
 class TestProductCountSerializer:
@@ -22,7 +62,7 @@ class TestProductCountSerializer:
             (True, {'id': 1000000, 'count': 1000000}),
         ],
     )
-    def test_field(self, is_valid, value):
+    def test_fields(self, is_valid, value):
         serializer = ProductCountSerializer(data=value)
         assert serializer.is_valid() == is_valid
 
@@ -40,7 +80,7 @@ class TestBasketIdSerializer:
             (False, 'abc'),
         ],
     )
-    def test_field(self, is_valid, value):
+    def test_fields(self, is_valid, value):
         serializer = BasketIdSerializer(data={'basket_id': value})
         assert serializer.is_valid() == is_valid
 
@@ -48,7 +88,7 @@ class TestBasketIdSerializer:
 class TestOrderSerializer:
     base_ok_data = {
         'fullName': 'Nick',
-        'email': 'kva@kva.com',
+        'email': 'test@test.com',
         'phone': '+712334361',
         'deliveryType': Order.DELIVERY_ORDINARY,
         'paymentType': Order.PAYMENT_SOMEONE,
@@ -63,23 +103,10 @@ class TestOrderSerializer:
         [
             (False, 'fullName', ['a' * 121]),
             (True, 'fullName', ['a' * 120]),
-            (
-                False,
-                'email',
-                [
-                    'a@' + 'a' * 260 + '.com',
-                    'test',
-                    'test@test',
-                    '.test@test.com',
-                ],
-            ),
-            (True, 'email', ['test@test.com', 'a@a.com']),
-            (False, 'phone', ['+' + '1' * 32, '+1234', '1234567']),
-            (
-                True,
-                'phone',
-                ['+' + '1' * 31, '+12345', '+1234567'],
-            ),
+            (False, 'email', INVALID_EMAILS),
+            (True, 'email', VALID_EMAILS),
+            (False, 'phone', INVALID_PHONES),
+            (True, 'phone', VALID_PHONES),
             (False, 'deliveryType', ['asdsf', '123']),
             (
                 True,
