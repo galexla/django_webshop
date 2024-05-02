@@ -1,6 +1,12 @@
 import pytest
+from django.http import Http404
 from rest_framework.exceptions import ValidationError
-from tests.common import camelcase_keys_to_underscore, slice_to_dict
+from tests.common import (
+    assert_dict_equal_exclude,
+    assert_not_raises,
+    camelcase_keys_to_underscore,
+    slice_to_dict,
+)
 from tests.fixtures.products import (
     INVALID_EMAILS,
     INVALID_PHONES,
@@ -9,7 +15,7 @@ from tests.fixtures.products import (
     VALID_PHONES,
 )
 
-from ..models import Order
+from ..models import Order, Review
 from ..serializers import (
     BasketIdSerializer,
     OrderSerializer,
@@ -30,10 +36,13 @@ class TestReviewCreateSerializer:
         'is_valid, field, values',
         [
             (False, 'author', [None, '', 'a' * 201]),
+            (True, 'author', ['a' * 200]),
             (False, 'email', [None, ''] + INVALID_EMAILS),
             (True, 'email', VALID_EMAILS),
-            (False, 'author', [None, '', 'a' * 201]),
-            (True, 'author', ['a' * 200]),
+            (False, 'text', [None, '', 'a' * 2001]),
+            (True, 'text', ['a' * 2000]),
+            (False, 'rate', [0, 6, 0.1, 'a']),
+            (True, 'rate', [1, 5]),
         ],
     )
     def test_fields(self, is_valid, field, values):
@@ -49,6 +58,27 @@ class TestReviewCreateSerializer:
             ), 'Data should be {} for field {} = {}'.format(
                 valid_str, field, value
             )
+
+    @pytest.mark.django_db(transaction=True)
+    def test_save(self, db_data):
+        serializer = ReviewCreateSerializer(data=self.base_ok_data)
+        assert serializer.is_valid()
+        with pytest.raises(Http404):
+            serializer.save(20)
+        assert serializer.instance is None
+
+        serializer = ReviewCreateSerializer(data=self.base_ok_data)
+        assert serializer.is_valid()
+        with assert_not_raises(Http404):
+            serializer.save(2)
+        serializer.instance.refresh_from_db()
+        review = Review.objects.get(id=serializer.instance.id)
+        data = review.__dict__
+        assert_dict_equal_exclude(
+            data,
+            self.base_ok_data,
+            ['_state', 'id', 'product_id', 'created_at'],
+        )
 
 
 class TestProductCountSerializer:

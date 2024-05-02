@@ -9,7 +9,12 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
-from tests.common import get_attrs, get_ids, get_keys
+from tests.common import (
+    assert_dict_equal_exclude,
+    get_attrs,
+    get_ids,
+    get_keys,
+)
 from tests.fixtures.products import (
     MONITOR_SHORT_DB_TPL,
     MONITOR_SHORT_SRLZD,
@@ -129,15 +134,6 @@ class TagListViewSetTest(TestCase):
         self.assertEqual(response.data, [])
 
 
-def assert_dict_equal_exclude(test_case: TestCase, dict1, dict2, exclude_keys):
-    dict1 = dict1.copy()
-    dict2 = dict2.copy()
-    for key in exclude_keys:
-        dict1.pop(key, None)
-        dict2.pop(key, None)
-    test_case.assertDictEqual(dict1, dict2)
-
-
 class CatalogViewSetTest(TestCase):
     fixtures = ['fixtures/sample_data.json']
 
@@ -243,7 +239,6 @@ class PopularProductsListViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [1, 3, 4, 2] + ids_added[:4])
         assert_dict_equal_exclude(
-            self,
             MONITOR_SHORT_SRLZD_TPL,
             response.data[7],
             ('id', 'date', 'rating'),
@@ -272,7 +267,6 @@ class LimitedProductsListViewTest(TestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(get_ids(response.data), [3, 4] + ids_added[:14])
         assert_dict_equal_exclude(
-            self,
             MONITOR_SHORT_SRLZD_TPL,
             response.data[15],
             ('id', 'date'),
@@ -616,7 +610,7 @@ class BasketViewTest(APITestCase):
         response = self.client.post(url, {'id': 4, 'count': 1})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         assert_dict_equal_exclude(
-            self, response.data[1], MONITOR_SHORT_SRLZD, ['count']
+            response.data[1], MONITOR_SHORT_SRLZD, ['count']
         )
         self.assertListEqual(
             get_keys(response.data, ['id', 'count']),
@@ -648,7 +642,7 @@ class BasketViewTest(APITestCase):
             [{'id': 3, 'count': 5}, {'id': 4, 'count': 1}],
         )
         assert_dict_equal_exclude(
-            self, response.data[1], MONITOR_SHORT_SRLZD, ['count']
+            response.data[1], MONITOR_SHORT_SRLZD, ['count']
         )
         self.assertListEqual(
             list(basket.basketproduct_set.values('product_id', 'count')),
@@ -759,7 +753,7 @@ class BasketViewTest(APITestCase):
         response = self.client.delete(url, {'id': 4, 'count': 1})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         assert_dict_equal_exclude(
-            self, response.data[1], MONITOR_SHORT_SRLZD, ['count']
+            response.data[1], MONITOR_SHORT_SRLZD, ['count']
         )
         basket = Basket.objects.get(user_id=admin.id)
         self.assertEqual(basket.basketproduct_set.count(), 2)
@@ -835,10 +829,9 @@ class OrdersViewTest(APITestCase):
             'address': 'Sretensky blvd 1',
         }
         assert_dict_equal_exclude(
-            self, response.data[0], expected_order1, ['products']
+            response.data[0], expected_order1, ['products']
         )
         assert_dict_equal_exclude(
-            self,
             response.data[0]['products'][1],
             MONITOR_SHORT_SRLZD,
             ['count'],
@@ -896,7 +889,7 @@ class OrdersViewTest(APITestCase):
             self.NEW_ORDER_TPL, user_id=user.id, total_cost=Decimal('2578.00')
         )
         assert_dict_equal_exclude(
-            self, order[0], expected_order, ['id', 'created_at']
+            order[0], expected_order, ['id', 'created_at']
         )
         product_counts = list(
             OrderProduct.objects.filter(order_id=order_id).values(
@@ -963,7 +956,6 @@ class OrdersViewTest(APITestCase):
             phone=user.profile.phone,
         )
         assert_dict_equal_exclude(
-            self,
             order.__dict__,
             expected_order,
             ['id', 'created_at', '_state'],
@@ -1032,11 +1024,8 @@ class OrderViewTest(APITestCase):
             'city': 'Moscow',
             'address': 'Sretensky blvd 1',
         }
+        assert_dict_equal_exclude(response.data, expected_order, ['products'])
         assert_dict_equal_exclude(
-            self, response.data, expected_order, ['products']
-        )
-        assert_dict_equal_exclude(
-            self,
             response.data['products'][1],
             MONITOR_SHORT_SRLZD,
             ['count'],
@@ -1086,7 +1075,7 @@ class OrderViewTest(APITestCase):
         order_data_after = order.__dict__
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         assert_dict_equal_exclude(
-            self, order_data_before, order_data_after, ['_state']
+            order_data_before, order_data_after, ['_state']
         )
         self.assertEqual(response.data, {'orderId': order_id})
 
@@ -1110,7 +1099,6 @@ class OrderViewTest(APITestCase):
         order = Order.objects.get(id=order_id)
         serializer = OrderSerializer(instance=order)
         assert_dict_equal_exclude(
-            self,
             order_data,
             serializer.data,
             ['id', 'orderId', 'createdAt', 'totalCost', 'products'],

@@ -1,8 +1,10 @@
 import io
 import re
+from contextlib import contextmanager
 from random import randint
 from typing import Any, Iterable
 
+import pytest
 from PIL import Image
 from rest_framework.test import APITestCase
 
@@ -73,6 +75,23 @@ class SerializerTestCase(APITestCase):
                 data[field_name] = value
             serializer = serializer_class(data=data)
             self.assertTrue(serializer.is_valid())
+
+
+def assert_dict_equal_exclude(dict1, dict2, exclude_keys):
+    dict1 = dict1.copy()
+    dict2 = dict2.copy()
+    for key in exclude_keys:
+        dict1.pop(key, None)
+        dict2.pop(key, None)
+    assert dict1 == dict2
+
+
+@contextmanager
+def assert_not_raises(exception_class):
+    try:
+        yield
+    except exception_class:
+        raise pytest.fail('Did raise {}'.format(exception_class))
 
 
 def get_ids(data: Iterable[dict]) -> list:
