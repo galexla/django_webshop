@@ -1,21 +1,48 @@
-import re
-from typing import Any
-
 import pytest
 from rest_framework.exceptions import ValidationError
-from tests.common import slice_to_dict
+from tests.common import camelcase_keys_to_underscore, slice_to_dict
 from tests.fixtures.products import MONITOR_SHORT_SRLZD
 
 from ..models import Order
-from ..serializers import OrderSerializer
+from ..serializers import (
+    BasketIdSerializer,
+    OrderSerializer,
+    ProductCountSerializer,
+)
 
 
-def camelcase_keys_to_underscore(d: dict[str, Any]):
-    result = {}
-    for key, value in d.items():
-        key2 = re.sub(r'([A-Z])', r'_\1', key).lower()
-        result[key2] = value
-    return result
+class TestProductCountSerializer:
+    @pytest.mark.parametrize(
+        'is_valid, value',
+        [
+            (False, {'count': 1}),
+            (False, {'id': 1}),
+            (False, {'id': 1, 'count': 0}),
+            (True, {'id': 1, 'count': 1}),
+            (True, {'id': 1000000, 'count': 1000000}),
+        ],
+    )
+    def test_field(self, is_valid, value):
+        serializer = ProductCountSerializer(data=value)
+        assert serializer.is_valid() == is_valid
+
+
+class TestBasketIdSerializer:
+    @pytest.mark.parametrize(
+        'is_valid, value',
+        [
+            (True, 'fabc8c6c-0f0b-47c2-a5d2-8981fba5fa8a'),
+            (True, 'fabc8c6c0f0b47c2a5d28981fba5fa8a'),
+            (False, 'fabc8c6c0f0b47c2a5d28981fba5fa8'),
+            (False, 'fabc8c6c-0f0b-47c2-a5d2-8981fba5fa8a2'),
+            (False, 'fabc8c6c-0f0b-47c2-a5d2-8981fba5fa8x'),
+            (False, ''),
+            (False, 'abc'),
+        ],
+    )
+    def test_field(self, is_valid, value):
+        serializer = BasketIdSerializer(data={'basket_id': value})
+        assert serializer.is_valid() == is_valid
 
 
 class TestOrderSerializer:

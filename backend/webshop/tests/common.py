@@ -1,8 +1,10 @@
-from typing import Iterable
-from rest_framework.test import APITestCase
 import io
+import re
 from random import randint
+from typing import Any, Iterable
+
 from PIL import Image
+from rest_framework.test import APITestCase
 
 
 class RandomImage:
@@ -110,4 +112,12 @@ def get_attrs(data: Iterable[object], attrs: Iterable) -> list[dict]:
         for key in attrs:
             elem[key] = getattr(item, key, None)
         result.append(elem)
+    return result
+
+
+def camelcase_keys_to_underscore(d: dict[str, Any]):
+    result = {}
+    for key, value in d.items():
+        key2 = re.sub(r'([A-Z])', r'_\1', key).lower()
+        result[key2] = value
     return result
