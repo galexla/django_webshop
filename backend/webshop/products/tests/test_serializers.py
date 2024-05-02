@@ -15,7 +15,7 @@ from tests.fixtures.products import (
     VALID_PHONES,
 )
 
-from ..models import Order, Review
+from ..models import Order, Product, Review
 from ..serializers import (
     BasketIdSerializer,
     OrderSerializer,
@@ -73,11 +73,23 @@ class TestReviewCreateSerializer:
             serializer.save(2)
         serializer.instance.refresh_from_db()
         review = Review.objects.get(id=serializer.instance.id)
-        data = review.__dict__
         assert_dict_equal_exclude(
-            data,
+            review.__dict__,
             self.base_ok_data,
             ['_state', 'id', 'product_id', 'created_at'],
+        )
+
+    @pytest.mark.django_db(transaction=True)
+    def test_create(self, db_data):
+        data = self.base_ok_data
+        data['product'] = Product.objects.get(id=2)
+        data['created_at'] = '2024-01-01T01:30:00.823000Z'
+        serializer = ReviewCreateSerializer()
+        review = serializer.create(data)
+        review = Review.objects.get(id=review.id)
+        # review.created_at
+        assert_dict_equal_exclude(
+            review.__dict__, data, ['_state', 'id', 'product_id', 'created_at']
         )
 
 

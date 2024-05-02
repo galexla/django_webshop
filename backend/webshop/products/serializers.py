@@ -8,14 +8,31 @@ from django.templatetags.static import static
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
-from .models import (Category, Order, OrderProduct, Product, Review,
-                     Specification, Tag, get_products_queryset)
+from .models import (
+    Category,
+    Order,
+    OrderProduct,
+    Product,
+    Review,
+    Specification,
+    Tag,
+    get_products_queryset,
+)
 
 log = logging.getLogger(__name__)
 
 
 FOLDER_ICON = 'products/folder_icon.png'
 GOODS_ICON = 'products/goods_icon.png'
+
+
+def get_last_reviews(product_id: int, count: int):
+    reviews = Review.objects.filter(product_id=product_id).order_by(
+        '-created_at'
+    )[:count]
+    serializer = ReviewSerializer(reviews, many=True)
+
+    return serializer.data
 
 
 class ImageSerializer(serializers.Serializer):
@@ -113,7 +130,13 @@ class ProductShortSerializer(serializers.ModelSerializer):
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields = ['id', 'author', 'email', 'text', 'rate', 'created_at']
+        fields = ['id', 'author', 'email', 'text', 'rate', 'date']
+
+    REVIEWS_COUNT = 10
+
+    date = serializers.DateTimeField(
+        source='created_at', format='%Y-%m-%d %H:%M'
+    )
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
@@ -136,8 +159,6 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'rating',
         ]
 
-    REVIEWS_COUNT = 10
-
     date = serializers.DateTimeField(source='created_at', read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
@@ -147,12 +168,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     freeDelivery = serializers.CharField(source='free_delivery')
 
     def get_reviews(self, obj):
-        reviews = Review.objects.filter(product=obj).order_by('-created_at')[
-            : self.REVIEWS_COUNT
-        ]
-        serializer = ReviewSerializer(reviews, many=True)
-
-        return serializer.data
+        return get_last_reviews(obj.id, ReviewSerializer.REVIEWS_COUNT)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -185,7 +201,9 @@ class ReviewCreateSerializer(serializers.Serializer):
             MaxValueValidator(5),
         ],
     )
-    created_at = serializers.DateTimeField(read_only=True)
+    date = serializers.DateTimeField(
+        source='created_at', read_only=True, format='%Y-%m-%d %H:%M'
+    )
 
     def save(self, product_id, **kwargs):
         product = get_object_or_404(Product, pk=product_id, archived=False)
@@ -240,7 +258,7 @@ class OrderSerializer(serializers.ModelSerializer):
         ]
 
     createdAt = serializers.DateTimeField(
-        source='created_at', read_only=True, format='%Y.%m.%d %H:%M:%S'
+        source='created_at', read_only=True, format='%Y-%m-%d %H:%M'
     )
     fullName = serializers.CharField(source='full_name', max_length=120)
     deliveryType = serializers.ChoiceField(

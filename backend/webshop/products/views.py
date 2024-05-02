@@ -35,9 +35,11 @@ from .serializers import (
     ProductDetailSerializer,
     ProductShortSerializer,
     ReviewCreateSerializer,
+    ReviewSerializer,
     SaleSerializer,
     TagSerializer,
     TopLevelCategorySerializer,
+    get_last_reviews,
 )
 
 log = logging.getLogger(__name__)
@@ -277,7 +279,7 @@ class ReviewCreateView(APIView):
             )
 
         serializer.save(product_id=pk)
-        return Response([serializer.data])
+        return Response(get_last_reviews(pk, ReviewSerializer.REVIEWS_COUNT))
 
 
 def basket_remove_products(basket_id, product_counts: dict[int, int]) -> bool:

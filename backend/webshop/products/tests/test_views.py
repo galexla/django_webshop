@@ -385,7 +385,7 @@ class ProductDetailViewTest(TestCase):
                 'email': 'somebody@email.net',
                 'text': 'Has dead pixels',
                 'rate': 1,
-                'created_at': '2024-02-13T17:19:03.059000Z',
+                'date': '2024-02-13 17:19',
             },
             {
                 'id': 2,
@@ -393,7 +393,7 @@ class ProductDetailViewTest(TestCase):
                 'email': 'susan@email.org',
                 'text': 'Not bad',
                 'rate': 4,
-                'created_at': '2024-02-13T17:06:00.558000Z',
+                'date': '2024-02-13 17:06',
             },
             {
                 'id': 1,
@@ -401,7 +401,7 @@ class ProductDetailViewTest(TestCase):
                 'email': 'jack@email.com',
                 'text': 'An amazing monitor',
                 'rate': 5,
-                'created_at': '2024-02-13T17:04:23.462000Z',
+                'date': '2024-02-13 17:04',
             },
         ],
     }
@@ -411,9 +411,8 @@ class ProductDetailViewTest(TestCase):
             reverse('products:product-details', kwargs={'pk': 4})
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(self.monitor_srlzd.items() <= response.data.items())
         full_description = response.data.pop('fullDescription')
-        self.assertEqual(response.data, self.monitor_srlzd)
+        self.assertDictEqual(self.monitor_srlzd, response.data)
         self.assertTrue(
             'sodales. Nam imperdiet quam at ullamcorper ullamcorper. Nulla'
             in full_description
@@ -817,7 +816,7 @@ class OrdersViewTest(APITestCase):
         self.assertEqual(get_ids(response.data), [3, 2])
         expected_order1 = {
             'id': 3,
-            'createdAt': '2024.03.02 19:16:12',
+            'createdAt': '2024-03-02 19:16',
             'fullName': 'Nick',
             'email': 'kva@kva.com',
             'phone': '+712334361',
@@ -1013,7 +1012,7 @@ class OrderViewTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         expected_order = {
             'id': 3,
-            'createdAt': '2024.03.02 19:16:12',
+            'createdAt': '2024-03-02 19:16',
             'fullName': 'Nick',
             'email': 'kva@kva.com',
             'phone': '+712334361',
