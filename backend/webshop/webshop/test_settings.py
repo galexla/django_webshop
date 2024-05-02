@@ -1,3 +1,4 @@
+# flake8: noqa: F403, F405
 from .settings import *
 
 ALLOWED_HOSTS += ['testserver']

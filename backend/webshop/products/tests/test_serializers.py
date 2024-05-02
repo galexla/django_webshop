@@ -74,7 +74,11 @@ class TestOrderSerializer:
         ],
     )
     def test_fields(self, is_valid: bool, field: str, values: list):
-        statuses = [Order.STATUS_PROCESSING, Order.STATUS_NEW]
+        statuses = [
+            Order.STATUS_PROCESSING,
+            Order.STATUS_PAID,
+            Order.STATUS_NEW,
+        ]
         values_w_none_empty = values.copy()
         values_w_none_empty.extend([None, ''])
         values_w_empty = values.copy()
@@ -82,7 +86,10 @@ class TestOrderSerializer:
 
         for status in statuses:
             values_to_loop = values
-            if status == Order.STATUS_PROCESSING and not is_valid:
+            if (
+                status in (Order.STATUS_PROCESSING, Order.STATUS_PAID)
+                and not is_valid
+            ):
                 values_to_loop = values_w_none_empty
             elif status == Order.STATUS_NEW and is_valid:
                 if field not in ['totalCost', 'fullName']:
@@ -110,7 +117,7 @@ class TestOrderSerializer:
             data['status'] = status
             serializer = OrderSerializer(data=data)
             assert (
-                serializer.is_valid() == False
+                not serializer.is_valid()
             ), f'Data should be invalid for status {status}'
 
     @pytest.mark.parametrize(
