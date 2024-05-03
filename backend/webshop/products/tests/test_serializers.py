@@ -13,6 +13,7 @@ from tests.common import (
 from tests.fixtures.products import (
     INVALID_EMAILS,
     INVALID_PHONES,
+    MONITOR_DETAIL_SRLZD,
     MONITOR_SHORT_SRLZD,
     VALID_EMAILS,
     VALID_PHONES,
@@ -30,8 +31,44 @@ from ..serializers import (
 
 
 class TestProductDetailSerializer:
-    def test_fields(self):
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data):
+        product = Product.objects.get(id=4)
+        serializer = ProductDetailSerializer(product)
+        self.assert_monitor_is_equal(serializer.data)
+
+    def assert_monitor_is_equal(self, data):
+        full_description = data.pop('fullDescription')
+        assert MONITOR_DETAIL_SRLZD == data
+        assert (
+            'sodales. Nam imperdiet quam at ullamcorper ullamcorper. Nulla'
+            in full_description
+        )
+
+    @pytest.mark.django_db(transaction=True)
+    def test_get_reviews(self, db_data):
+        product = Product.objects.get(id=4)
         serializer = ProductDetailSerializer()
+        data = serializer.get_reviews(product)
+        assert data == MONITOR_DETAIL_SRLZD['reviews']
+
+    @pytest.mark.django_db(transaction=True)
+    def test_to_representation(self, db_data):
+        product = Product.objects.get(id=4)
+        serializer = ProductDetailSerializer()
+        data = serializer.to_representation(product)
+        self.assert_monitor_is_equal(data)
+
+        product.images.all().delete()
+        product.save()
+        product.refresh_from_db()
+        data = serializer.to_representation(product)
+        data.pop('fullDescription')
+        expected = MONITOR_DETAIL_SRLZD.copy()
+        expected['images'] = [
+            {'src': '/media/products/goods_icon.png', 'alt': ''}
+        ]
+        assert expected == data
 
 
 class TestSaleSerializer:

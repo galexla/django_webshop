@@ -18,6 +18,7 @@ from tests.common import (
     product_img_path,
 )
 from tests.fixtures.products import (
+    MONITOR_DETAIL_SRLZD,
     MONITOR_SHORT_DB_TPL,
     MONITOR_SHORT_SRLZD,
     MONITOR_SHORT_SRLZD_TPL,
@@ -362,54 +363,13 @@ class SalesViewTest(TestCase):
 class ProductDetailViewTest(TestCase):
     fixtures = ['fixtures/sample_data.json']
 
-    monitor_srlzd = {
-        'id': 4,
-        'category': 4,
-        'title': 'Monitor',
-        'date': '2024-01-30T15:30:48.823000Z',
-        'price': '490.00',
-        'count': 2,
-        'description': 'Maecenas in nisi in eros sagittis sagittis eget in purus.',
-        'freeDelivery': 'False',
-        'rating': '4.0',
-        'tags': [{'id': 1, 'name': 'Tag1'}, {'id': 2, 'name': 'Tag2'}],
-        'images': [{'src': product_img_path(4, 'monitor.png'), 'alt': ''}],
-        'specifications': [{'name': 'Screen diagonal', 'value': '21"'}],
-        'reviews': [
-            {
-                'id': 3,
-                'author': 'Somebody',
-                'email': 'somebody@email.net',
-                'text': 'Has dead pixels',
-                'rate': 1,
-                'date': '2024-02-13 17:19',
-            },
-            {
-                'id': 2,
-                'author': 'Susan',
-                'email': 'susan@email.org',
-                'text': 'Not bad',
-                'rate': 4,
-                'date': '2024-02-13 17:06',
-            },
-            {
-                'id': 1,
-                'author': 'Jack',
-                'email': 'jack@email.com',
-                'text': 'An amazing monitor',
-                'rate': 5,
-                'date': '2024-02-13 17:04',
-            },
-        ],
-    }
-
     def test_all(self):
         response = self.client.get(
             reverse('products:product-details', kwargs={'pk': 4})
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         full_description = response.data.pop('fullDescription')
-        self.assertDictEqual(self.monitor_srlzd, response.data)
+        self.assertDictEqual(MONITOR_DETAIL_SRLZD, response.data)
         self.assertTrue(
             'sodales. Nam imperdiet quam at ullamcorper ullamcorper. Nulla'
             in full_description

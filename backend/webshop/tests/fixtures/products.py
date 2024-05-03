@@ -1,7 +1,50 @@
-# a version of monitor entity serialized with ProductShortSerializer,
-# 'fullDescription' is omitted
 from tests.common import product_img_path
 
+# a version of monitor entity serialized with ProductDetailSerializer,
+# 'fullDescription' field is omitted
+MONITOR_DETAIL_SRLZD = {
+    'id': 4,
+    'category': 4,
+    'title': 'Monitor',
+    'date': '2024-01-30T15:30:48.823000Z',
+    'price': '490.00',
+    'count': 2,
+    'description': 'Maecenas in nisi in eros sagittis sagittis eget in purus.',
+    'freeDelivery': 'False',
+    'rating': '4.0',
+    'tags': [{'id': 1, 'name': 'Tag1'}, {'id': 2, 'name': 'Tag2'}],
+    'images': [{'src': product_img_path(4, 'monitor.png'), 'alt': ''}],
+    'specifications': [{'name': 'Screen diagonal', 'value': '21"'}],
+    'reviews': [
+        {
+            'id': 3,
+            'author': 'Somebody',
+            'email': 'somebody@email.net',
+            'text': 'Has dead pixels',
+            'rate': 1,
+            'date': '2024-02-13 17:19',
+        },
+        {
+            'id': 2,
+            'author': 'Susan',
+            'email': 'susan@email.org',
+            'text': 'Not bad',
+            'rate': 4,
+            'date': '2024-02-13 17:06',
+        },
+        {
+            'id': 1,
+            'author': 'Jack',
+            'email': 'jack@email.com',
+            'text': 'An amazing monitor',
+            'rate': 5,
+            'date': '2024-02-13 17:04',
+        },
+    ],
+}
+
+# a version of monitor entity serialized with ProductShortSerializer,
+# 'fullDescription' field is omitted
 MONITOR_SHORT_SRLZD = {
     'id': 4,
     'title': 'Monitor',

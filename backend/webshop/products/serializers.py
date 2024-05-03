@@ -42,15 +42,15 @@ class ImageSerializer(serializers.Serializer):
     def get_src(self, instance):
         try:
             return instance.image.url
-        except Exception:
+        except AttributeError:
             return self.default_image_url
+
+    def get_alt(self, instance):
+        return getattr(instance, 'image_alt', '')
 
     @property
     def default_image_url(self):
         return ''
-
-    def get_alt(self, instance):
-        return getattr(instance, 'image_alt', '')
 
 
 class CategoryImageSerializer(ImageSerializer):
