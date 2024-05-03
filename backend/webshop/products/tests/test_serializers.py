@@ -1,10 +1,13 @@
 import pytest
 from django.http import Http404
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 from tests.common import (
     assert_dict_equal_exclude,
     assert_not_raises,
     camelcase_keys_to_underscore,
+    is_date_almost_equal,
+    product_img_path,
     slice_to_dict,
 )
 from tests.fixtures.products import (
@@ -15,13 +18,39 @@ from tests.fixtures.products import (
     VALID_PHONES,
 )
 
-from ..models import Order, Product, Review
+from ..models import Order, Product, Review, Sale
 from ..serializers import (
     BasketIdSerializer,
     OrderSerializer,
     ProductCountSerializer,
+    ProductDetailSerializer,
     ReviewCreateSerializer,
+    SaleSerializer,
 )
+
+
+class TestProductDetailSerializer:
+    def test_fields(self):
+        serializer = ProductDetailSerializer()
+
+
+class TestSaleSerializer:
+    @pytest.mark.django_db(transaction=True)
+    def test_all(self, db_data):
+        sale = Sale.objects.get(id=2)
+        serializer = SaleSerializer(sale)
+        expected = {
+            'id': 3,
+            'price': '799.00',
+            'salePrice': '700.00',
+            'dateFrom': '03-11',
+            'dateTo': '12-30',
+            'title': 'Smartphone',
+            'images': [
+                {'src': product_img_path(3, 'smartphone.jpg'), 'alt': ''}
+            ],
+        }
+        assert expected == serializer.data
 
 
 class TestReviewCreateSerializer:
@@ -87,10 +116,10 @@ class TestReviewCreateSerializer:
         serializer = ReviewCreateSerializer()
         review = serializer.create(data)
         review = Review.objects.get(id=review.id)
-        # review.created_at
         assert_dict_equal_exclude(
             review.__dict__, data, ['_state', 'id', 'product_id', 'created_at']
         )
+        assert is_date_almost_equal(timezone.now(), review.created_at, 3)
 
 
 class TestProductCountSerializer:

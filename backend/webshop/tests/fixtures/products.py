@@ -1,9 +1,7 @@
-def product_img_path(id, file_name):
-    return f'/media/products/product{id}/images/{file_name}'
-
-
 # a version of monitor entity serialized with ProductShortSerializer,
 # 'fullDescription' is omitted
+from tests.common import product_img_path
+
 MONITOR_SHORT_SRLZD = {
     'id': 4,
     'title': 'Monitor',

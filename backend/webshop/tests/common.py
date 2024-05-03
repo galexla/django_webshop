@@ -1,6 +1,7 @@
 import io
 import re
 from contextlib import contextmanager
+from datetime import datetime, timedelta
 from random import randint
 from typing import Any, Iterable
 
@@ -77,6 +78,14 @@ class SerializerTestCase(APITestCase):
             self.assertTrue(serializer.is_valid())
 
 
+def product_img_path(id, file_name):
+    return f'/media/products/product{id}/images/{file_name}'
+
+
+def category_img_path(id, file_name):
+    return f'/media/categories/category{id}/image/{file_name}'
+
+
 def assert_dict_equal_exclude(dict1, dict2, exclude_keys):
     dict1 = dict1.copy()
     dict2 = dict2.copy()
@@ -140,3 +149,8 @@ def camelcase_keys_to_underscore(d: dict[str, Any]):
         key2 = re.sub(r'([A-Z])', r'_\1', key).lower()
         result[key2] = value
     return result
+
+
+def is_date_almost_equal(date1: datetime, date2: datetime, max_delta=1):
+    delta: timedelta = date1 - date2
+    return delta.seconds <= max_delta

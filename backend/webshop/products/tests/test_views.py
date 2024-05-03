@@ -11,15 +11,16 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 from tests.common import (
     assert_dict_equal_exclude,
+    category_img_path,
     get_attrs,
     get_ids,
     get_keys,
+    product_img_path,
 )
 from tests.fixtures.products import (
     MONITOR_SHORT_DB_TPL,
     MONITOR_SHORT_SRLZD,
     MONITOR_SHORT_SRLZD_TPL,
-    product_img_path,
 )
 
 from ..models import (
@@ -33,10 +34,6 @@ from ..models import (
 )
 from ..serializers import OrderSerializer
 from ..views import BasketView, OrdersView, OrderView, basket_remove_products
-
-
-def category_img_path(id, file_name):
-    return f'/media/categories/category{id}/image/{file_name}'
 
 
 class TopLevelCategoryListViewTest(TestCase):
