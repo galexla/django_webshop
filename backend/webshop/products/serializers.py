@@ -42,7 +42,7 @@ class ImageSerializer(serializers.Serializer):
     def get_src(self, instance):
         try:
             return instance.image.url
-        except AttributeError:
+        except Exception:
             return self.default_image_url
 
     def get_alt(self, instance):
@@ -54,12 +54,6 @@ class ImageSerializer(serializers.Serializer):
 
 
 class CategoryImageSerializer(ImageSerializer):
-    @property
-    def default_image_url(self):
-        return static(FOLDER_ICON)
-
-
-class ProductImageSerializer(ImageSerializer):
     @property
     def default_image_url(self):
         return static(FOLDER_ICON)
@@ -115,7 +109,7 @@ class ProductShortSerializer(serializers.ModelSerializer):
         ]
 
     date = serializers.DateTimeField(source='created_at', read_only=True)
-    images = ProductImageSerializer(many=True, read_only=True)
+    images = ImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     reviews = serializers.IntegerField(source='reviews_count')
     freeDelivery = serializers.CharField(source='free_delivery')
@@ -131,8 +125,6 @@ class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
         fields = ['id', 'author', 'email', 'text', 'rate', 'date']
-
-    REVIEWS_COUNT = 10
 
     date = serializers.DateTimeField(
         source='created_at', format='%Y-%m-%d %H:%M'
@@ -159,8 +151,10 @@ class ProductDetailSerializer(serializers.ModelSerializer):
             'rating',
         ]
 
+    REVIEWS_COUNT = 10
+
     date = serializers.DateTimeField(source='created_at', read_only=True)
-    images = ProductImageSerializer(many=True, read_only=True)
+    images = ImageSerializer(many=True, read_only=True)
     tags = TagSerializer(many=True, read_only=True)
     specifications = SpecificationSerializer(many=True, read_only=True)
     reviews = serializers.SerializerMethodField(read_only=True)
@@ -168,7 +162,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     freeDelivery = serializers.CharField(source='free_delivery')
 
     def get_reviews(self, obj):
-        return get_last_reviews(obj.id, ReviewSerializer.REVIEWS_COUNT)
+        return get_last_reviews(obj.id, self.REVIEWS_COUNT)
 
     def to_representation(self, instance):
         data = super().to_representation(instance)

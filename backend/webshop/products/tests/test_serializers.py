@@ -11,6 +11,8 @@ from tests.common import (
     slice_to_dict,
 )
 from tests.fixtures.products import (
+    CATEGORIES_SRLZD,
+    FOLDER_ICON,
     INVALID_EMAILS,
     INVALID_PHONES,
     MONITOR_DETAIL_SRLZD,
@@ -19,15 +21,112 @@ from tests.fixtures.products import (
     VALID_PHONES,
 )
 
-from ..models import Order, Product, Review, Sale
+from ..models import Category, Order, Product, Review, Sale, Specification, Tag
 from ..serializers import (
     BasketIdSerializer,
+    CategoryImageSerializer,
+    CategorySerializer,
+    ImageSerializer,
     OrderSerializer,
     ProductCountSerializer,
     ProductDetailSerializer,
     ReviewCreateSerializer,
+    ReviewSerializer,
     SaleSerializer,
+    SpecificationSerializer,
+    TagSerializer,
+    TopLevelCategorySerializer,
+    get_last_reviews,
 )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_last_reviews(db_data):
+    data = get_last_reviews(4, 10)
+    assert data == MONITOR_DETAIL_SRLZD['reviews']
+
+    data = get_last_reviews(4, 2)
+    assert data == MONITOR_DETAIL_SRLZD['reviews'][:2]
+
+
+class TestImageSerializer:
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data):
+        obj = Category.objects.get(id=1)
+        serializer = ImageSerializer(obj)
+        expected = CATEGORIES_SRLZD[0]['image']
+        assert expected == serializer.data
+
+        obj.image = None
+        obj.image_alt = ''
+        serializer = ImageSerializer(obj)
+        assert {'src': '', 'alt': ''} == serializer.data
+
+
+class TestCategoryImageSerializer:
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data):
+        obj = Category.objects.get(id=1)
+        serializer = CategoryImageSerializer(obj)
+        expected = CATEGORIES_SRLZD[0]['image']
+        assert expected == serializer.data
+
+        obj.image = None
+        obj.image_alt = ''
+        serializer = CategoryImageSerializer(obj)
+        assert {'src': FOLDER_ICON, 'alt': ''} == serializer.data
+
+
+class TestCategorySerializer:
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data):
+        obj = Category.objects.get(id=7)
+        serializer = CategorySerializer(obj)
+        expected = CATEGORIES_SRLZD[1]['subcategories'][1]
+        assert expected == serializer.data
+
+
+class TestTopLevelCategorySerializer:
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data):
+        obj = Category.objects.get(id=2)
+        serializer = TopLevelCategorySerializer(obj)
+        expected = CATEGORIES_SRLZD[1]
+        assert expected == serializer.data
+
+
+class TestTagSerializer:
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data):
+        obj = Tag.objects.get(id=1)
+        serializer = TagSerializer(obj)
+        expected = {'id': 1, 'name': 'Tag1'}
+        assert expected == serializer.data
+
+
+class TestSpecificationSerializer:
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data):
+        obj = Specification.objects.get(id=4)
+        serializer = SpecificationSerializer(obj)
+        expected = {'name': 'Screen diagonal', 'value': '21"'}
+        assert expected == serializer.data
+
+
+class TestReviewSerializer:
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data):
+        review = Review.objects.get(id=2)
+        serializer = ReviewSerializer(review)
+        expected = {
+            'id': 2,
+            'author': 'Susan',
+            'email': 'susan@email.org',
+            'text': 'Not bad',
+            'rate': 4,
+            'date': '2024-02-13 17:06',
+        }
+        assert expected == serializer.data
 
 
 class TestProductDetailSerializer:

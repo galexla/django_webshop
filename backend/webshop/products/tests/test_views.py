@@ -11,13 +11,13 @@ from rest_framework.response import Response
 from rest_framework.test import APITestCase
 from tests.common import (
     assert_dict_equal_exclude,
-    category_img_path,
     get_attrs,
     get_ids,
     get_keys,
     product_img_path,
 )
 from tests.fixtures.products import (
+    CATEGORIES_SRLZD,
     MONITOR_DETAIL_SRLZD,
     MONITOR_SHORT_DB_TPL,
     MONITOR_SHORT_SRLZD,
@@ -43,69 +43,7 @@ class TopLevelCategoryListViewTest(TestCase):
     def test_get(self):
         response: Response = self.client.get(reverse('products:categories'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        expected = [
-            {
-                'id': 1,
-                'title': 'Phones, tablets, laptops and portable equipment',
-                'image': {
-                    'src': category_img_path(1, 'mobile-devices.jpg'),
-                    'alt': 'some image alt',
-                },
-                'subcategories': [
-                    {
-                        'id': 3,
-                        'title': 'Phones',
-                        'image': {
-                            'src': category_img_path(3, 'smartphone.jpg'),
-                            'alt': 'monitor',
-                        },
-                    },
-                    {
-                        'id': 5,
-                        'title': 'Laptops',
-                        'image': {
-                            'src': category_img_path(5, 'laptop.jpg'),
-                            'alt': '',
-                        },
-                    },
-                    {
-                        'id': 6,
-                        'title': 'Tablets',
-                        'image': {
-                            'src': category_img_path(6, 'tablet.jpg'),
-                            'alt': '',
-                        },
-                    },
-                ],
-            },
-            {
-                'id': 2,
-                'title': 'Computer, network and office equipment',
-                'image': {
-                    'src': category_img_path(2, 'pc.jpg'),
-                    'alt': '',
-                },
-                'subcategories': [
-                    {
-                        'id': 4,
-                        'title': 'Monitors',
-                        'image': {
-                            'src': category_img_path(4, 'monitor.png'),
-                            'alt': '',
-                        },
-                    },
-                    {
-                        'id': 7,
-                        'title': 'Printers',
-                        'image': {
-                            'src': category_img_path(7, 'printer.jpg'),
-                            'alt': '',
-                        },
-                    },
-                ],
-            },
-        ]
-        self.assertEqual(response.data, expected)
+        self.assertEqual(response.data, CATEGORIES_SRLZD)
 
 
 class TagListViewSetTest(TestCase):

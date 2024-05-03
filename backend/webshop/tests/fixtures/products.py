@@ -1,4 +1,70 @@
-from tests.common import product_img_path
+from tests.common import category_img_path, product_img_path
+
+FOLDER_ICON = '/media/products/folder_icon.png'
+GOODS_ICON = '/media/products/goods_icon.png'
+
+CATEGORIES_SRLZD = [
+    {
+        'id': 1,
+        'title': 'Phones, tablets, laptops and portable equipment',
+        'image': {
+            'src': category_img_path(1, 'mobile-devices.jpg'),
+            'alt': 'some image alt',
+        },
+        'subcategories': [
+            {
+                'id': 3,
+                'title': 'Phones',
+                'image': {
+                    'src': category_img_path(3, 'smartphone.jpg'),
+                    'alt': 'monitor',
+                },
+            },
+            {
+                'id': 5,
+                'title': 'Laptops',
+                'image': {
+                    'src': category_img_path(5, 'laptop.jpg'),
+                    'alt': '',
+                },
+            },
+            {
+                'id': 6,
+                'title': 'Tablets',
+                'image': {
+                    'src': category_img_path(6, 'tablet.jpg'),
+                    'alt': '',
+                },
+            },
+        ],
+    },
+    {
+        'id': 2,
+        'title': 'Computer, network and office equipment',
+        'image': {
+            'src': category_img_path(2, 'pc.jpg'),
+            'alt': '',
+        },
+        'subcategories': [
+            {
+                'id': 4,
+                'title': 'Monitors',
+                'image': {
+                    'src': category_img_path(4, 'monitor.png'),
+                    'alt': '',
+                },
+            },
+            {
+                'id': 7,
+                'title': 'Printers',
+                'image': {
+                    'src': category_img_path(7, 'printer.jpg'),
+                    'alt': '',
+                },
+            },
+        ],
+    },
+]
 
 # a version of monitor entity serialized with ProductDetailSerializer,
 # 'fullDescription' field is omitted
