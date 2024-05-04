@@ -100,7 +100,7 @@ def assert_not_raises(exception_class):
     try:
         yield
     except exception_class:
-        raise pytest.fail('Did raise {}'.format(exception_class))
+        pytest.fail('Did raise {}'.format(exception_class))
 
 
 def get_ids(data: Iterable[dict]) -> list:
