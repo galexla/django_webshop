@@ -333,3 +333,54 @@ class TestProduct(AbstractModelTest):
             instance.images.all()[1].image.path
         ).read()
         assert file_data == image_bytes.getvalue()
+
+
+class TestProductImage(AbstractModelTest):
+    model = ProductImage
+    base_ok_data = {
+        'product_id': 1,
+        'image_alt': '',
+    }
+
+    @classmethod
+    def setup_class(cls):
+        cls.rand_image = RandomImage(40 * 40)
+
+    @pytest.mark.parametrize(
+        'should_be_ok, field, values',
+        [
+            (False, 'product_id', [None, '', 20]),
+            (True, 'product_id', [1, 4]),
+            (False, 'image_alt', ['a' * 201]),
+            (True, 'image_alt', ['', 'a' * 200]),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data, should_be_ok, field, values):
+        super().fields_test(db_data, should_be_ok, field, values)
+
+    @pytest.mark.parametrize(
+        'default, field, values',
+        [
+            ('', 'image_alt', [None]),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_field_defaults(self, db_data, default, field, values):
+        super().field_defaults_test(db_data, default, field, values)
+
+    @pytest.mark.django_db(transaction=True)
+    def test_image(self, db_data):
+        image_bytes = self.rand_image.get_bytes(size=(100, 100), format='jpeg')
+        image = ProductImage(
+            product_id=1,
+            image=ImageFile(image_bytes, name='test2.jpg'),
+        )
+        image.save()
+        image.refresh_from_db()
+        file_data = default_storage.open(image.image.path).read()
+        assert file_data == image_bytes.getvalue()
+
+    def test_product_image_upload_path(self):
+        pass
+        # product_image_upload_path()
