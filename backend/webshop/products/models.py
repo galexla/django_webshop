@@ -117,7 +117,7 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     description = models.CharField(blank=True, max_length=3000)
     full_description = models.CharField(blank=True, max_length=20000)
-    free_delivery = models.BooleanField(default=True)
+    free_delivery = models.BooleanField(default=False)
     is_limited_edition = models.BooleanField(default=False)
     is_banner = models.BooleanField(default=False)
     tags = models.ManyToManyField(Tag, blank=True, related_name='products')
