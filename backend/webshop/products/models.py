@@ -217,7 +217,7 @@ class BasketProduct(models.Model):
 
     basket = models.ForeignKey('Basket', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    count = models.PositiveIntegerField()
+    count = models.PositiveIntegerField(validators=[MinValueValidator(1)])
 
 
 class Basket(models.Model):
