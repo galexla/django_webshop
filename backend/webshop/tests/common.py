@@ -156,5 +156,9 @@ def is_date_almost_equal(date1: datetime, date2: datetime, max_delta=1):
     return delta.seconds <= max_delta
 
 
-def get_not_equal_values(instance, data):
-    return list(filter(lambda k: data[k] != getattr(instance, k), data))
+def get_not_equal_values(instance, data, with_values=False):
+    fields = list(filter(lambda k: data[k] != getattr(instance, k), data))
+    if not with_values:
+        return fields
+    values = [getattr(instance, k) for k in fields]
+    return dict(zip(fields, values))

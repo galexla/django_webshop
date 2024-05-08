@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 from decimal import Decimal
+from uuid import UUID
 
 import pytest
 from django.core.files.images import ImageFile
@@ -14,6 +15,7 @@ from tests.fixtures.products import (
 )
 
 from ..models import (
+    BasketProduct,
     Category,
     Product,
     ProductImage,
@@ -40,16 +42,18 @@ class AbstractModelTest:
 
         instance = self.model(**data)
         valid_and_saved = True
+        exc = None
         try:
             instance.full_clean()
             instance.save()
-        except Exception:
+        except Exception as ex:
             valid_and_saved = False
+            exc = ex
 
         if valid_and_saved:
             instance.refresh_from_db()
 
-        return instance, data, value, valid_and_saved
+        return instance, data, value, valid_and_saved, exc
 
     def iterate_values(self, field, values):
         for value in values:
@@ -61,13 +65,13 @@ class AbstractModelTest:
         if not self.model:
             pytest.skip('No model set for testing')
 
-        for instance, data, value, valid_and_saved in self.iterate_values(
+        for instance, data, value, valid_and_saved, exc in self.iterate_values(
             field, values
         ):
             if not valid_and_saved:
                 if should_be_ok:
-                    msg = 'Data should be valid with {}={}'.format(
-                        field, value
+                    msg = 'Data should be valid for {}={}, exc={}'.format(
+                        field, value, exc
                     )
                     pytest.fail(msg)
                 else:
@@ -85,6 +89,7 @@ class AbstractModelTest:
                     ), 'Not all fields should be equal for {}={}'.format(
                         field, value
                     )
+                instance.delete()
 
     @pytest.mark.parametrize('default, field, values', [])
     @pytest.mark.django_db(transaction=True)
@@ -96,7 +101,7 @@ class AbstractModelTest:
             field, values
         ):
             if not valid_and_saved:
-                msg = 'Data should be valid with {}={}'.format(field, value)
+                msg = 'Data should be valid for {}={}'.format(field, value)
                 pytest.fail(msg)
             elif valid_and_saved:
                 instance.refresh_from_db()
@@ -114,6 +119,7 @@ class AbstractModelTest:
                     assert all(
                         data[k] == getattr(instance, k) for k in data
                     ), msg.format(field, value)
+                instance.delete()
 
     def is_equal_with_date(
         self, instance, data: dict, date_field: str
@@ -547,3 +553,31 @@ class TestReview(AbstractModelTest):
     @pytest.mark.django_db(transaction=True)
     def test_field_defaults(self, db_data, default, field, values):
         super().field_defaults_test(db_data, default, field, values)
+
+
+class TestBasketProduct(AbstractModelTest):
+    model = BasketProduct
+    base_ok_data = {
+        'product_id': 1,
+        'basket_id': UUID('60ac1520a1104db49090d934a0b9f8f9'),
+        'count': 3,
+    }
+
+    @pytest.mark.parametrize(
+        'should_be_ok, field, values',
+        [
+            (False, 'product_id', [None, 3, 4, 20, -1, '', 'abc']),
+            (True, 'product_id', [1, 2]),
+            (
+                False,
+                'basket_id',
+                [None, '', 'a' * 20, UUID('db49090d934a0b9f8f960ac1520a1104')],
+            ),
+            (True, 'basket_id', [UUID('60ac1520a1104db49090d934a0b9f8f9')]),
+            (False, 'count', ['', 'abc', -1, 0, 3.2]),
+            (True, 'count', [1, 5, 4]),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data, should_be_ok, field, values):
+        super().fields_test(db_data, should_be_ok, field, values)
