@@ -15,8 +15,10 @@ from tests.fixtures.products import (
 )
 
 from ..models import (
+    Basket,
     BasketProduct,
     Category,
+    OrderProduct,
     Product,
     ProductImage,
     Review,
@@ -97,11 +99,13 @@ class AbstractModelTest:
         if not self.model:
             pytest.skip('No model set for testing')
 
-        for instance, data, value, valid_and_saved in self.iterate_values(
+        for instance, data, value, valid_and_saved, exc in self.iterate_values(
             field, values
         ):
             if not valid_and_saved:
-                msg = 'Data should be valid for {}={}'.format(field, value)
+                msg = 'Data should be valid for {}={}, exc={}'.format(
+                    field, value, exc
+                )
                 pytest.fail(msg)
             elif valid_and_saved:
                 instance.refresh_from_db()
@@ -574,6 +578,71 @@ class TestBasketProduct(AbstractModelTest):
                 [None, '', 'a' * 20, UUID('db49090d934a0b9f8f960ac1520a1104')],
             ),
             (True, 'basket_id', [UUID('60ac1520a1104db49090d934a0b9f8f9')]),
+            (False, 'count', ['', 'abc', -1, 0, 3.2]),
+            (True, 'count', [1, 5, 4]),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data, should_be_ok, field, values):
+        super().fields_test(db_data, should_be_ok, field, values)
+
+
+class TestBasket(AbstractModelTest):
+    model = Basket
+    base_ok_data = {
+        'user_id': 2,
+    }
+
+    @pytest.mark.parametrize(
+        'should_be_ok, field, values',
+        [
+            (False, 'user_id', [20, -1, 1, '', 'abc']),
+            (True, 'user_id', [None, 2]),
+            (False, 'last_accessed', ['', 'abc', 1]),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data, should_be_ok, field, values):
+        super().fields_test(db_data, should_be_ok, field, values)
+
+    @pytest.mark.parametrize(
+        'default, field, values',
+        [
+            (
+                'now',
+                'last_accessed',
+                [
+                    None,
+                    '',
+                    datetime.fromisoformat('2024-01-30T15:30:48.823000Z'),
+                ],
+            ),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_field_defaults(self, db_data, default, field, values):
+        super().field_defaults_test(db_data, default, field, values)
+
+
+class TestOrderProduct(AbstractModelTest):
+    model = OrderProduct
+    base_ok_data = {
+        'product_id': 1,
+        'order_id': 2,
+        'count': 3,
+    }
+
+    @pytest.mark.parametrize(
+        'should_be_ok, field, values',
+        [
+            (False, 'product_id', [None, 2, 3, 4, 20, -1, '', 'abc']),
+            (True, 'product_id', [1]),
+            (
+                False,
+                'order_id',
+                [None, '', 'a' * 20, 30],
+            ),
+            (True, 'order_id', [2, 3]),
             (False, 'count', ['', 'abc', -1, 0, 3.2]),
             (True, 'count', [1, 5, 4]),
         ],
