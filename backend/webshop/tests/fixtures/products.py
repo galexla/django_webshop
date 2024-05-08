@@ -1,4 +1,4 @@
-from tests.common import category_img_path, product_img_path
+from ..common import category_img_path, product_img_path
 
 FOLDER_ICON = '/media/products/folder_icon.png'
 GOODS_ICON = '/media/products/goods_icon.png'

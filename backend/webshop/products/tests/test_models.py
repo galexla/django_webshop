@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
@@ -6,14 +6,31 @@ from django.core.files.images import ImageFile
 from django.core.files.storage import default_storage
 from django.forms import ValidationError
 from django.utils import timezone
-from tests.common import RandomImage
+from tests.common import RandomImage, get_not_equal_values
+from tests.fixtures.products import (
+    INVALID_EMAILS,
+    MONITOR_DETAIL_SRLZD,
+    VALID_EMAILS,
+)
 
-from ..models import Category, Product, ProductImage, Specification, Tag
+from ..models import (
+    Category,
+    Product,
+    ProductImage,
+    Review,
+    Sale,
+    Specification,
+    Tag,
+    get_products_queryset,
+    product_image_upload_path,
+)
+from ..serializers import ProductDetailSerializer
 
 
 class AbstractModelTest:
     model = None
     base_ok_data = {}
+    datetime_max_diff = 3  # seconds
 
     def create_instance(self, field, value):
         data = self.base_ok_data.copy()
@@ -56,15 +73,12 @@ class AbstractModelTest:
                 else:
                     pass
             elif valid_and_saved:
-                if value is None:
-                    data[field] = None
-
                 if should_be_ok:
+                    not_equal_fields = get_not_equal_values(instance, data)
+                    msg = 'All fields should be equal for {}={}. Not equal: {}'
                     assert all(
                         data[k] == getattr(instance, k) for k in data
-                    ), 'All fields should be equal for {}={}'.format(
-                        field, value
-                    )
+                    ), msg.format(field, value, not_equal_fields)
                 if not should_be_ok:
                     assert not all(
                         data[k] == getattr(instance, k) for k in data
@@ -86,10 +100,31 @@ class AbstractModelTest:
                 pytest.fail(msg)
             elif valid_and_saved:
                 instance.refresh_from_db()
-                data[field] = default
-                assert all(
-                    data[k] == getattr(instance, k) for k in data
-                ), 'All fields should be equal for {}={}'.format(field, value)
+                if default == 'now' and isinstance(
+                    getattr(instance, field), datetime
+                ):
+                    data[field] = timezone.now
+                    msg = 'All fields should be equal for {}={}'
+                    assert self.is_equal_with_date(
+                        instance, data, field
+                    ), msg.format(field, value)
+                else:
+                    data[field] = default
+                    msg = 'All fields should be equal for {}={}'
+                    assert all(
+                        data[k] == getattr(instance, k) for k in data
+                    ), msg.format(field, value)
+
+    def is_equal_with_date(
+        self, instance, data: dict, date_field: str
+    ) -> bool:
+        keys = set(data.keys())
+        keys.remove(date_field)
+        almost_equal = all(data[k] == getattr(instance, k) for k in keys)
+        dates_almost_equal = getattr(
+            instance, date_field
+        ) - timezone.now() <= timedelta(seconds=self.datetime_max_diff)
+        return almost_equal and dates_almost_equal
 
 
 class TestTag(AbstractModelTest):
@@ -244,6 +279,20 @@ class TestProduct(AbstractModelTest):
             (True, 'count', [0, 200, 1000000]),
             (False, 'sold_count', ['', 'abc', -1]),
             (True, 'sold_count', [0, 200, 1000000]),
+            (False, 'description', ['a' * 3001]),
+            (True, 'description', [None, '', 'a' * 3000]),
+            (False, 'full_description', ['a' * 20001]),
+            (True, 'full_description', [None, '', 'a' * 20000]),
+            (False, 'free_delivery', ['', 'abc']),
+            (True, 'free_delivery', [True, False, 1, 0]),
+            (False, 'is_limited_edition', ['', 'abc']),
+            (True, 'is_limited_edition', [True, False, 1, 0]),
+            (False, 'is_banner', ['', 'abc']),
+            (True, 'is_banner', [True, False, 1, 0]),
+            (False, 'rating', ['', 'abc', -1, 0, 6, '3.2']),
+            (True, 'rating', [1, 5, 4.5]),
+            (False, 'archived', ['', 'abc']),
+            (True, 'archived', [True, False, 1, 0]),
         ],
     )
     @pytest.mark.django_db(transaction=True)
@@ -255,6 +304,10 @@ class TestProduct(AbstractModelTest):
         [
             (0, 'count', [None]),
             (0, 'sold_count', [None]),
+            (False, 'free_delivery', [None]),
+            (False, 'is_limited_edition', [None]),
+            (False, 'is_banner', [None]),
+            (False, 'archived', [None]),
         ],
     )
     @pytest.mark.django_db(transaction=True)
@@ -344,7 +397,7 @@ class TestProductImage(AbstractModelTest):
 
     @classmethod
     def setup_class(cls):
-        cls.rand_image = RandomImage(40 * 40)
+        cls.rand_image = RandomImage(20 * 20)
 
     @pytest.mark.parametrize(
         'should_be_ok, field, values',
@@ -381,6 +434,116 @@ class TestProductImage(AbstractModelTest):
         file_data = default_storage.open(image.image.path).read()
         assert file_data == image_bytes.getvalue()
 
-    def test_product_image_upload_path(self):
-        pass
-        # product_image_upload_path()
+
+@pytest.mark.django_db(transaction=True)
+def test_product_image_upload_path(db_data):
+    rand_image = RandomImage(10 * 10)
+    image_bytes = rand_image.get_bytes(size=(100, 100), format='png')
+    image = ProductImage(
+        product_id=1,
+        image=ImageFile(image_bytes, name='test.png'),
+    )
+    path = product_image_upload_path(image, 'test.png')
+    assert path == 'products/product1/images/test.png'
+
+
+@pytest.mark.django_db(transaction=True)
+def test_get_products_queryset(db_data):
+    queryset = get_products_queryset()
+    monitor = queryset.filter(id=4)[0]
+    serializer = ProductDetailSerializer(monitor)
+    data = serializer.data
+    data.pop('fullDescription')
+    assert data == MONITOR_DETAIL_SRLZD
+
+
+class TestSale(AbstractModelTest):
+    model = Sale
+    base_ok_data = {
+        'product_id': 1,
+        'date_from': datetime.fromisoformat('2024-01-30T15:30:48.823000Z'),
+        'date_to': datetime.fromisoformat('2024-03-30T15:30:48.823000Z'),
+        'sale_price': Decimal('400.00'),
+    }
+
+    @pytest.mark.parametrize(
+        'should_be_ok, field, values',
+        [
+            (False, 'product_id', [None, 20, -1, '', 'abc']),
+            (True, 'product_id', [1, 3]),
+            (False, 'date_from', [None, '', 'abc', 1]),
+            (
+                True,
+                'date_from',
+                [datetime.fromisoformat('2024-01-30T15:30:48.823000Z')],
+            ),
+            (False, 'date_to', [None, '', 'abc', 1]),
+            (
+                True,
+                'date_to',
+                [datetime.fromisoformat('2024-03-30T15:30:48.823000Z')],
+            ),
+            (
+                False,
+                'sale_price',
+                [None, '', 'abc', -1, 1000000, Decimal('999999.999')],
+            ),
+            (
+                True,
+                'sale_price',
+                [Decimal('0.99'), 0, 1, 999999, Decimal('999999.99')],
+            ),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data, should_be_ok, field, values):
+        super().fields_test(db_data, should_be_ok, field, values)
+
+
+class TestReview(AbstractModelTest):
+    model = Review
+    base_ok_data = {
+        'product_id': 1,
+        'author': 'Name',
+        'email': 'test@test.com',
+        'text': 'text',
+        'rate': 4,
+    }
+
+    @pytest.mark.parametrize(
+        'should_be_ok, field, values',
+        [
+            (False, 'product_id', [None, 20, -1, '', 'abc']),
+            (True, 'product_id', [1, 3]),
+            (False, 'author', [None, '', 'a' * 201]),
+            (True, 'author', ['a' * 200]),
+            (False, 'email', [None, ''] + INVALID_EMAILS),
+            (True, 'email', VALID_EMAILS),
+            (False, 'text', [None, '', 'a' * 2001]),
+            (True, 'text', ['a' * 2000]),
+            (False, 'rate', ['', 'abc', -1, 0, 6, 3.2]),
+            (True, 'rate', [1, 5, 4]),
+            (False, 'created_at', ['', 'abc', 1]),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data, should_be_ok, field, values):
+        super().fields_test(db_data, should_be_ok, field, values)
+
+    @pytest.mark.parametrize(
+        'default, field, values',
+        [
+            (
+                'now',
+                'created_at',
+                [
+                    None,
+                    '',
+                    datetime.fromisoformat('2024-01-30T15:30:48.823000Z'),
+                ],
+            ),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_field_defaults(self, db_data, default, field, values):
+        super().field_defaults_test(db_data, default, field, values)

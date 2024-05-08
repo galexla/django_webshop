@@ -154,3 +154,7 @@ def camelcase_keys_to_underscore(d: dict[str, Any]):
 def is_date_almost_equal(date1: datetime, date2: datetime, max_delta=1):
     delta: timedelta = date1 - date2
     return delta.seconds <= max_delta
+
+
+def get_not_equal_values(instance, data):
+    return list(filter(lambda k: data[k] != getattr(instance, k), data))
