@@ -10,14 +10,17 @@ from django.utils import timezone
 from tests.common import AbstractModelTest, RandomImage
 from tests.fixtures.products import (
     INVALID_EMAILS,
+    INVALID_PHONES,
     MONITOR_DETAIL_SRLZD,
     VALID_EMAILS,
+    VALID_PHONES,
 )
 
 from ..models import (
     Basket,
     BasketProduct,
     Category,
+    Order,
     OrderProduct,
     Product,
     ProductImage,
@@ -137,7 +140,7 @@ class TestCategory(AbstractModelTest):
         )
 
     @pytest.mark.parametrize(
-        'default, field, values',
+        'expected, field, values',
         [
             ('', 'image', [None]),
             ('', 'image_alt', [None]),
@@ -145,8 +148,8 @@ class TestCategory(AbstractModelTest):
         ],
     )
     @pytest.mark.django_db(transaction=True)
-    def test_field_defaults(self, db_data, default, field, values):
-        super().field_defaults_test(db_data, default, field, values)
+    def test_field_defaults(self, db_data, expected, field, values):
+        super().field_defaults_test(db_data, expected, field, values)
 
 
 class TestProduct(AbstractModelTest):
@@ -204,7 +207,7 @@ class TestProduct(AbstractModelTest):
         super().fields_test(db_data, should_be_ok, field, values)
 
     @pytest.mark.parametrize(
-        'default, field, values',
+        'expected, field, values',
         [
             (0, 'count', [None]),
             (0, 'sold_count', [None]),
@@ -215,8 +218,8 @@ class TestProduct(AbstractModelTest):
         ],
     )
     @pytest.mark.django_db(transaction=True)
-    def test_field_defaults(self, db_data, default, field, values):
-        super().field_defaults_test(db_data, default, field, values)
+    def test_field_defaults(self, db_data, expected, field, values):
+        super().field_defaults_test(db_data, expected, field, values)
 
     @pytest.mark.django_db(transaction=True)
     def test_created_at(self, db_data):
@@ -317,14 +320,14 @@ class TestProductImage(AbstractModelTest):
         super().fields_test(db_data, should_be_ok, field, values)
 
     @pytest.mark.parametrize(
-        'default, field, values',
+        'expected, field, values',
         [
             ('', 'image_alt', [None]),
         ],
     )
     @pytest.mark.django_db(transaction=True)
-    def test_field_defaults(self, db_data, default, field, values):
-        super().field_defaults_test(db_data, default, field, values)
+    def test_field_defaults(self, db_data, expected, field, values):
+        super().field_defaults_test(db_data, expected, field, values)
 
     @pytest.mark.django_db(transaction=True)
     def test_image(self, db_data):
@@ -435,7 +438,7 @@ class TestReview(AbstractModelTest):
         super().fields_test(db_data, should_be_ok, field, values)
 
     @pytest.mark.parametrize(
-        'default, field, values',
+        'expected, field, values',
         [
             (
                 'now',
@@ -449,8 +452,8 @@ class TestReview(AbstractModelTest):
         ],
     )
     @pytest.mark.django_db(transaction=True)
-    def test_field_defaults(self, db_data, default, field, values):
-        super().field_defaults_test(db_data, default, field, values)
+    def test_field_defaults(self, db_data, expected, field, values):
+        super().field_defaults_test(db_data, expected, field, values)
 
 
 class TestBasketProduct(AbstractModelTest):
@@ -500,7 +503,7 @@ class TestBasket(AbstractModelTest):
         super().fields_test(db_data, should_be_ok, field, values)
 
     @pytest.mark.parametrize(
-        'default, field, values',
+        'expected, field, values',
         [
             (
                 'now',
@@ -514,8 +517,8 @@ class TestBasket(AbstractModelTest):
         ],
     )
     @pytest.mark.django_db(transaction=True)
-    def test_field_defaults(self, db_data, default, field, values):
-        super().field_defaults_test(db_data, default, field, values)
+    def test_field_defaults(self, db_data, expected, field, values):
+        super().field_defaults_test(db_data, expected, field, values)
 
 
 class TestOrderProduct(AbstractModelTest):
@@ -544,3 +547,87 @@ class TestOrderProduct(AbstractModelTest):
     @pytest.mark.django_db(transaction=True)
     def test_fields(self, db_data, should_be_ok, field, values):
         super().fields_test(db_data, should_be_ok, field, values)
+
+
+class TestOrder(AbstractModelTest):
+    model = Order
+    base_ok_data = {
+        'user_id': 1,
+        'full_name': 'test test',
+        'email': 'test@test.com',
+        'phone': '+123456789',
+        'delivery_type': Order.DELIVERY_ORDINARY,
+        'payment_type': Order.PAYMENT_ONLINE,
+        'total_cost': Decimal('1000.00'),
+        'status': Order.STATUS_NEW,
+        'city': 'test',
+        'address': 'test',
+        'archived': False,
+    }
+
+    @pytest.mark.parametrize(
+        'should_be_ok, field, values',
+        [
+            (False, 'user_id', [None, 20, -1, '', 'abc']),
+            (True, 'user_id', [1, 2]),
+            (False, 'created_at', ['', 'abc', 1]),
+            (False, 'full_name', ['a' * 121]),
+            (True, 'full_name', [None, '', 'a' * 120]),
+            (False, 'email', INVALID_EMAILS),
+            (True, 'email', [None, ''] + VALID_EMAILS),
+            (False, 'phone', INVALID_PHONES),
+            (True, 'phone', [None, ''] + VALID_PHONES),
+            (False, 'delivery_type', ['asdsf', '123']),
+            (
+                True,
+                'delivery_type',
+                [None, '', Order.DELIVERY_ORDINARY, Order.DELIVERY_EXPRESS],
+            ),
+            (False, 'payment_type', ['asdsf', '123']),
+            (
+                True,
+                'payment_type',
+                [None, '', Order.PAYMENT_ONLINE, Order.PAYMENT_SOMEONE],
+            ),
+            (
+                False,
+                'total_cost',
+                ['', 'abc', -1, 100000000, Decimal('99999999.999')],
+            ),
+            (
+                True,
+                'total_cost',
+                [Decimal('0.99'), 0, 1, 99999999, Decimal('99999999.99')],
+            ),
+            (False, 'city', ['a' * 151]),
+            (True, 'city', [None, '', 'a' * 150]),
+            (False, 'address', ['a' * 301]),
+            (True, 'address', [None, '', 'a' * 300]),
+            (False, 'archived', ['', 'abc']),
+            (True, 'archived', [True, False, 1, 0]),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_fields(self, db_data, should_be_ok, field, values):
+        super().fields_test(db_data, should_be_ok, field, values)
+
+    @pytest.mark.parametrize(
+        'expected, field, values',
+        [
+            (
+                'now',
+                'created_at',
+                [
+                    None,
+                    '',
+                    datetime.fromisoformat('2024-01-30T15:30:48.823000Z'),
+                ],
+            ),
+            (0, 'total_cost', [None]),
+            (Order.STATUS_NEW, 'status', [None]),
+            (False, 'archived', [None]),
+        ],
+    )
+    @pytest.mark.django_db(transaction=True)
+    def test_field_defaults(self, db_data, expected, field, values):
+        super().field_defaults_test(db_data, expected, field, values)

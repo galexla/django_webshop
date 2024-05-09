@@ -267,10 +267,10 @@ class AbstractModelTest:
                     )
                 instance.delete()
 
-    @pytest.mark.parametrize('default, field, values', [])
+    @pytest.mark.parametrize('expected, field, values', [])
     @pytest.mark.django_db(transaction=True)
     def field_defaults_test(
-        self, db_data: Any, default: Any, field: str, values: list
+        self, db_data: Any, expected: Any, field: str, values: list
     ) -> None:
         """
         Test the default value of the field with different values. Check if the
@@ -303,7 +303,7 @@ class AbstractModelTest:
                 pytest.fail(msg)
             elif valid_and_saved:
                 instance.refresh_from_db()
-                if default == 'now' and isinstance(
+                if expected == 'now' and isinstance(
                     getattr(instance, field), datetime
                 ):
                     data[field] = timezone.now
@@ -312,7 +312,7 @@ class AbstractModelTest:
                         instance, data, field
                     ), msg.format(field, value)
                 else:
-                    data[field] = default
+                    data[field] = expected
                     msg = 'All fields should be equal for {}={}'
                     assert all(
                         data[k] == getattr(instance, k) for k in data
