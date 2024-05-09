@@ -7,7 +7,7 @@ from django.core.files.images import ImageFile
 from django.core.files.storage import default_storage
 from django.forms import ValidationError
 from django.utils import timezone
-from tests.common import RandomImage, get_not_equal_values
+from tests.common import AbstractModelTest, RandomImage
 from tests.fixtures.products import (
     INVALID_EMAILS,
     MONITOR_DETAIL_SRLZD,
@@ -29,112 +29,6 @@ from ..models import (
     product_image_upload_path,
 )
 from ..serializers import ProductDetailSerializer
-
-
-class AbstractModelTest:
-    model = None
-    base_ok_data = {}
-    datetime_max_diff = 3  # seconds
-
-    def create_instance(self, field, value):
-        data = self.base_ok_data.copy()
-        data[field] = value
-        if value is None:
-            data.pop(field)
-
-        instance = self.model(**data)
-        valid_and_saved = True
-        exc = None
-        try:
-            instance.full_clean()
-            instance.save()
-        except Exception as ex:
-            valid_and_saved = False
-            exc = ex
-
-        if valid_and_saved:
-            instance.refresh_from_db()
-
-        return instance, data, value, valid_and_saved, exc
-
-    def iterate_values(self, field, values):
-        for value in values:
-            yield self.create_instance(field, value)
-
-    @pytest.mark.parametrize('should_be_ok, field, values', [])
-    @pytest.mark.django_db(transaction=True)
-    def fields_test(self, db_data, should_be_ok, field, values):
-        if not self.model:
-            pytest.skip('No model set for testing')
-
-        for instance, data, value, valid_and_saved, exc in self.iterate_values(
-            field, values
-        ):
-            if not valid_and_saved:
-                if should_be_ok:
-                    msg = 'Data should be valid for {}={}, exc={}'.format(
-                        field, value, exc
-                    )
-                    pytest.fail(msg)
-                else:
-                    pass
-            elif valid_and_saved:
-                if should_be_ok:
-                    not_equal_fields = get_not_equal_values(instance, data)
-                    msg = 'All fields should be equal for {}={}. Not equal: {}'
-                    assert all(
-                        data[k] == getattr(instance, k) for k in data
-                    ), msg.format(field, value, not_equal_fields)
-                if not should_be_ok:
-                    assert not all(
-                        data[k] == getattr(instance, k) for k in data
-                    ), 'Not all fields should be equal for {}={}'.format(
-                        field, value
-                    )
-                instance.delete()
-
-    @pytest.mark.parametrize('default, field, values', [])
-    @pytest.mark.django_db(transaction=True)
-    def field_defaults_test(self, db_data, default, field, values):
-        if not self.model:
-            pytest.skip('No model set for testing')
-
-        for instance, data, value, valid_and_saved, exc in self.iterate_values(
-            field, values
-        ):
-            if not valid_and_saved:
-                msg = 'Data should be valid for {}={}, exc={}'.format(
-                    field, value, exc
-                )
-                pytest.fail(msg)
-            elif valid_and_saved:
-                instance.refresh_from_db()
-                if default == 'now' and isinstance(
-                    getattr(instance, field), datetime
-                ):
-                    data[field] = timezone.now
-                    msg = 'All fields should be equal for {}={}'
-                    assert self.is_equal_with_date(
-                        instance, data, field
-                    ), msg.format(field, value)
-                else:
-                    data[field] = default
-                    msg = 'All fields should be equal for {}={}'
-                    assert all(
-                        data[k] == getattr(instance, k) for k in data
-                    ), msg.format(field, value)
-                instance.delete()
-
-    def is_equal_with_date(
-        self, instance, data: dict, date_field: str
-    ) -> bool:
-        keys = set(data.keys())
-        keys.remove(date_field)
-        almost_equal = all(data[k] == getattr(instance, k) for k in keys)
-        dates_almost_equal = getattr(
-            instance, date_field
-        ) - timezone.now() <= timedelta(seconds=self.datetime_max_diff)
-        return almost_equal and dates_almost_equal
 
 
 class TestTag(AbstractModelTest):
@@ -327,7 +221,7 @@ class TestProduct(AbstractModelTest):
     @pytest.mark.django_db(transaction=True)
     def test_created_at(self, db_data):
         for value in None, '', '2024-01-30T15:30:48.823000Z':
-            instance, _, _, valid_and_saved = self.create_instance(
+            instance, _, _, valid_and_saved, _ = self.create_instance(
                 'created_at', value
             )
             assert valid_and_saved
@@ -335,7 +229,7 @@ class TestProduct(AbstractModelTest):
 
     @pytest.mark.django_db(transaction=True)
     def test_tags(self, db_data):
-        instance, _, _, valid_and_saved = self.create_instance('count', 3)
+        instance, _, _, valid_and_saved, _ = self.create_instance('count', 3)
         assert valid_and_saved
         instance.tags.add(Tag.objects.create(name='test1'))
         instance.tags.add(Tag.objects.create(name='test2'))
@@ -348,7 +242,7 @@ class TestProduct(AbstractModelTest):
 
     @pytest.mark.django_db(transaction=True)
     def test_specifications(self, db_data):
-        instance, _, _, valid_and_saved = self.create_instance('count', 3)
+        instance, _, _, valid_and_saved, _ = self.create_instance('count', 3)
         assert valid_and_saved
         instance.specifications.add(
             Specification.objects.create(name='test1', value='a')
@@ -365,7 +259,7 @@ class TestProduct(AbstractModelTest):
 
     @pytest.mark.django_db(transaction=True)
     def test_images(self, db_data):
-        instance, _, _, valid_and_saved = self.create_instance('count', 3)
+        instance, _, _, valid_and_saved, _ = self.create_instance('count', 3)
         assert valid_and_saved
         rand_image = RandomImage(40 * 40)
         image_bytes = rand_image.get_bytes(size=(100, 100), format='jpeg')
