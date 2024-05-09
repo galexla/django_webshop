@@ -9,12 +9,16 @@ from django.core.validators import (
     RegexValidator,
 )
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, QuerySet
 from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
 
 
 class Tag(models.Model):
+    """
+    Tag model for products
+    """
+
     name = models.CharField(max_length=100)
 
     def __str__(self) -> str:
@@ -22,18 +26,44 @@ class Tag(models.Model):
 
 
 class Specification(models.Model):
+    """
+    Specification model for products. For example, color, weight, and other
+    product characteristics.
+    """
+
     name = models.CharField(max_length=200)
     value = models.CharField(max_length=200)
 
     def __str__(self) -> str:
+        """
+        Return specification in format "name: value".
+
+        :return: Specification in format "name: value"
+        :rtype: str
+        """
         return f'{self.name}: {self.value}'
 
 
 def category_image_upload_path(instance: 'Category', filename: str) -> str:
+    """
+    Return category image upload path.
+
+    :param instance: Category instance
+    :type instance: Category
+    :param filename: Image filename
+    :type filename: str
+    :return: Category image upload path
+    :rtype: str
+    """
     return f'categories/category{instance.pk}/image/{filename}'
 
 
 class Category(models.Model):
+    """
+    Category model for products. Categories can be nested, but only one level
+    deep.
+    """
+
     class Meta:
         verbose_name = _('category')
         verbose_name_plural = _('categories')
@@ -57,6 +87,13 @@ class Category(models.Model):
     archived = models.BooleanField(default=False)
 
     def clean(self) -> None:
+        """
+        Validate category parent and subcategories.
+
+        :raises ValidationError: If category is parent of itself, has parent
+            with a parent, or has subcategories.
+        :return: None
+        """
         if self.parent is not None:
             if self == self.parent:
                 raise ValidationError(
@@ -76,10 +113,40 @@ class Category(models.Model):
         return super().clean()
 
     def __str__(self) -> str:
+        """
+        Return category title.
+
+        :return: Category title
+        :rtype: str
+        """
         return self.title
 
 
 class Product(models.Model):
+    """
+    Product model for webshop. Products can have multiple images, tags,
+    specifications, and reviews. Products can be on sale, and can be added to
+    a basket. Products can be archived. Products can have a category.
+
+    Attributes:
+        title (str): Product title
+        price (Decimal): Product price
+        category (Category): Product category. Can be None
+        count (int): Product count in stock
+        sold_count (int): Product sold count
+        created_at (datetime): Product creation date
+        description (str): Product short description
+        full_description (str): Product full description
+        free_delivery (bool): Whether delivery is free
+        is_limited_edition (bool): If product is shown in the limited edition
+            section
+        is_banner (bool): If product is shown in the banner section
+        tags (QuerySet): Product tags
+        specifications (QuerySet): Product specifications (characteristics)
+        rating (Decimal): Product rating from 1 to 5
+        archived (bool): If product is archived
+    """
+
     class Meta:
         indexes = [
             models.Index(Lower('title'), name='idx_product_title_lower'),
@@ -141,12 +208,26 @@ class Product(models.Model):
 
 
 def product_image_upload_path(instance: 'ProductImage', filename: str) -> str:
+    """
+    Return product image upload path.
+
+    :param instance: ProductImage instance
+    :type instance: ProductImage
+    :param filename: Image filename
+    :type filename: str
+    :return: Product image upload path
+    :rtype: str
+    """
     return 'products/product{pk}/images/{filename}'.format(
         pk=instance.product.pk, filename=filename
     )
 
 
 class ProductImage(models.Model):
+    """
+    Image model for products. Product can have multiple images.
+    """
+
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name='images'
     )
@@ -156,7 +237,13 @@ class ProductImage(models.Model):
     image_alt = models.CharField(max_length=200, blank=True)
 
 
-def get_products_queryset():
+def get_products_queryset() -> 'QuerySet[Product]':
+    """
+    Return products queryset with all related data.
+
+    :return: Products queryset
+    :rtype: QuerySet[Product]
+    """
     return (
         Product.objects.select_related('category')
         .prefetch_related(
@@ -170,6 +257,11 @@ def get_products_queryset():
 
 
 class Sale(models.Model):
+    """
+    Sale model for products. Products can be on sale for a specific time with a
+    specific price.
+    """
+
     class Meta:
         indexes = [
             models.Index(fields=['date_from'], name='idx_sale_date_from'),
@@ -191,6 +283,11 @@ class Sale(models.Model):
 
 
 class Review(models.Model):
+    """
+    Review model for products. Users can leave reviews for products. Reviews
+    have a rate from 1 to 5.
+    """
+
     class Meta:
         indexes = [
             models.Index(fields=['created_at'], name='idx_review_created_at'),
@@ -212,6 +309,11 @@ class Review(models.Model):
 
 
 class BasketProduct(models.Model):
+    """
+    BasketProduct model for products. Basket can have multiple products in it.
+    Each product has count.
+    """
+
     class Meta:
         unique_together = ('basket', 'product')
 
@@ -221,6 +323,12 @@ class BasketProduct(models.Model):
 
 
 class Basket(models.Model):
+    """
+    Basket model for products. Basket can have multiple products in it. Basket
+    has a user and last accessed date which is updated each time basket is
+    saved.
+    """
+
     class Meta:
         indexes = [
             models.Index(
@@ -242,6 +350,11 @@ class Basket(models.Model):
 
 
 class OrderProduct(models.Model):
+    """
+    OrderProduct model for products. Order can have multiple products in it.
+    Each product has count.
+    """
+
     class Meta:
         unique_together = ('order', 'product')
 
@@ -251,6 +364,37 @@ class OrderProduct(models.Model):
 
 
 class Order(models.Model):
+    """
+    Order model for products. Order can have multiple products in it.
+
+    Attributes:
+        DELIVERY_ORDINARY (str): Ordinary (regular) delivery type
+        DELIVERY_EXPRESS (str): Express delivery type
+        PAYMENT_ONLINE (str): Online payment type
+        PAYMENT_SOMEONE (str): Payment by someone type
+        STATUS_NEW (str): Order status when it is just created
+        STATUS_PROCESSING (str): Order status when all fields are filled but it
+            is not paid yet
+        STATUS_PAID (str): Paid order status
+        DELIVERY_TYPES (tuple): Delivery types choices
+        PAYMENT_TYPES (tuple): Payment types choices
+        STATUSES (tuple): Order statuses choices
+
+        user (User): Customer who made the order
+        products (QuerySet): Order products
+        created_at (datetime): Order creation date
+        full_name (str): Customer full name
+        email (str): Customer email
+        phone (str): Customer phone
+        delivery_type (str): Order delivery type
+        payment_type (str): Order payment type
+        total_cost (Decimal): Order total cost
+        status (str): Order status
+        city (str): City where order is delivered
+        address (str): Address where order is delivered
+        archived (bool): If order is archived
+    """
+
     class Meta:
         indexes = [
             models.Index(fields=['created_at'], name='idx_order_created_at'),

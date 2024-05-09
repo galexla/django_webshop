@@ -3,19 +3,40 @@ import re
 from contextlib import contextmanager
 from datetime import datetime, timedelta
 from random import randint
-from typing import Any, Iterable, Iterator
+from typing import Any, Iterable, Iterator, Type
 
 import pytest
+from django.db.models import Model
 from django.utils import timezone
 from PIL import Image
+from rest_framework.serializers import Serializer
 from rest_framework.test import APITestCase
 
 
 class RandomImage:
+    """
+    Class to generate random images. It creates a list of random pixels and
+    generates an image with the specified size using these pixels.
+
+    Args:
+        size (int): Number of random pixels to be generated.
+
+    Attributes:
+        rand_pixels (list): List of random pixels in the format (R, G, B).
+    """
+
     def __init__(self, size: int) -> None:
         self.rand_pixels = self._create_random_pixels(size)
 
     def _create_random_pixels(self, n: int) -> list[tuple[int, int, int]]:
+        """
+        Create a list of random pixels in the format (R, G, B).
+
+        :param n: Number of random pixels to be generated.
+        :type n: int
+        :return: List of random pixels.
+        :rtype: list[tuple[int, int, int]]
+        """
         return [
             (
                 randint(0, 255),
@@ -26,9 +47,25 @@ class RandomImage:
         ]
 
     def get_bytes(
-        self, size=(100, 100), filename='test', format='png'
+        self,
+        size: tuple[int, int] = (100, 100),
+        filename: str = 'test',
+        format: str = 'png',
     ) -> io.BytesIO:
-        """Generate a random image made of self.rand_pixels"""
+        """
+        Generate an image with the specified size using the random pixels. The
+        image is saved in the specified format and the file is returned as a
+        BytesIO object.
+
+        :param size: Size of the image in pixels.
+        :type size: tuple[int, int]
+        :param filename: Name of the file.
+        :type filename: str
+        :param format: Format of the image.
+        :type format: str
+        :return: BytesIO object with the image file.
+        :rtype: io.BytesIO
+        """
         file = io.BytesIO()
         n_pixels = size[0] * size[1]
         ratio = n_pixels // len(self.rand_pixels) + 1
@@ -47,11 +84,25 @@ class RandomImage:
 
 class SerializerTestCase(APITestCase):
     def assert_all_invalid(
-        self, serializer_class, ok_data: dict, field_name: str, values: list
-    ):
+        self,
+        serializer_class: Type[Serializer],
+        ok_data: dict,
+        field_name: str,
+        values: list,
+    ) -> None:
         """
         Assert that all values of the specified field are invalid. None
         in values means the field is missing.
+
+        :param serializer_class: Serializer class
+        :type serializer_class: Type[Serializer]
+        :param ok_data: Dictionary with valid data for the serializer.
+        :type ok_data: dict
+        :param field_name: Name of the field to be tested.
+        :type field_name: str
+        :param values: List of values to be tested.
+        :type values: list
+        :return: None
         """
         for value in values:
             data = ok_data.copy()
@@ -63,11 +114,25 @@ class SerializerTestCase(APITestCase):
             self.assertFalse(serializer.is_valid())
 
     def assert_all_valid(
-        self, serializer_class, ok_data: dict, field_name: str, values: list
-    ):
+        self,
+        serializer_class: Type[Serializer],
+        ok_data: dict,
+        field_name: str,
+        values: list,
+    ) -> None:
         """
         Assert that all values of the specified field are valid. None
         in values means the field is missing.
+
+        :param serializer_class: Serializer class
+        :type serializer_class: Type[Serializer]
+        :param ok_data: Dictionary with valid data for the serializer.
+        :type ok_data: dict
+        :param field_name: Name of the field to be tested.
+        :type field_name: str
+        :param values: List of values to be tested.
+        :type values: list
+        :return: None
         """
         for value in values:
             data = ok_data.copy()
@@ -86,18 +151,18 @@ class AbstractModelTest:
     instance of the model and checking if it was saved correctly.
 
     Attributes:
-        model: Model class to be tested.
-        base_ok_data: Dictionary with valid data for creating an instance of
-            the model. It should be used as a base for creating an instance
-            with different values for fields.
-        datetime_max_diff: Maximum difference in seconds between the current
-            time and the time of the instance creation. Used for checking if
-            the default value of a datetime field is set correctly. See the
-            `is_equal_with_date` method.
+        model (Type[Model]): Model class to be tested.
+        base_ok_data (dict): Dictionary with valid data for creating an
+            instance of the model. It should be used as a base for creating an
+            instance with different values for fields.
+        datetime_max_diff (int): Maximum difference in seconds between the
+            current time and the time of the instance creation. Used for
+            checking if the default value of a datetime field is set correctly.
+            See the `is_equal_with_date` method.
     """
 
-    model = None
-    base_ok_data = {}
+    model: Type[Model] = None
+    base_ok_data: dict[str, Any] = {}
     datetime_max_diff = 3  # seconds
 
     def create_instance(
@@ -113,7 +178,7 @@ class AbstractModelTest:
         :type value: Any
         :return: Tuple with the instance, data, value, if the data is valid and
             saved correctly and the exception if the data is not valid.
-        :rtype: tuple
+        :rtype: tuple[Any, dict, Any, bool, Exception | None]
         """
         data = self.base_ok_data.copy()
         data[field] = value
@@ -146,10 +211,8 @@ class AbstractModelTest:
         :type field: str
         :param values: List of values to be tested.
         :type values: list
-        :return: Iterator with tuples with the instance, data, value, if the
-            data is valid and saved correctly and the exception if the data is
-            not valid.
-        :rtype: Iterator
+        :yields: Tuple with the instance, data, value, if the data is valid and
+            saved correctly and the exception if the data is not valid.
         """
         for value in values:
             yield self.create_instance(field, value)
@@ -172,6 +235,7 @@ class AbstractModelTest:
         :type field: str
         :param values: List of values to be tested.
         :type values: list
+        :raises AssertionError: If the any assertion fails.
         :return: None
         """
         if not self.model:
@@ -223,6 +287,7 @@ class AbstractModelTest:
         :type field: str
         :param values: List of values to be tested.
         :type values: list
+        :raises AssertionError: If the any assertion fails.
         :return: None
         """
         if not self.model:
@@ -255,7 +320,7 @@ class AbstractModelTest:
                 instance.delete()
 
     def is_equal_with_date(
-        self, instance: Any, data: dict, date_field: str
+        self, instance: Any, data: dict[str, Any], date_field: str
     ) -> bool:
         """
         Check if all fields of the instance are equal to the data and if the
@@ -265,7 +330,7 @@ class AbstractModelTest:
         :param instance: Instance of the model.
         :type instance: Any
         :param data: Dictionary with data for the instance.
-        :type data: dict
+        :type data: dict[str, Any]
         :param date_field: Name of the datetime field.
         :type date_field: str
         :return: If all fields are equal to the data and the date field is
@@ -281,15 +346,48 @@ class AbstractModelTest:
         return almost_equal and dates_almost_equal
 
 
-def product_img_path(id, file_name):
+def product_img_path(id: str, file_name: str) -> str:
+    """
+    Return the path for a product image.
+
+    :param id: Product ID.
+    :type id: int
+    :param file_name: Name of the file.
+    :type file_name: str
+    :return: Path for the product image.
+    :rtype: str
+    """
     return f'/media/products/product{id}/images/{file_name}'
 
 
-def category_img_path(id, file_name):
+def category_img_path(id: str, file_name: str) -> str:
+    """
+    Return the path for a category image.
+
+    :param id: Category ID.
+    :type id: int
+    :param file_name: Name of the file.
+    :type file_name: str
+    :return: Path for the category image.
+    :rtype: str
+    """
     return f'/media/categories/category{id}/image/{file_name}'
 
 
-def assert_dict_equal_exclude(dict1, dict2, exclude_keys):
+def assert_dict_equal_exclude(
+    dict1: dict, dict2: dict, exclude_keys: list
+) -> None:
+    """
+    Assert that two dictionaries are equal excluding the specified keys.
+
+    :param dict1: First dictionary.
+    :type dict1: dict
+    :param dict2: Second dictionary.
+    :type dict2: dict
+    :param exclude_keys: List of keys to be excluded.
+    :type exclude_keys: list
+    :return: None
+    """
     dict1 = dict1.copy()
     dict2 = dict2.copy()
     for key in exclude_keys:
@@ -299,7 +397,15 @@ def assert_dict_equal_exclude(dict1, dict2, exclude_keys):
 
 
 @contextmanager
-def assert_not_raises(exception_class):
+def assert_not_raises(exception_class: Type[BaseException]) -> Iterator[None]:
+    """
+    Context manager to assert that an exception was not raised.
+
+    :param exception_class: Exception class to be checked.
+    :type exception_class: Type[BaseException]
+    :raises AssertionError: If the `exception_class` is raised within the context block.
+    :yields: None
+    """
     try:
         yield
     except exception_class:
@@ -307,14 +413,40 @@ def assert_not_raises(exception_class):
 
 
 def get_ids(data: Iterable[dict]) -> list:
+    """
+    Get a list of IDs from a list of dictionaries.
+
+    :param data: List of dictionaries.
+    :type data: Iterable[dict]
+    :return: List of IDs.
+    :rtype: list
+    """
     return [item['id'] for item in data]
 
 
 def get_obj_ids(data: Iterable[object]) -> list:
+    """
+    Get a list of IDs from a list of objects.
+
+    :param data: List of objects.
+    :type data: Iterable[object]
+    :return: List of IDs.
+    :rtype: list
+    """
     return [item.id for item in data]
 
 
 def get_keys(data: Iterable[dict], keys: Iterable) -> list[dict]:
+    """
+    Get only the specified keys from a list of dictionaries.
+
+    :param data: List of dictionaries.
+    :type data: Iterable[dict]
+    :param keys: List of keys to be selected.
+    :type keys: Iterable
+    :return: List of dictionaries with only the specified keys.
+    :rtype: list[dict]
+    """
     result = []
     for item in data:
         elem = {}
@@ -325,8 +457,22 @@ def get_keys(data: Iterable[dict], keys: Iterable) -> list[dict]:
 
 
 def slice_to_dict(
-    data: Iterable[dict], keys: Iterable, unique_key
+    data: Iterable[dict], keys: Iterable, unique_key: str
 ) -> list[dict]:
+    """
+    Convert a list of dictionaries to a dictionary with a unique key (e.g. ID).
+
+    :param data: List of dictionaries.
+    :type data: Iterable[dict]
+    :param keys: List of keys to be selected.
+    :type keys: Iterable
+    :param unique_key: Unique key present in all dictionaries to be used as the
+        key in the resulting dictionary.
+    :type unique_key: str
+    :return: Dictionary with the unique key as the key and the selected keys as
+        the values.
+    :rtype: list[dict]
+    """
     result = {}
     for item in data:
         elem = {}
@@ -337,6 +483,16 @@ def slice_to_dict(
 
 
 def get_attrs(data: Iterable[object], attrs: Iterable) -> list[dict]:
+    """
+    Get only the specified attributes from a list of objects.
+
+    :param data: List of objects.
+    :type data: Iterable[object]
+    :param attrs: List of attributes to be selected.
+    :type attrs: Iterable
+    :return: List of dictionaries with only the specified attributes.
+    :rtype: list[dict]
+    """
     result = []
     for item in data:
         elem = {}
@@ -346,7 +502,15 @@ def get_attrs(data: Iterable[object], attrs: Iterable) -> list[dict]:
     return result
 
 
-def camelcase_keys_to_underscore(d: dict[str, Any]):
+def camelcase_keys_to_underscore(d: dict[str, Any]) -> dict[str, Any]:
+    """
+    Convert camelCase keys to snake_case.
+
+    :param d: Dictionary with camelCase keys.
+    :type d: dict[str, Any]
+    :return: Dictionary with snake_case keys.
+    :rtype: dict[str, Any]
+    """
     result = {}
     for key, value in d.items():
         key2 = re.sub(r'([A-Z])', r'_\1', key).lower()
@@ -354,12 +518,41 @@ def camelcase_keys_to_underscore(d: dict[str, Any]):
     return result
 
 
-def is_date_almost_equal(date1: datetime, date2: datetime, max_delta=1):
+def is_date_almost_equal(
+    date1: datetime, date2: datetime, max_delta: int = 1
+) -> bool:
+    """
+    Check if two dates are almost equal. The difference between the dates
+    should be less than or equal to the specified delta in seconds.
+
+    :param date1: First date.
+    :type date1: datetime
+    :param date2: Second date.
+    :type date2: datetime
+    :param max_delta: Maximum difference in seconds between the dates.
+    :type max_delta: int
+    :return: If the dates are almost equal.
+    :rtype: bool
+    """
     delta: timedelta = date1 - date2
     return delta.seconds <= max_delta
 
 
-def get_not_equal_values(instance, data, with_values=False):
+def get_not_equal_values(
+    instance: Any, data: dict[str, Any], with_values: bool = False
+) -> dict[str, Any]:
+    """
+    Get the fields that are not equal between the instance and the data.
+
+    :param instance: Instance of a model or any object.
+    :type instance: Any
+    :param data: Dictionary with data for the instance.
+    :type data: dict[str, Any]
+    :param with_values: If the values of the fields should be returned.
+    :type with_values: bool
+    :return: Fields that are not equal between the instance and the data.
+    :rtype: dict[str, Any]
+    """
     fields = list(filter(lambda k: data[k] != getattr(instance, k), data))
     if not with_values:
         return fields
