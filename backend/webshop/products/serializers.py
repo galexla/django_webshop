@@ -1,8 +1,10 @@
 import logging
 from decimal import Decimal
+from typing import Any
 
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import transaction
+from django.db.models import Model
 from django.shortcuts import get_object_or_404
 from django.templatetags.static import static
 from rest_framework import serializers
@@ -26,7 +28,17 @@ FOLDER_ICON = 'products/folder_icon.png'
 GOODS_ICON = 'products/goods_icon.png'
 
 
-def get_last_reviews(product_id: int, count: int):
+def get_last_reviews(product_id: int, count: int) -> list[dict]:
+    """
+    Get last N reviews for product with id=product_id ordered by created_at
+
+    :param product_id: product id
+    :type product_id: int
+    :param count: number of reviews to return
+    :type count: int
+    :return: list of reviews
+    :rtype: list[dict]
+    """
     reviews = Review.objects.filter(product_id=product_id).order_by(
         '-created_at'
     )[:count]
@@ -36,30 +48,72 @@ def get_last_reviews(product_id: int, count: int):
 
 
 class ImageSerializer(serializers.Serializer):
+    """
+    Serializer for image field. If there is no image, a default image is added.
+    """
+
     src = serializers.SerializerMethodField()
     alt = serializers.SerializerMethodField()
 
-    def get_src(self, instance):
+    def get_src(self, instance: Model) -> str:
+        """
+        Get image url. If image is not found, return default image url
+
+        :param instance: model instance
+        :type instance: Model
+        :return: image url
+        :rtype: str
+        """
         try:
             return instance.image.url
         except Exception:
             return self.default_image_url
 
-    def get_alt(self, instance):
+    def get_alt(self, instance: Model) -> str:
+        """
+        Get image alt text
+
+        :param instance: model instance
+        :type instance: Model
+        :return: image alt text
+        :rtype: str
+        """
         return getattr(instance, 'image_alt', '')
 
     @property
-    def default_image_url(self):
+    def default_image_url(self) -> str:
+        """
+        Get default image url
+
+        :return: default image url
+        :rtype: str
+        """
         return ''
 
 
 class CategoryImageSerializer(ImageSerializer):
+    """
+    Serializer for category image field. If there is no image, a default image
+    is added.
+    """
+
     @property
-    def default_image_url(self):
+    def default_image_url(self) -> str:
+        """
+        Get default image url
+
+        :return: default image url
+        :rtype: str
+        """
         return static(FOLDER_ICON)
 
 
 class CategorySerializer(serializers.ModelSerializer):
+    """
+    Serializer for category model. Image field is serialized with
+    `CategoryImageSerializer`. If there is no image, a default image is added.
+    """
+
     class Meta:
         model = Category
         fields = ['id', 'title', 'image']
@@ -69,6 +123,12 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class TopLevelCategorySerializer(serializers.ModelSerializer):
+    """
+    Serializer for top level category and its subcategories. Image field is
+    serialized with `CategoryImageSerializer`. If there is no image, a default
+    image is added.
+    """
+
     class Meta:
         model = Category
         fields = ['id', 'title', 'image', 'subcategories']
@@ -79,18 +139,31 @@ class TopLevelCategorySerializer(serializers.ModelSerializer):
 
 
 class TagSerializer(serializers.ModelSerializer):
+    """
+    Serializer for tag model
+    """
+
     class Meta:
         model = Tag
         fields = ['id', 'name']
 
 
 class SpecificationSerializer(serializers.ModelSerializer):
+    """
+    Serializer for specification (product characteristics) model
+    """
+
     class Meta:
         model = Specification
         fields = ['name', 'value']
 
 
 class ProductShortSerializer(serializers.ModelSerializer):
+    """
+    Serializer for `Product` model. `Reviews` field is replaced with the number
+    of reviews. If there are no images, a default image is added.
+    """
+
     class Meta:
         model = Product
         fields = [
@@ -122,6 +195,10 @@ class ProductShortSerializer(serializers.ModelSerializer):
 
 
 class ReviewSerializer(serializers.ModelSerializer):
+    """
+    Serializer for review model. Date field is formatted as 'YYYY-MM-DD HH:MM'
+    """
+
     class Meta:
         model = Review
         fields = ['id', 'author', 'email', 'text', 'rate', 'date']
@@ -132,6 +209,11 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 
 class ProductDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer for `Product` model. `Reviews` field is replaced with the last
+    `REVIEWS_COUNT` reviews. If there are no images, a default image is added.
+    """
+
     class Meta:
         model = Product
         fields = [
@@ -161,10 +243,26 @@ class ProductDetailSerializer(serializers.ModelSerializer):
     fullDescription = serializers.CharField(source='full_description')
     freeDelivery = serializers.CharField(source='free_delivery')
 
-    def get_reviews(self, obj):
-        return get_last_reviews(obj.id, self.REVIEWS_COUNT)
+    def get_reviews(self, instance: Product) -> list[dict]:
+        """
+        Get last `REVIEWS_COUNT` reviews for product ordered by created_at
 
-    def to_representation(self, instance):
+        :param instance: product instance
+        :type instance: Product
+        :return: list of reviews
+        :rtype: list[dict]
+        """
+        return get_last_reviews(instance.id, self.REVIEWS_COUNT)
+
+    def to_representation(self, instance: Product) -> dict[str, Any]:
+        """
+        Replace empty images with default image
+
+        :param instance: product instance
+        :type instance: Product
+        :return: product data
+        :rtype: dict[str, Any]
+        """
         data = super().to_representation(instance)
         if not data['images']:
             data['images'] = [{'src': static(GOODS_ICON), 'alt': ''}]
@@ -172,6 +270,19 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
 
 class SaleSerializer(serializers.Serializer):
+    """
+    Serializer for `Sale` model
+
+    Attributes:
+        id: product id
+        price: product price
+        salePrice: sale price
+        dateFrom: sale start date in format 'MM-DD'
+        dateTo: sale end date in format 'MM-DD'
+        title: product title
+        images: product images
+    """
+
     id = serializers.IntegerField(source='product.id')
     price = serializers.DecimalField(
         source='product.price', max_digits=8, decimal_places=2
@@ -186,6 +297,11 @@ class SaleSerializer(serializers.Serializer):
 
 
 class ReviewCreateSerializer(serializers.Serializer):
+    """
+    Serializer for review creation. Date field is formatted as
+    'YYYY-MM-DD HH:MM'
+    """
+
     author = serializers.CharField(max_length=200)
     email = serializers.EmailField()
     text = serializers.CharField(max_length=2000)
@@ -199,14 +315,32 @@ class ReviewCreateSerializer(serializers.Serializer):
         source='created_at', read_only=True, format='%Y-%m-%d %H:%M'
     )
 
-    def save(self, product_id, **kwargs):
+    def save(self, product_id: int, **kwargs) -> Any:
+        """
+        Save review for product with id=product_id
+
+        :param product_id: product id
+        :type product_id: int
+        :param kwargs: additional keyword arguments
+        :raises Http404: if product with id=product_id is not found
+        :return: created review
+        :rtype: Any
+        """
         product = get_object_or_404(Product, pk=product_id, archived=False)
         kwargs['product'] = product
 
         return super().save(**kwargs)
 
     @transaction.atomic
-    def create(self, validated_data):
+    def create(self, validated_data: Any) -> Review:
+        """
+        Create review
+
+        :param validated_data: validated data
+        :type validated_data: Any
+        :return: created review
+        :rtype: Review
+        """
         review = Review.objects.create(**validated_data)
         review.product = validated_data.pop('product')
         review.save()
@@ -215,6 +349,10 @@ class ReviewCreateSerializer(serializers.Serializer):
 
 
 class ProductCountSerializer(serializers.Serializer):
+    """
+    Serializer for product count in basket and in an order
+    """
+
     id = serializers.IntegerField(
         required=True,
         validators=[
@@ -230,10 +368,19 @@ class ProductCountSerializer(serializers.Serializer):
 
 
 class BasketIdSerializer(serializers.Serializer):
+    """
+    Serializer for basket id. The id format is UUID
+    """
+
     basket_id = serializers.UUIDField()
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    """
+    Serializer for `Order` model. CreatedAt field is formatted as
+    'YYYY-MM-DD HH:MM'
+    """
+
     class Meta:
         model = Order
         fields = [
@@ -269,7 +416,15 @@ class OrderSerializer(serializers.ModelSerializer):
     )
     products = serializers.SerializerMethodField(read_only=True)
 
-    def get_products(self, obj):
+    def get_products(self, obj: Order) -> list[dict]:
+        """
+        Get products in order with their count
+
+        :param obj: order instance
+        :type obj: Order
+        :return: list of products with their count
+        :rtype: list[dict]
+        """
         order_products = OrderProduct.objects.filter(order=obj).all()
         product_counts = {op.product_id: op.count for op in order_products}
 
@@ -284,12 +439,20 @@ class OrderSerializer(serializers.ModelSerializer):
 
         return result
 
-    def validate(self, data):
-        """Allow empty fields only for order with status Order.STATUS_NEW"""
+    def validate(self, data: dict) -> dict:
+        """
+        Validate order data. Some empty fields are only allowed in a new order
+
+        :param data: order data
+        :type data: dict
+        :raises ValidationError: if order is not new and some fields are empty
+        :return: validated order data
+        :rtype: dict
+        """
         if data['status'] == Order.STATUS_NEW:
             return data
 
-        fields = [
+        allowed_empty = [
             'full_name',
             'email',
             'phone',
@@ -298,12 +461,14 @@ class OrderSerializer(serializers.ModelSerializer):
             'city',
             'address',
         ]
-        is_empty = (str(data.get(field, '')).strip() == '' for field in fields)
+        any_is_empty = any(
+            str(data.get(field, '')).strip() == '' for field in allowed_empty
+        )
 
-        if any(is_empty):
+        if any_is_empty:
             raise ValidationError(
                 'These fields can only be empty in a new order: {}'.format(
-                    ', '.join(fields)
+                    ', '.join(allowed_empty)
                 )
             )
 
