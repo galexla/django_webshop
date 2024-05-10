@@ -302,7 +302,6 @@ class AbstractModelTest:
                 )
                 pytest.fail(msg)
             elif valid_and_saved:
-                instance.refresh_from_db()
                 if expected == 'now' and isinstance(
                     getattr(instance, field), datetime
                 ):

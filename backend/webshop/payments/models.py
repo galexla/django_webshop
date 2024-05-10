@@ -11,7 +11,7 @@ from products.models import Order
 
 class Payment(models.Model):
     order = models.OneToOneField(
-        Order, null=True, on_delete=models.CASCADE, related_name='payment'
+        Order, on_delete=models.CASCADE, related_name='payment'
     )
     card_number = models.IntegerField(
         blank=False,
