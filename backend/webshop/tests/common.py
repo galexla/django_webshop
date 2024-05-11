@@ -144,6 +144,26 @@ class SerializerTestCase(APITestCase):
             self.assertTrue(serializer.is_valid())
 
 
+class SerializerTestPytest:
+    serializer_class: Type[Serializer] = None
+    base_ok_data: dict[str, Any] = {}
+
+    @pytest.mark.parametrize('should_be_ok, field, values', [])
+    def test_fields(self, should_be_ok, field, values):
+        for value in values:
+            data = self.base_ok_data.copy()
+            data[field] = value
+            if value is None:
+                data.pop(field, None)
+            serializer = self.serializer_class(data=data)
+            valid_str = 'valid' if should_be_ok else 'invalid'
+            assert (
+                serializer.is_valid() == should_be_ok
+            ), 'Data should be {} for field {} = {}, errors: {}'.format(
+                valid_str, field, value, serializer.errors
+            )
+
+
 class AbstractModelTest:
     """
     Base class for testing models. It provides methods for testing fields and

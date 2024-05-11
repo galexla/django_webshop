@@ -2,12 +2,46 @@ from decimal import Decimal
 
 import pytest
 from django.utils import timezone
-from tests.common import get_not_equal_values, is_date_almost_equal
+from tests.common import (
+    SerializerTestPytest,
+    get_not_equal_values,
+    is_date_almost_equal,
+)
 
-from ..serializers import PaymentSerializer
+from ..serializers import PaymentSerializer, PlasticCardSerializer
 
 
-class TestPaymentSerializer:
+class TestPlasticCardSerializer(SerializerTestPytest):
+    serializer_class = PlasticCardSerializer
+    base_ok_data = {
+        'number': 142384,
+        'name': 'JOHN SMITH',
+        'month': '01',
+        'year': 2345,
+        'code': 123,
+    }
+
+    @pytest.mark.parametrize(
+        'should_be_ok, field, values',
+        [
+            (False, 'number', [None, '', 'abc', -1, 0, 999_999_999]),
+            (True, 'number', [99_999_999]),
+            (False, 'name', [None, '', 'a' * 256]),
+            (True, 'name', ['a', 'a' * 255]),
+            (False, 'month', [None, '', 'abc', -1, 0, 13]),
+            (True, 'month', ['01', '05', 12, '12']),
+            (False, 'year', [None, '', 'abc', -1, 0, 999, 10000]),
+            (True, 'year', ['2000', 2350]),
+            (False, 'code', [None, '', 'abc', -1, 0, 12, 1234]),
+            (True, 'code', [123, '123', 439]),
+        ],
+    )
+    def test_fields(self, should_be_ok, field, values):
+        super().test_fields(should_be_ok, field, values)
+
+
+class TestPaymentSerializer(SerializerTestPytest):
+    serializer_class = PaymentSerializer
     base_ok_data = {
         'order_id': 3,
         'number': 142384,
@@ -18,8 +52,6 @@ class TestPaymentSerializer:
     @pytest.mark.parametrize(
         'should_be_ok, field, values',
         [
-            # 20, 2
-            # 3
             (False, 'order_id', [None, -1, '', 'abc']),
             (True, 'order_id', [1, 3]),
             (False, 'number', [None, '', 'abc', -1, 0, 999_999_999]),
@@ -39,18 +71,7 @@ class TestPaymentSerializer:
         ],
     )
     def test_fields(self, should_be_ok, field, values):
-        for value in values:
-            data = self.base_ok_data.copy()
-            data[field] = value
-            if value is None:
-                data.pop(field, None)
-            serializer = PaymentSerializer(data=data)
-            valid_str = 'valid' if should_be_ok else 'invalid'
-            assert (
-                serializer.is_valid() == should_be_ok
-            ), 'Data should be {} for field {} = {}, errors: {}'.format(
-                valid_str, field, value, serializer.errors
-            )
+        super().test_fields(should_be_ok, field, values)
 
     @pytest.mark.django_db(transaction=True)
     def test_create(self, db_data):
