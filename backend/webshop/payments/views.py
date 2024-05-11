@@ -30,7 +30,7 @@ class PaymentView(APIView):
                 Order.STATUS_PROCESSING
             )
             return Response(
-                {'status': [msg]}, status=status.HTTP_400_BAD_REQUEST
+                {'non_field_errors': [msg]}, status=status.HTTP_400_BAD_REQUEST
             )
 
         data = request.data
@@ -47,29 +47,19 @@ class PaymentView(APIView):
 
         data['order_id'] = order.id
         data['paid_sum'] = order.total_cost
-        response_body, http_status = self._save_payment(order, data)
-
-        return Response(response_body, status=http_status)
-
-    def _save_payment(self, order, data) -> tuple[Any, int]:
-        """Try to save. Return response body and HTTP status"""
         serializer = PaymentSerializer(data=data)
         if not serializer.is_valid():
-            return serializer.errors, status.HTTP_400_BAD_REQUEST
-
-        try:
-            with transaction.atomic():
-                order.status = Order.STATUS_PAID
-                order.save()
-                serializer.save()
-            log.info(
-                'Order %s has been paid from card %s',
-                order.id,
-                serializer.validated_data['card_number'],
+            return Response(
+                serializer.errors, status=status.HTTP_400_BAD_REQUEST
             )
-            return None, status.HTTP_200_OK
-        except IntegrityError:
-            return None, status.HTTP_500_INTERNAL_SERVER_ERROR
+
+        with transaction.atomic():
+            order.status = Order.STATUS_PAID
+            order.save()
+            serializer.save()
+        log.info('Order %s has been paid', order.id)
+
+        return Response()
 
     def _get_random_error(self) -> tuple[str, int]:
         """Return random error message and HTTP status"""
