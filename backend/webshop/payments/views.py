@@ -1,8 +1,7 @@
 import logging
 from random import randint
-from typing import Any
 
-from django.db import IntegrityError, transaction
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from products.models import Order
 from rest_framework import status
@@ -18,10 +17,26 @@ log = logging.getLogger(__name__)
 
 
 class PaymentView(APIView):
+    """
+    A payment stub to simulate payment operations.
+    """
+
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def post(self, request: Request, pk):
+    def post(self, request: Request, pk: int) -> Response:
+        """
+        Pay for an order using a plastic card. It simulates errors if a card
+        number is odd or ends with zero. Saves payment information to the
+        database.
+
+        :param request: Request object
+        :type request: Request
+        :param pk: Order ID
+        :type pk: int
+        :return: Response object
+        :rtype: Response
+        """
         order = get_object_or_404(
             Order, pk=pk, user=request.user, archived=False
         )
@@ -62,7 +77,12 @@ class PaymentView(APIView):
         return Response()
 
     def _get_random_error(self) -> tuple[str, int]:
-        """Return random error message and HTTP status"""
+        """
+        Get random error message and HTTP status
+
+        :return: Random error message and HTTP status
+        :rtype: tuple[str, int]
+        """
         errors = (
             'Insufficient funds in your account',
             'Card has expired',

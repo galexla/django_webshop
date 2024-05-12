@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from django.core.validators import (
     MaxValueValidator,
@@ -15,6 +16,10 @@ log = logging.getLogger(__name__)
 
 
 class PlasticCardSerializer(serializers.Serializer):
+    """
+    Serializer for validating and serializing plastic card data.
+    """
+
     number = serializers.IntegerField(
         required=True,
         validators=[MinValueValidator(1), MaxValueValidator(99_999_999)],
@@ -34,7 +39,18 @@ class PlasticCardSerializer(serializers.Serializer):
         validators=[MinValueValidator(100), MaxValueValidator(999)],
     )
 
-    def validate_month(self, value):
+    def validate_month(self, value: Any) -> Any:
+        """
+        Validates the month field to ensure it represents an integer and is
+        within the valid range (01-12).
+
+        :param value: Month value to validate
+        :type value: str
+        :return: Validated month
+        :rtype: str
+        :raise ValidationError: If the value is not an integer or not within
+            the valid month range.
+        """
         try:
             int_value = int(value)
         except ValueError:
@@ -49,6 +65,11 @@ class PlasticCardSerializer(serializers.Serializer):
 
 
 class PaymentSerializer(serializers.ModelSerializer):
+    """
+    Serializer for creating (and validating) payments based on order and card
+    information.
+    """
+
     class Meta:
         model = Payment
         fields = ['order_id', 'number', 'name', 'paid_sum']
@@ -78,7 +99,18 @@ class PaymentSerializer(serializers.ModelSerializer):
         validators=[MinValueValidator(0)],
     )
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Payment:
+        """
+        Creates a payment record based on validated data. Ensures the
+        associated order is not archived.
+
+        :param validated_data: Validated data for instance creation
+        :type validated_data: dict
+        :rtype: Payment
+        :return: Payment instance
+        :raise ValidationError: If the referenced order does not exist or is
+            archived.
+        """
         order_id = validated_data['order_id']
         order = Order.objects.filter(id=order_id, archived=False).first()
         if order is None:

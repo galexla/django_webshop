@@ -10,6 +10,10 @@ from products.models import Order
 
 
 class Payment(models.Model):
+    """
+    Payment model to store payment information.
+    """
+
     order = models.OneToOneField(
         Order, on_delete=models.CASCADE, related_name='payment'
     )
