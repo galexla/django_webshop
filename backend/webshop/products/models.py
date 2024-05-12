@@ -31,6 +31,9 @@ class Specification(models.Model):
     product characteristics.
     """
 
+    class Meta:
+        unique_together = ('name', 'value')
+
     name = models.CharField(max_length=200)
     value = models.CharField(max_length=200)
 
