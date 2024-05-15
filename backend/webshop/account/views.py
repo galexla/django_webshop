@@ -17,7 +17,19 @@ from .serializers import (
 
 
 class SignInView(APIView):
+    """
+    View for signing in user.
+    """
+
     def post(self, request: Request) -> Response:
+        """
+        Sign in user.
+
+        :param request: Request
+        :type request: Request
+        :return: Response
+        :rtype: Response
+        """
         data = request.data
         serializer = SignInSerializer(data=data)
         if serializer.is_valid():
@@ -37,10 +49,22 @@ class SignInView(APIView):
 
 
 class SignOutView(APIView):
+    """
+    View for signing out user.
+    """
+
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request) -> Response:
+        """
+        Sign out user.
+
+        :param request: Request
+        :type request: Request
+        :return: Response
+        :rtype: Response
+        """
         logout(request)
         response = Response()
         response.delete_cookie('basket_id')
@@ -48,7 +72,19 @@ class SignOutView(APIView):
 
 
 class SignUpView(APIView):
+    """
+    View for signing up user.
+    """
+
     def post(self, request: Request) -> Response:
+        """
+        Sign up user.
+
+        :param request: Request
+        :type request: Request
+        :return: Response
+        :rtype: Response
+        """
         data = request.data
         serializer = SignUpSerializer(data=data)
         if serializer.is_valid():
@@ -70,10 +106,22 @@ class SignUpView(APIView):
 
 
 class SetPasswordView(APIView):
+    """
+    View for setting new password.
+    """
+
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request: Request, *args, **kwargs) -> Response:
+        """
+        Set new password.
+
+        :param request: Request
+        :type request: Request
+        :return: Response
+        :rtype: Response
+        """
         serializer = SetPasswordSerializer(data=request.data)
 
         if serializer.is_valid():
@@ -95,14 +143,34 @@ class SetPasswordView(APIView):
 
 
 class ProfileView(APIView):
+    """
+    View for getting and updating user profile.
+    """
+
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request: Request) -> Response:
+        """
+        Get user profile.
+
+        :param request: Request
+        :type request: Request
+        :return: Response
+        :rtype: Response
+        """
         serializer = ProfileSerializer(request.user)
         return Response(serializer.data)
 
     def post(self, request: Request) -> Response:
+        """
+        Update user profile.
+
+        :param request: Request
+        :type request: Request
+        :return: Response
+        :rtype: Response
+        """
         serializer = ProfileSerializer(request.user, data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -112,10 +180,22 @@ class ProfileView(APIView):
 
 
 class AvatarUpdateView(APIView):
+    """
+    View for updating user avatar.
+    """
+
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
 
     def post(self, request: Request) -> Response:
+        """
+        Update user avatar.
+
+        :param request: Request
+        :type request: Request
+        :return: Response
+        :rtype: Response
+        """
         profile = Profile.objects.get(user=request.user)
         serializer = AvatarUpdateSerializer(profile, data=request.data)
         if serializer.is_valid():

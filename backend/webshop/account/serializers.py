@@ -1,15 +1,20 @@
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.core.files import File
 from django.core.validators import RegexValidator
 from django.db import transaction
-from django.forms import ValidationError
 from rest_framework import serializers
+from rest_framework.serializers import ValidationError
 from rest_framework.validators import UniqueValidator
 
 from .models import Profile, User
 
 
 class SignUpSerializer(serializers.ModelSerializer):
+    """
+    Serializer for signing up user.
+    """
+
     name = serializers.CharField(max_length=150, write_only=True)
 
     class Meta:
@@ -19,7 +24,16 @@ class SignUpSerializer(serializers.ModelSerializer):
             'password': {'write_only': True},
         }
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate data.
+
+        :param attrs: Data
+        :type attrs: dict
+        :raises ValidationError: If password is invalid
+        :return: Data
+        :rtype: dict
+        """
         attrs['first_name'] = attrs.pop('name')
 
         user = User(username=attrs['username'])
@@ -27,7 +41,15 @@ class SignUpSerializer(serializers.ModelSerializer):
 
         return attrs
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> User:
+        """
+        Create user.
+
+        :param validated_data: Validated data
+        :type validated_data: dict
+        :return: User
+        :rtype: User
+        """
         user = User.objects.create(
             first_name=validated_data['first_name'],
             username=validated_data['username'],
@@ -39,6 +61,10 @@ class SignUpSerializer(serializers.ModelSerializer):
 
 
 class SignInSerializer(serializers.Serializer):
+    """
+    Serializer for signing in user.
+    """
+
     username = serializers.CharField(
         max_length=150,
         validators=[
@@ -49,20 +75,44 @@ class SignInSerializer(serializers.Serializer):
 
 
 class SetPasswordSerializer(serializers.Serializer):
+    """
+    Serializer for changing user password.
+    """
+
     currentPassword = serializers.CharField(max_length=128)
     newPassword = serializers.CharField(max_length=128)
 
-    def validate_newPassword(self, value):
+    def validate_newPassword(self, value: str) -> str:
+        """
+        Validate new password.
+
+        :param value: New password
+        :type value: str
+        :raises ValidationError: If password is invalid
+        :return: New password
+        """
         validate_password(value)
         return value
 
-    def validate(self, attrs):
+    def validate(self, attrs: dict) -> dict:
+        """
+        Validate data.
+
+        :param attrs: Data
+        :type attrs: dict
+        :raises ValidationError: If new password is the same as the current password
+        :return: Data
+        """
         if attrs['currentPassword'] == attrs['newPassword']:
             raise ValidationError('New password must be different')
         return super().validate(attrs)
 
 
 class ProfileSerializer(serializers.Serializer):
+    """
+    Serializer for updating user profile.
+    """
+
     fullName = serializers.CharField(allow_blank=False, max_length=150)
     email = serializers.EmailField(
         allow_blank=False,
@@ -83,7 +133,17 @@ class ProfileSerializer(serializers.Serializer):
     )
 
     @transaction.atomic
-    def update(self, user: User, validated_data):
+    def update(self, user: User, validated_data: dict) -> User:
+        """
+        Update user profile.
+
+        :param user: User
+        :type user: User
+        :param validated_data: Validated data
+        :type validated_data: dict
+        :return: User
+        :rtype: User
+        """
         if not isinstance(user, User):
             raise TypeError('user must be of type User')
 
@@ -96,7 +156,16 @@ class ProfileSerializer(serializers.Serializer):
 
         return user
 
-    def to_representation(self, user: User):
+    def to_representation(self, user: User) -> dict:
+        """
+        Serialize user profile.
+
+        :param user: User
+        :type user: User
+        :raises TypeError: If user is not of type User
+        :return: User profile data
+        :rtype: dict
+        """
         if not isinstance(user, User):
             raise TypeError('user must be of type User')
 
@@ -116,6 +185,10 @@ class ProfileSerializer(serializers.Serializer):
 
 
 class AvatarUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating user avatar.
+    """
+
     class Meta:
         model = Profile
         fields = ['avatar']
@@ -123,9 +196,18 @@ class AvatarUpdateSerializer(serializers.ModelSerializer):
 
     MAX_FILE_SIZE = 2 * 1024 * 1024
 
-    def validate_avatar(self, value):
+    def validate_avatar(self, value: File) -> File:
+        """
+        Validate avatar file size.
+
+        :param value: File
+        :type value: File
+        :raises ValidationError: If file size is greater than MAX_FILE_SIZE
+        :return: File
+        :rtype: File
+        """
         if value.size > self.MAX_FILE_SIZE:
-            raise serializers.ValidationError(
+            raise ValidationError(
                 f'Maximum file size is {self.MAX_FILE_SIZE} bytes'
             )
         return value

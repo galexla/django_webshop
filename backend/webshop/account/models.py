@@ -7,10 +7,24 @@ from django.utils.translation import gettext_lazy as _
 
 
 def get_avatar_upload_path(instance: 'Profile', filename: str) -> str:
+    """
+    Get avatar upload path.
+
+    :param instance: Profile instance
+    :type instance: Profile
+    :param filename: Filename
+    :type filename: str
+    :return: Path
+    :rtype: str
+    """
     return f'users/user{instance.user.pk}/avatar/{filename}'
 
 
 class Profile(models.Model):
+    """
+    User profile model.
+    """
+
     user = models.OneToOneField(
         'User', on_delete=models.CASCADE, related_name='profile'
     )
@@ -42,8 +56,20 @@ class Profile(models.Model):
 
 
 class CustomUserManager(UserManager):
+    """
+    Custom user manager.
+    """
+
     @transaction.atomic
     def create(self, **kwargs: Any) -> Any:
+        """
+        Create user with profile.
+
+        :param kwargs: User data
+        :type kwargs: Any
+        :return: User
+        :rtype: Any
+        """
         user = super().create(**kwargs)
         Profile.objects.create(user=user)
         return user
@@ -56,6 +82,20 @@ class CustomUserManager(UserManager):
         password: str | None,
         **extra_fields: Any,
     ) -> Any:
+        """
+        Create superuser with profile.
+
+        :param username: Username
+        :type username: str
+        :param email: Email
+        :type email: str | None
+        :param password: Password
+        :type password: str | None
+        :param extra_fields: Extra fields
+        :type extra_fields: Any
+        :return: User
+        :rtype: Any
+        """
         user = super().create_superuser(
             username, email, password, **extra_fields
         )
@@ -64,6 +104,10 @@ class CustomUserManager(UserManager):
 
 
 class User(AbstractUser):
+    """
+    Custom user model.
+    """
+
     objects = CustomUserManager()
     # to make email unique & allow null: null=True, blank=False, unique=True
     email = models.EmailField(

@@ -1,7 +1,7 @@
 # Webshop
 
 ## Quick start
-Here is the minimal configuration to start with.
+Here is a minimal configuration to start with.
 
 Create a `.env` file from a template:
 * `cp .env.template .env`
@@ -9,7 +9,7 @@ Create a `.env` file from a template:
 Change the following variables there:
 * `DJANGO_DB_PASSWORD` - create a strong root password.
 * `DJANGO_SECRET_KEY` - be sure to generate a random unique key! For this, you can run `openssl rand -hex 32`
-* `DJANGO_ALLOWED_HOSTS` - IP addresses and/or domain names which the web shop must be accessible from.
+* `DJANGO_ALLOWED_HOSTS` - IP addresses and/or domain names which the web shop needs to be be accessible from.
 
 After configuring, run the webshop in a Docker container:
 * `docker compose build`
@@ -26,7 +26,7 @@ To load sample data into a Docker container:
 ## Other .env variables
 * `DJANGO_DEBUG` - debug mode (`true` or `false`).
 * `DJANGO_LOGLEVEL` - logging level. Possible values: debug, info, warning, error, and critical.
-* `DJANGO_DB_HOST` - the web shop database host defined in `docker-compose.yaml`. Usually, there is no need to change this variable. But if changed, it must be changed both in `.env` and `docker-compose.yaml`
+* `DJANGO_DB_HOST` - the web shop database host name defined in `docker-compose.yaml`. Usually, there is no need to change this variable. But if changed, it must be changed both in `.env` and `docker-compose.yaml`
 * `DJANGO_DB_PORT` - database port number.
 * `DJANGO_DB_NAME` - database name.
 

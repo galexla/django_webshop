@@ -21,7 +21,11 @@ def mark_inactive(
 
 
 @admin.register(User)
-class CategoryAdmin(UserAdmin):
+class CustomUserAdmin(UserAdmin):
+    """
+    User admin.
+    """
+
     actions = [
         mark_active,
         mark_inactive,
@@ -35,5 +39,15 @@ class CategoryAdmin(UserAdmin):
         'is_active',
     ]
 
-    def has_delete_permission(self, request, obj=None):
+    def has_delete_permission(self, request: HttpRequest, obj=None) -> bool:
+        """
+        Check if user can delete object.
+
+        :param request: Request
+        :type request: Any
+        :param obj: Object
+        :type obj: Any
+        :return: True if user can delete object, False otherwise
+        :rtype: bool
+        """
         return False
