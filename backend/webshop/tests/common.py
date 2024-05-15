@@ -16,7 +16,7 @@ from rest_framework.test import APITestCase
 class RandomImage:
     """
     Class to generate random images. It creates a list of random pixels and
-    generates an image with the specified size using these pixels.
+    generates an image of specified size using these pixels.
 
     Args:
         size (int): Number of random pixels to be generated.
@@ -83,6 +83,10 @@ class RandomImage:
 
 
 class SerializerTestCase(APITestCase):
+    """
+    Base class for testing serializers with Django testing tools.
+    """
+
     def assert_all_invalid(
         self,
         serializer_class: Type[Serializer],
@@ -145,11 +149,29 @@ class SerializerTestCase(APITestCase):
 
 
 class SerializerTestPytest:
+    """
+    Base class for testing serializers with pytest.
+    """
+
     serializer_class: Type[Serializer] = None
     base_ok_data: dict[str, Any] = {}
 
     @pytest.mark.parametrize('should_be_ok, field, values', [])
-    def test_fields(self, should_be_ok, field, values):
+    def test_fields(
+        self, should_be_ok: bool, field: str, values: list
+    ) -> None:
+        """
+        Test the field with different values. Check if the data is valid.
+
+        :param should_be_ok: If the data should be valid.
+        :type should_be_ok: bool
+        :param field: Field to be tested.
+        :type field: str
+        :param values: List of values to be tested.
+        :type values: list
+        :raises AssertionError: If the any assertion fails.
+        :return: None
+        """
         for value in values:
             data = self.base_ok_data.copy()
             data[field] = value

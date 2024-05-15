@@ -187,7 +187,15 @@ class ProductShortSerializer(serializers.ModelSerializer):
     reviews = serializers.IntegerField(source='reviews_count')
     freeDelivery = serializers.CharField(source='free_delivery')
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: Product) -> dict[str, Any]:
+        """
+        Replace empty images with default image
+
+        :param instance: product instance
+        :type instance: Product
+        :return: product data
+        :rtype: dict[str, Any]
+        """
         data = super().to_representation(instance)
         if not data['images']:
             data['images'] = [{'src': static(GOODS_ICON), 'alt': ''}]
@@ -271,7 +279,7 @@ class ProductDetailSerializer(serializers.ModelSerializer):
 
 class SaleSerializer(serializers.Serializer):
     """
-    Serializer for `Sale` model
+    Serializer for sale model
 
     Attributes:
         id: product id
@@ -317,12 +325,12 @@ class ReviewCreateSerializer(serializers.Serializer):
 
     def save(self, product_id: int, **kwargs) -> Any:
         """
-        Save review for product with id=product_id
+        Save review for a product
 
         :param product_id: product id
         :type product_id: int
         :param kwargs: additional keyword arguments
-        :raises Http404: if product with id=product_id is not found
+        :raises Http404: if product is not found
         :return: created review
         :rtype: Any
         """
@@ -441,7 +449,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     def validate(self, data: dict) -> dict:
         """
-        Validate order data. Some empty fields are only allowed in a new order
+        Validate order data. Some empty fields are only allowed in a new order.
 
         :param data: order data
         :type data: dict
