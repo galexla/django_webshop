@@ -11,5 +11,7 @@ exclude=
     *.pyc
     ./webshop/manage.py
     ./webshop/webshop/settings.py
+    */tests/test_*.py
 per-file-ignores =
-    ./webshop/urls.py: RST203, RST301, RST201
+    */apps.py: D101, D102
+ignore = RST201, RST203, RST301, D100, D104, D106, D205, D400

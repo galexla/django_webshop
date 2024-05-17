@@ -17,9 +17,7 @@ log = logging.getLogger(__name__)
 
 
 class PaymentView(APIView):
-    """
-    A payment stub to simulate payment operations.
-    """
+    """A payment stub to simulate payment operations."""
 
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]

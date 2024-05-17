@@ -16,9 +16,7 @@ log = logging.getLogger(__name__)
 
 
 class PlasticCardSerializer(serializers.Serializer):
-    """
-    Serializer for validating and serializing plastic card data.
-    """
+    """Serializer for validating and serializing plastic card data."""
 
     number = serializers.IntegerField(
         required=True,
@@ -41,7 +39,7 @@ class PlasticCardSerializer(serializers.Serializer):
 
     def validate_month(self, value: Any) -> Any:
         """
-        Validates the month field to ensure it represents an integer and is
+        Validate the month field to ensure it represents an integer and is
         within the valid range (01-12).
 
         :param value: Month value to validate
@@ -101,20 +99,25 @@ class PaymentSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict) -> Payment:
         """
-        Creates a payment record based on validated data. Ensures the
-        associated order is not archived.
+        Create a payment record based on validated data. Ensure the associated
+        order is not archived.
 
         :param validated_data: Validated data for instance creation
         :type validated_data: dict
         :rtype: Payment
         :return: Payment instance
-        :raise ValidationError: If the referenced order does not exist or is
-            archived.
+        :raise ValidationError: If the referenced order does not exist, is
+            archived, or is not in the correct status for payment.
         """
         order_id = validated_data['order_id']
         order = Order.objects.filter(id=order_id, archived=False).first()
         if order is None:
             raise ValidationError(f'Order {order_id} does not exist')
+        if order.status != Order.STATUS_PROCESSING:
+            raise ValidationError(
+                f'To pay for order {order_id}, it must be in '
+                f'the "{Order.STATUS_PROCESSING}" status'
+            )
         payment = Payment.objects.create(**validated_data)
 
         return payment
