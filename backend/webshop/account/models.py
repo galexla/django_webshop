@@ -21,9 +21,7 @@ def get_avatar_upload_path(instance: 'Profile', filename: str) -> str:
 
 
 class Profile(models.Model):
-    """
-    User profile model.
-    """
+    """User profile model."""
 
     user = models.OneToOneField(
         'User', on_delete=models.CASCADE, related_name='profile'
@@ -56,9 +54,7 @@ class Profile(models.Model):
 
 
 class CustomUserManager(UserManager):
-    """
-    Custom user manager.
-    """
+    """Custom user manager."""
 
     @transaction.atomic
     def create(self, **kwargs: Any) -> Any:
@@ -104,9 +100,7 @@ class CustomUserManager(UserManager):
 
 
 class User(AbstractUser):
-    """
-    Custom user model.
-    """
+    """Custom user model."""
 
     objects = CustomUserManager()
     # to make email unique & allow null: null=True, blank=False, unique=True

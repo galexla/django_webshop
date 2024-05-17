@@ -12,6 +12,14 @@ log = logging.getLogger(__name__)
 
 
 def get_basket(request: Request) -> Basket | None:
+    """
+    Get basket by user or cookie
+
+    :param request: Request
+    :type request: Request
+    :return: Basket
+    :rtype: Basket | None
+    """
     user: User = request.user
     basket = get_basket_by_user(user)
     if not basket:
@@ -34,6 +42,14 @@ def get_basket(request: Request) -> Basket | None:
 
 
 def get_basket_by_user(user: User | None) -> Basket | None:
+    """
+    Get basket by user
+
+    :param user: User
+    :type user: User | None
+    :return: Basket
+    :rtype: Basket | None
+    """
     if user is None or user.is_anonymous:
         return None
 
@@ -41,6 +57,14 @@ def get_basket_by_user(user: User | None) -> Basket | None:
 
 
 def get_basket_by_cookie(request: Request) -> Basket | None:
+    """
+    Get basket by cookie
+
+    :param request: Request
+    :type request: Request
+    :return: Basket
+    :rtype: Basket | None
+    """
     basket_id = request.COOKIES.get('basket_id')
     serializer = BasketIdSerializer(data={'basket_id': basket_id})
     if not serializer.is_valid():
@@ -51,7 +75,15 @@ def get_basket_by_cookie(request: Request) -> Basket | None:
     ).first()
 
 
-def get_client_ip(request: Request):
+def get_client_ip(request: Request) -> str:
+    """
+    Get client IP address
+
+    :param request: Request
+    :type request: Request
+    :return: IP address
+    :rtype: str
+    """
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
@@ -61,23 +93,42 @@ def get_client_ip(request: Request):
 
 
 def check_basket_permissions(basket: Basket, user: User) -> bool:
+    """
+    Check if user has permissions to access basket
+
+    :param basket: Basket
+    :type basket: Basket
+    :param user: User
+    :type user: User
+    :return: True if user has permissions to access basket
+    :rtype: bool
+    """
     if basket.user and basket.user != user:
         return False
     return True
 
 
 def update_basket_access_time(basket: Basket) -> None:
-    """Update basket last access time"""
+    """
+    Update basket last access time
+
+    :param basket: Basket
+    :type basket: Basket
+    :return: None
+    """
     update_after = timedelta(seconds=120)
     now = timezone.now()
     if now - update_after > basket.last_accessed:
         basket.save()  # update basket.last_accessed
 
 
-def delete_unused_baskets(max_age: int):
+def delete_unused_baskets(max_age: int) -> None:
     """
-    Delete too old baskets without a user attached
-    max_age - max age in seconds
+    Delete too old baskets with no user
+
+    :param max_age: Max age in seconds
+    :type max_age: int
+    :return: None
     """
     Basket.objects.filter(
         last_accessed__lt=timezone.now() - timedelta(seconds=max_age),

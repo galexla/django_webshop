@@ -3,7 +3,7 @@ import logging
 from account.models import User
 from django.contrib.auth.signals import user_logged_in
 from django.db import IntegrityError, transaction
-from django.dispatch import receiver
+from django.dispatch import Signal, receiver
 from rest_framework.request import Request
 
 from .common import get_basket_by_cookie, get_basket_by_user
@@ -14,11 +14,19 @@ log = logging.getLogger(__name__)
 
 @receiver(user_logged_in)
 def switch_user_basket_if_needed(
-    user: User, signal, request: Request, **kwargs
-):
+    user: User, signal: Signal, request: Request, **kwargs
+) -> None:
     """
-    Set an existing basket as user's basket if user's basket
-    doesn't exist or is empty.
+    Set an existing basket as user's basket if user's basket doesn't exist or
+    is empty.
+
+    :param user: User instance
+    :type user: User
+    :param signal: Signal instance
+    :type signal: Signal
+    :param request: Request instance
+    :type request: Request
+    :return: None
     """
     basket_of_user: Basket = get_basket_by_user(user)
     basket_by_cookie: Basket = get_basket_by_cookie(request)
@@ -43,6 +51,18 @@ def switch_user_basket_if_needed(
 def switch_user_basket(
     user: User, from_basket: Basket, to_basket: Basket
 ) -> bool:
+    """
+    Switch user's basket from one to another.
+
+    :param user: User instance
+    :type user: User
+    :param from_basket: Basket instance to switch from
+    :type from_basket: Basket
+    :param to_basket: Basket instance to switch to
+    :type to_basket: Basket
+    :return: True if switched successfully, False otherwise
+    :rtype: bool
+    """
     try:
         with transaction.atomic():
             from_basket.delete()

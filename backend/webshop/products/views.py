@@ -14,8 +14,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import pagination, status
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.filters import OrderingFilter
-from rest_framework.generics import (ListAPIView, ListCreateAPIView,
-                                     RetrieveAPIView)
+from rest_framework.generics import (
+    ListAPIView,
+    ListCreateAPIView,
+    RetrieveAPIView,
+)
 from rest_framework.mixins import DestroyModelMixin, ListModelMixin
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -24,21 +27,34 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from .common import delete_unused_baskets, get_basket
-from .models import (Basket, BasketProduct, Category, Order, OrderProduct,
-                     Product, Sale, Tag, get_products_queryset)
-from .serializers import (OrderSerializer, ProductCountSerializer,
-                          ProductDetailSerializer, ProductShortSerializer,
-                          ReviewCreateSerializer, SaleSerializer,
-                          TagSerializer, TopLevelCategorySerializer,
-                          get_last_reviews)
+from .models import (
+    Basket,
+    BasketProduct,
+    Category,
+    Order,
+    OrderProduct,
+    Product,
+    Sale,
+    Tag,
+    get_products_queryset,
+)
+from .serializers import (
+    OrderSerializer,
+    ProductCountSerializer,
+    ProductDetailSerializer,
+    ProductShortSerializer,
+    ReviewCreateSerializer,
+    SaleSerializer,
+    TagSerializer,
+    TopLevelCategorySerializer,
+    get_last_reviews,
+)
 
 log = logging.getLogger(__name__)
 
 
 class TopLevelCategoryListView(APIView):
-    """
-    View for getting top-level categories with subcategories
-    """
+    """View for getting top-level categories with subcategories"""
 
     def get(self, request: Request) -> Response:
         """
@@ -57,9 +73,7 @@ class TopLevelCategoryListView(APIView):
 
 
 class TagFilter(django_filters.FilterSet):
-    """
-    Filter for tags
-    """
+    """Filter for tags"""
 
     category = django_filters.NumberFilter(
         field_name='category', method='filter_by_category_or_parent'
@@ -87,9 +101,7 @@ class TagFilter(django_filters.FilterSet):
 
 
 class TagListViewSet(ListModelMixin, GenericViewSet):
-    """
-    View for getting tags
-    """
+    """View for getting tags"""
 
     queryset = Tag.objects.all()
     serializer_class = TagSerializer
@@ -98,9 +110,7 @@ class TagListViewSet(ListModelMixin, GenericViewSet):
 
 
 class Pagination(pagination.PageNumberPagination):
-    """
-    Custom pagination class
-    """
+    """Custom pagination class"""
 
     page_query_param = 'currentPage'
 
@@ -123,9 +133,7 @@ class Pagination(pagination.PageNumberPagination):
 
 
 class CatalogPagination(Pagination):
-    """
-    Pagination for catalog
-    """
+    """Pagination for catalog"""
 
     page_size_query_param = 'limit'
 
@@ -306,9 +314,7 @@ class CatalogOrderingFilter(OrderingFilter):
 
 
 class CatalogViewSet(ListModelMixin, GenericViewSet):
-    """
-    View for catalog
-    """
+    """View for catalog"""
 
     queryset = (
         get_products_queryset()
@@ -332,9 +338,7 @@ class CatalogViewSet(ListModelMixin, GenericViewSet):
 
 
 class PopularProductsListView(ListAPIView):
-    """
-    View for getting for popular products section
-    """
+    """View for getting for popular products section"""
 
     queryset = (
         get_products_queryset()
@@ -347,9 +351,7 @@ class PopularProductsListView(ListAPIView):
 
 
 class LimitedProductsListView(ListAPIView):
-    """
-    View for getting products for limited edition section
-    """
+    """View for getting products for limited edition section"""
 
     queryset = (
         get_products_queryset()
@@ -362,9 +364,7 @@ class LimitedProductsListView(ListAPIView):
 
 
 class BannerProductsListView(ListAPIView):
-    """
-    View for getting products for banner section
-    """
+    """View for getting products for banner section"""
 
     queryset = (
         get_products_queryset()
@@ -377,9 +377,7 @@ class BannerProductsListView(ListAPIView):
 
 
 class SalesView(ListAPIView):
-    """
-    View for getting sales
-    """
+    """View for getting sales"""
 
     queryset = (
         Sale.objects.prefetch_related('product', 'product__images')
@@ -403,9 +401,7 @@ class SalesView(ListAPIView):
 
 
 class ProductDetailView(RetrieveAPIView):
-    """
-    View for getting product details
-    """
+    """View for getting product details"""
 
     queryset = (
         Product.objects.select_related('category')
@@ -420,9 +416,7 @@ class ProductDetailView(RetrieveAPIView):
 
 
 class ReviewCreateView(APIView):
-    """
-    View for creating a review
-    """
+    """View for creating a review"""
 
     def post(self, request: Request, pk: int) -> Response:
         """
@@ -486,9 +480,7 @@ def basket_remove_products(
 
 
 class BasketView(DestroyModelMixin, ListCreateAPIView):
-    """
-    View for basket
-    """
+    """View for basket"""
 
     COOKIE_MAX_AGE = 14 * 24 * 3600
 
@@ -706,9 +698,7 @@ class BasketView(DestroyModelMixin, ListCreateAPIView):
 
 
 class OrdersView(APIView):
-    """
-    View for orders
-    """
+    """View for orders"""
 
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
@@ -865,9 +855,7 @@ class OrdersView(APIView):
 
 
 class OrderView(APIView):
-    """
-    View for an order
-    """
+    """View for an order"""
 
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
@@ -906,7 +894,7 @@ class OrderView(APIView):
 
         # Only orders with status 'new' can be modified
         if order.status == Order.STATUS_PROCESSING:
-            # Fix bug in swagger.yaml: return 'orderId' instead of empty string
+            # Return order id instead of '' as defined in swagger.yaml
             return Response({'orderId': order.id})
         elif order.status != Order.STATUS_NEW:
             msg = 'Only orders with status "{}" can be modified.'.format(
@@ -929,7 +917,7 @@ class OrderView(APIView):
         )
         serializer.save()
 
-        # Fix bug in swagger.yaml: return 'orderId' instead of empty string
+        # Return order id instead of '' as defined in swagger.yaml
         return Response({'orderId': order.id})
 
     def _get_delivery_cost(

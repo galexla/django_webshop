@@ -9,26 +9,46 @@ from .models import User
 @admin.action(description='Activate users')
 def mark_active(
     modeladmin: admin.ModelAdmin, request: HttpRequest, queryset: QuerySet
-):
+) -> None:
+    """
+    Activate users.
+
+    :param modeladmin: Model admin
+    :type modeladmin: admin.ModelAdmin
+    :param request: Request
+    :type request: HttpRequest
+    :param queryset: Queryset
+    :type queryset: QuerySet
+    :return: None
+    """
     queryset.update(is_active=True)
 
 
 @admin.action(description='Deactivate users')
-def mark_inactive(
+def mark_deactive(
     modeladmin: admin.ModelAdmin, request: HttpRequest, queryset: QuerySet
-):
+) -> None:
+    """
+    Dectivate users.
+
+    :param modeladmin: Model admin
+    :type modeladmin: admin.ModelAdmin
+    :param request: Request
+    :type request: HttpRequest
+    :param queryset: Queryset
+    :type queryset: QuerySet
+    :return: None
+    """
     queryset.update(is_active=False)
 
 
 @admin.register(User)
 class CustomUserAdmin(UserAdmin):
-    """
-    User admin.
-    """
+    """User admin."""
 
     actions = [
         mark_active,
-        mark_inactive,
+        mark_deactive,
     ]
     list_display = [
         'username',
@@ -39,9 +59,11 @@ class CustomUserAdmin(UserAdmin):
         'is_active',
     ]
 
-    def has_delete_permission(self, request: HttpRequest, obj=None) -> bool:
+    def has_delete_permission(
+        self, request: HttpRequest, obj: User = None
+    ) -> bool:
         """
-        Check if user can delete object.
+        Disable delete permission in User admin panel.
 
         :param request: Request
         :type request: Any

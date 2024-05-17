@@ -15,13 +15,17 @@ from django.utils.translation import gettext_lazy as _
 
 
 class Tag(models.Model):
-    """
-    Tag model for products
-    """
+    """Tag model for products"""
 
     name = models.CharField(max_length=100)
 
     def __str__(self) -> str:
+        """
+        Return tag name.
+
+        :return: Tag name
+        :rtype: str
+        """
         return self.name
 
 
@@ -103,11 +107,10 @@ class Category(models.Model):
                     _('Category cannot be a parent of itself')
                 )
             if self.parent.parent is not None:
-                raise ValidationError(
-                    _(
-                        'Category can only be subcategory of a top-level category'
-                    )
+                msg = (
+                    'Category can only be subcategory of a top-level category'
                 )
+                raise ValidationError(_(msg))
             if self.pk is not None and self.subcategories.count() > 0:
                 raise ValidationError(
                     _('Subcategory cannot have subcategories')
@@ -207,6 +210,12 @@ class Product(models.Model):
     archived = models.BooleanField(default=False)
 
     def __str__(self) -> str:
+        """
+        Return product title.
+
+        :return: Product title
+        :rtype: str
+        """
         return self.title
 
 
@@ -227,9 +236,7 @@ def product_image_upload_path(instance: 'ProductImage', filename: str) -> str:
 
 
 class ProductImage(models.Model):
-    """
-    Image model for products. Product can have multiple images.
-    """
+    """Image model for products. Product can have multiple images."""
 
     product = models.ForeignKey(
         Product, on_delete=models.CASCADE, related_name='images'

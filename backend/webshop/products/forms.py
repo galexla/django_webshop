@@ -4,6 +4,8 @@ from .models import Category, Product
 
 
 class CategoryAdminForm(forms.ModelForm):
+    """Form for Category model in admin panel."""
+
     class Meta:
         model = Category
         fields = '__all__'
@@ -14,7 +16,8 @@ class CategoryAdminForm(forms.ModelForm):
         widget=forms.Textarea,
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
+        """Initialize form."""
         super(CategoryAdminForm, self).__init__(*args, **kwargs)
         instance = kwargs.get('instance')
         if instance and instance.subcategories.all():
@@ -26,11 +29,21 @@ class CategoryAdminForm(forms.ModelForm):
             self.fields['parent'].queryset = queryset
 
     def has_child_categories(self, instance: Category) -> bool:
+        """
+        Check if category has child categories.
+
+        :param instance: Category instance
+        :type instance: Category
+        :return: True if category has child categories, False otherwise
+        :rtype: bool
+        """
         child = Category.objects.filter(parent__id=instance.id).first()
         return True if child else False
 
 
 class ProductAdminForm(forms.ModelForm):
+    """Form for Product model in admin panel."""
+
     class Meta:
         model = Product
         fields = [

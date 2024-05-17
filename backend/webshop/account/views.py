@@ -17,9 +17,7 @@ from .serializers import (
 
 
 class SignInView(APIView):
-    """
-    View for signing in user.
-    """
+    """View for signing in user."""
 
     def post(self, request: Request) -> Response:
         """
@@ -49,9 +47,7 @@ class SignInView(APIView):
 
 
 class SignOutView(APIView):
-    """
-    View for signing out user.
-    """
+    """View for signing out user."""
 
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
@@ -72,9 +68,7 @@ class SignOutView(APIView):
 
 
 class SignUpView(APIView):
-    """
-    View for signing up user.
-    """
+    """View for signing up user."""
 
     def post(self, request: Request) -> Response:
         """
@@ -106,9 +100,7 @@ class SignUpView(APIView):
 
 
 class SetPasswordView(APIView):
-    """
-    View for setting new password.
-    """
+    """View for setting new password."""
 
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
@@ -143,9 +135,7 @@ class SetPasswordView(APIView):
 
 
 class ProfileView(APIView):
-    """
-    View for getting and updating user profile.
-    """
+    """View for getting and updating user profile."""
 
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]
@@ -180,9 +170,7 @@ class ProfileView(APIView):
 
 
 class AvatarUpdateView(APIView):
-    """
-    View for updating user avatar.
-    """
+    """View for updating user avatar."""
 
     authentication_classes = [SessionAuthentication]
     permission_classes = [IsAuthenticated]

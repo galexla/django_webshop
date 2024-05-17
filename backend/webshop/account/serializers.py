@@ -11,9 +11,7 @@ from .models import Profile, User
 
 
 class SignUpSerializer(serializers.ModelSerializer):
-    """
-    Serializer for signing up user.
-    """
+    """Serializer for signing up user."""
 
     name = serializers.CharField(max_length=150, write_only=True)
 
@@ -61,9 +59,7 @@ class SignUpSerializer(serializers.ModelSerializer):
 
 
 class SignInSerializer(serializers.Serializer):
-    """
-    Serializer for signing in user.
-    """
+    """Serializer for signing in user."""
 
     username = serializers.CharField(
         max_length=150,
@@ -75,9 +71,7 @@ class SignInSerializer(serializers.Serializer):
 
 
 class SetPasswordSerializer(serializers.Serializer):
-    """
-    Serializer for changing user password.
-    """
+    """Serializer for changing user password."""
 
     currentPassword = serializers.CharField(max_length=128)
     newPassword = serializers.CharField(max_length=128)
@@ -100,7 +94,8 @@ class SetPasswordSerializer(serializers.Serializer):
 
         :param attrs: Data
         :type attrs: dict
-        :raises ValidationError: If new password is the same as the current password
+        :raises ValidationError: If new password is the same as the current
+            password
         :return: Data
         """
         if attrs['currentPassword'] == attrs['newPassword']:
@@ -109,9 +104,7 @@ class SetPasswordSerializer(serializers.Serializer):
 
 
 class ProfileSerializer(serializers.Serializer):
-    """
-    Serializer for updating user profile.
-    """
+    """Serializer for updating user profile."""
 
     fullName = serializers.CharField(allow_blank=False, max_length=150)
     email = serializers.EmailField(
@@ -185,9 +178,7 @@ class ProfileSerializer(serializers.Serializer):
 
 
 class AvatarUpdateSerializer(serializers.ModelSerializer):
-    """
-    Serializer for updating user avatar.
-    """
+    """Serializer for updating user avatar."""
 
     class Meta:
         model = Profile

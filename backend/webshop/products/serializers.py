@@ -49,7 +49,8 @@ def get_last_reviews(product_id: int, count: int) -> list[dict]:
 
 class ImageSerializer(serializers.Serializer):
     """
-    Serializer for image field. If there is no image, a default image is added.
+    Serializer for image field. If there is no image, a default image is
+    added.
     """
 
     src = serializers.SerializerMethodField()
@@ -139,9 +140,7 @@ class TopLevelCategorySerializer(serializers.ModelSerializer):
 
 
 class TagSerializer(serializers.ModelSerializer):
-    """
-    Serializer for tag model
-    """
+    """Serializer for tag model"""
 
     class Meta:
         model = Tag
@@ -149,9 +148,7 @@ class TagSerializer(serializers.ModelSerializer):
 
 
 class SpecificationSerializer(serializers.ModelSerializer):
-    """
-    Serializer for specification (product characteristics) model
-    """
+    """Serializer for specification (product characteristics) model"""
 
     class Meta:
         model = Specification
@@ -204,7 +201,8 @@ class ProductShortSerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     """
-    Serializer for review model. Date field is formatted as 'YYYY-MM-DD HH:MM'
+    Serializer for review model. Date field is formatted as
+    'YYYY-MM-DD HH:MM'
     """
 
     class Meta:
@@ -357,9 +355,7 @@ class ReviewCreateSerializer(serializers.Serializer):
 
 
 class ProductCountSerializer(serializers.Serializer):
-    """
-    Serializer for product count in basket and in an order
-    """
+    """Serializer for product count in basket and in an order"""
 
     id = serializers.IntegerField(
         required=True,
@@ -376,9 +372,7 @@ class ProductCountSerializer(serializers.Serializer):
 
 
 class BasketIdSerializer(serializers.Serializer):
-    """
-    Serializer for basket id. The id format is UUID
-    """
+    """Serializer for basket id. The id format is UUID"""
 
     basket_id = serializers.UUIDField()
 
