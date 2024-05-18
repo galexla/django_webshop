@@ -41,7 +41,7 @@ To load sample data into a Docker container:
 For debugging, the SQLite database is used.
 
 ## Running unit tests and flake8
-Unit tests:
+Run unit tests:
 * `cd backend/webshop/`
 * `pytest`
 
