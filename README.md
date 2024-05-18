@@ -38,9 +38,13 @@ To load sample data into a Docker container:
 
 For debugging, the SQLite database is used.
 
-## Running unit tests
+## Running unit tests and linter
+Unit tests:
 * `cd backend/webshop/`
 * `pytest`
+Linter:
+* `cd backend/webshop/`
+* `flake8`
 
 ## User credentials
 User `admin` exists both locally and in a Docker container. The password is also `admin`. Be sure to change this password in production!
