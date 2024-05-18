@@ -113,11 +113,6 @@ class PaymentSerializer(serializers.ModelSerializer):
         order = Order.objects.filter(id=order_id, archived=False).first()
         if order is None:
             raise ValidationError(f'Order {order_id} does not exist')
-        if order.status != Order.STATUS_PROCESSING:
-            raise ValidationError(
-                f'To pay for order {order_id}, it must be in '
-                f'the "{Order.STATUS_PROCESSING}" status'
-            )
         payment = Payment.objects.create(**validated_data)
 
         return payment
