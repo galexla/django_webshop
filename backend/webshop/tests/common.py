@@ -26,6 +26,7 @@ class RandomImage:
     """
 
     def __init__(self, size: int) -> None:
+        """Create a list of random pixels."""
         self.rand_pixels = self._create_random_pixels(size)
 
     def _create_random_pixels(self, n: int) -> list[tuple[int, int, int]]:
@@ -83,9 +84,7 @@ class RandomImage:
 
 
 class SerializerTestCase(APITestCase):
-    """
-    Base class for testing serializers with Django testing tools.
-    """
+    """Base class for testing serializers with Django testing tools."""
 
     def assert_all_invalid(
         self,
@@ -149,9 +148,7 @@ class SerializerTestCase(APITestCase):
 
 
 class SerializerTestPytest:
-    """
-    Base class for testing serializers with pytest.
-    """
+    """Base class for testing serializers with pytest."""
 
     serializer_class: Type[Serializer] = None
     base_ok_data: dict[str, Any] = {}
@@ -444,7 +441,8 @@ def assert_not_raises(exception_class: Type[BaseException]) -> Iterator[None]:
 
     :param exception_class: Exception class to be checked.
     :type exception_class: Type[BaseException]
-    :raises AssertionError: If the `exception_class` is raised within the context block.
+    :raises AssertionError: If the `exception_class` is raised within the
+        context block.
     :yields: None
     """
     try:

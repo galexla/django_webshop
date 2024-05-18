@@ -5,8 +5,9 @@ from rest_framework.response import Response
 
 def fix_frontend_bugs_middleware(get_response: callable) -> callable:
     """
-    A middleware to fix frontend bugs. It adds a trailing slash to the API
-    endpoints and changes the content type for the sign-in and sign-up pages.
+    Add a trailing slash to API endpoints, change content type for the sign-in
+    and sign-up pages. Thus fixing inconsitencies between swagger.yaml and the
+    real frontend behaviour.
 
     :param get_response: A callable to get a response
     :type get_response: callable
