@@ -35,6 +35,12 @@ class ShopConfiguration(models.Model):
         return self.key
 
     def clean_value(self) -> float:
+        """
+        Clean value and return as float.
+
+        :return: Value as float
+        :rtype: float
+        """
         try:
             float_value = float(self.value)
             MinValueValidator(0)(float_value)
@@ -43,6 +49,11 @@ class ShopConfiguration(models.Model):
             raise ValidationError('Value must be a positive float number')
 
     def clean(self) -> None:
+        """
+        Clean value before saving.
+
+        :return: None
+        """
         self.clean_value()
         super().clean()
 
@@ -72,6 +83,14 @@ class ShopConfiguration(models.Model):
 
 
 def get_shop_configuration(key: str) -> float:
+    """
+    Get shop configuration value by key.
+
+    :param key: Configuration key
+    :type key: str
+    :return: Configuration value
+    :rtype: float
+    """
     item = ShopConfiguration.objects.filter(key=key).first()
     if item is None:
         return 0
