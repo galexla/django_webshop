@@ -1,4 +1,4 @@
-# Web shop
+# Webshop
 
 ## Quick start
 Here is a minimal configuration to start with.
@@ -11,13 +11,15 @@ Create a `.env` file from a template:
 Change the following variables there:
 * `DJANGO_DB_PASSWORD` - create a strong root password.
 * `DJANGO_SECRET_KEY` - be sure to generate a random unique key! For this, you can run `openssl rand -hex 32`
-* `DJANGO_ALLOWED_HOSTS` - IP addresses and/or domain names which the web shop needs to be accessible from.
+* `DJANGO_ALLOWED_HOSTS` - IP addresses and/or domain names which the webshop needs to be accessible from.
 
 After configuring, run the webshop in a Docker container:
 * `docker compose build`
 * `docker compose up`
 
 If needed, you can change other variables in the `.env` file - see [Other .env variables](#-other-.env-variables).
+
+Please note that the real payment system is not connected. The stub expects the credit card number to be no longer than 8 digits and end with an even number other than 0.
 
 ## Sample data
 In debug mode, sample data is loaded automatically from `db.sqlite3` file - see `DJANGO_DEBUG` in [Other .env variables](#-other-.env-variables).
@@ -28,7 +30,7 @@ To load sample data into a Docker container:
 ## Other .env variables
 * `DJANGO_DEBUG` - debug mode (`true` or `false`).
 * `DJANGO_LOGLEVEL` - logging level. Possible values: debug, info, warning, error, and critical.
-* `DJANGO_DB_HOST` - the web shop database hostname defined in `docker-compose.yaml`. Usually, there is no need to change this variable. But if changed, it must be changed both in `.env` and `docker-compose.yaml`
+* `DJANGO_DB_HOST` - the webshop database hostname defined in `docker-compose.yaml`. Usually, there is no need to change this variable. But if changed, it must be changed both in `.env` and `docker-compose.yaml`
 * `DJANGO_DB_PORT` - database port number.
 * `DJANGO_DB_NAME` - database name.
 
@@ -36,6 +38,9 @@ To load sample data into a Docker container:
 * You may need to install poetry: `pip install poetry`
 * Install dependencies: `poetry install`
 * Set `DJANGO_DEBUG` to `true` in the `.env` file
+* To debug, you may also need to uncomment some of these lines in the settings.py:
+    * `debug_toolbar` in the `INSTALLED_APPS` list
+    * `LoggingMiddleware`, `DebugToolbarMiddleware` in the `MIDDLEWARE` list
 * Run `python manage.py runserver`
 
 For debugging, the SQLite database is used.

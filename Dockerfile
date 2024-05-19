@@ -9,6 +9,7 @@ RUN poetry config virtualenvs.create false --local
 COPY pyproject.toml poetry.lock ./
 COPY frontend /app/frontend
 RUN poetry install
+RUN apt update -y && apt install -y postgresql-client
 
 COPY .env ./
 COPY backend /app/backend
