@@ -6,10 +6,36 @@ from django.db import IntegrityError, transaction
 from django.dispatch import Signal, receiver
 from rest_framework.request import Request
 
-from .common import get_basket_by_cookie, get_basket_by_user
-from .models import Basket
+from .common import (
+    get_basket_by_cookie,
+    get_basket_by_user,
+    get_basket_id_cookie,
+)
+from .models import Basket, Order
 
 log = logging.getLogger(__name__)
+
+
+@receiver(user_logged_in)
+def set_order_owner_by_basket_id(
+    user: User, signal: Signal, request: Request, **kwargs
+) -> None:
+    """
+    Get order by basket_id from cookies and assign an owner to it
+
+    :param user: User instance
+    :type user: User
+    :param signal: Signal instance
+    :type signal: Signal
+    :param request: Request instance
+    :type request: Request
+    :return: None
+    """
+    basket_id = get_basket_id_cookie(request)
+    orders = Order.objects.filter(
+        basket_id=basket_id, user=None, status=Order.STATUS_NEW
+    )
+    orders.update(user=user, basket_id=None)
 
 
 @receiver(user_logged_in)

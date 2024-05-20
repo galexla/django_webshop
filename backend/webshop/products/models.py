@@ -391,6 +391,7 @@ class Order(models.Model):
         STATUSES (tuple): Order statuses choices
 
         user (User): Customer who made the order
+        basket (Basket): Basket to identify an anonymous user
         products (QuerySet): Order products
         created_at (datetime): Order creation date
         full_name (str): Customer full name
@@ -449,8 +450,9 @@ class Order(models.Model):
     )
 
     user = models.ForeignKey(
-        User, related_name='orders', on_delete=models.CASCADE
+        User, null=True, related_name='orders', on_delete=models.CASCADE
     )
+    basket = models.ForeignKey(Basket, null=True, on_delete=models.CASCADE)
     products = models.ManyToManyField(
         Product, through=OrderProduct, related_name='orders'
     )

@@ -697,11 +697,29 @@ class BasketView(DestroyModelMixin, ListCreateAPIView):
         return self._get_response(products, basket_id)
 
 
+def fill_order_fields_if_needed(order: Order, user: User) -> None:
+    """
+    Fill some empty order fields from a user instance
+
+    :param order: request
+    :type order: Order
+    :param user: user to get fields from
+    :type order: User
+    :return: None
+    """
+    if order.status != Order.STATUS_NEW:
+        return
+
+    if order.full_name or order.phone or order.email:
+        return
+
+    order.full_name = user.get_full_name()
+    order.phone = user.profile.phone or ''
+    order.email = user.email or ''
+
+
 class OrdersView(APIView):
     """View for orders"""
-
-    authentication_classes = [SessionAuthentication]
-    permission_classes = [IsAuthenticated]
 
     def get(self, request: Request, *args, **kwargs) -> Response:
         """
@@ -751,8 +769,10 @@ class OrdersView(APIView):
         order_created = False
         with transaction.atomic():
             if self._are_available(product_counts_dict):
-                order = self._create_order(product_counts_dict, request.user)
-                basket = Basket.objects.filter(user=request.user).first()
+                basket = get_basket(request)
+                order = self._create_order(
+                    product_counts_dict, request.user, basket
+                )
                 if basket:
                     basket_remove_products(basket.id, product_counts_dict)
                 order_created = True
@@ -788,7 +808,7 @@ class OrdersView(APIView):
         return True
 
     def _create_order(
-        self, product_counts: dict[str, int], user: User
+        self, product_counts: dict[str, int], user: User, basket: Basket | None
     ) -> Order:
         """
         Create an order with products. Needs to be always called from within a
@@ -798,13 +818,17 @@ class OrdersView(APIView):
         :type product_counts: dict[str, int]
         :param user: order owner
         :type user: User
+        :param basket: user's basket
+        :type basket: Basket | None
         :return: order
         :rtype: Order
         """
-        order = Order(user=user)
-        order.full_name = user.get_full_name()
-        order.phone = user.profile.phone or ''
-        order.email = user.email or ''
+        order = Order()
+        if not user.is_anonymous:
+            order.user = user
+            fill_order_fields_if_needed(order, user)
+        elif basket:
+            order.basket = basket
         order.status = order.STATUS_NEW
         order.save()
 
@@ -874,6 +898,8 @@ class OrderView(APIView):
         order = get_object_or_404(
             Order, pk=pk, user=request.user, archived=False
         )
+        fill_order_fields_if_needed(order, request.user)
+        order.save()
         serializer = OrderSerializer(order)
         return Response(serializer.data)
 

@@ -56,6 +56,18 @@ def get_basket_by_user(user: User | None) -> Basket | None:
     return Basket.objects.filter(user=user).first()
 
 
+def get_basket_id_cookie(request: Request) -> str:
+    """
+    Get basket id saved in cookie
+
+    :param request: Request
+    :type request: Request
+    :return: basket id
+    :rtype: str
+    """
+    return request.COOKIES.get('basket_id')
+
+
 def get_basket_by_cookie(request: Request) -> Basket | None:
     """
     Get basket by cookie
@@ -65,7 +77,7 @@ def get_basket_by_cookie(request: Request) -> Basket | None:
     :return: Basket
     :rtype: Basket | None
     """
-    basket_id = request.COOKIES.get('basket_id')
+    basket_id = get_basket_id_cookie(request)
     serializer = BasketIdSerializer(data={'basket_id': basket_id})
     if not serializer.is_valid():
         return None

@@ -457,7 +457,6 @@ class OrderSerializer(serializers.ModelSerializer):
         allowed_empty = [
             'full_name',
             'email',
-            'phone',
             'delivery_type',
             'payment_type',
             'city',
