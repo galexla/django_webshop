@@ -38,15 +38,17 @@ class ShopConfiguration(models.Model):
         """
         Clean value and return as float.
 
+        :raises ValidationError: If value isn't parsable to non-negative float
         :return: Value as float
         :rtype: float
         """
         try:
             float_value = float(self.value)
-            MinValueValidator(0)(float_value)
-            return float_value
-        except (ValueError, ValidationError):
-            raise ValidationError('Value must be a positive float number')
+        except ValueError:
+            raise ValidationError('Value must be a non-negative float number')
+
+        MinValueValidator(0)(float_value)
+        return float_value
 
     def clean(self) -> None:
         """
@@ -57,27 +59,27 @@ class ShopConfiguration(models.Model):
         self.clean_value()
         super().clean()
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         """
         Save configuration, restrict renaming of protected keys.
 
         :return: None
         """
-        if self.pk and self.key in self.protected_keys:
-            original_key = ShopConfiguration.objects.get(pk=self.pk).key
-            if self.key != original_key:
-                return
+        if self.pk:
+            prev_key = ShopConfiguration.objects.get(pk=self.pk).key
+            if prev_key in self.protected_keys and self.key != prev_key:
+                raise ValidationError('Unable to rename a protected key')
 
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args, **kwargs) -> None:
         """
         Delete configuration if key is not protected.
 
         :return: None
         """
         if self.key in self.protected_keys:
-            return
+            raise ValidationError('Unable to delete a protected key')
 
         super().delete(*args, **kwargs)
 
