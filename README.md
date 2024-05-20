@@ -35,12 +35,17 @@ To load sample data into a Docker container:
 * `DJANGO_DB_NAME` - database name.
 
 ## Running locally and debugging
+* Ensure you've done steps from the [Quick start](#-quick-start) section except building and running a Docker container.
+* `cd <this_project_root>`
 * You may need to install poetry: `pip install poetry`
-* Install dependencies: `poetry install`
-* Set `DJANGO_DEBUG` to `true` in the `.env` file
+* `poetry shell`
+* `export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring` (optional)
+* Install dependencies: `poetry install --no-root`
+* Set `DJANGO_DEBUG` to `true` in the `.env` file.
 * To debug, you may also need to uncomment some of these lines in the settings.py:
-    * `debug_toolbar` in the `INSTALLED_APPS` list
-    * `LoggingMiddleware`, `DebugToolbarMiddleware` in the `MIDDLEWARE` list
+    * `debug_toolbar` in the `INSTALLED_APPS` list.
+    * `LoggingMiddleware`, `DebugToolbarMiddleware` in the `MIDDLEWARE` list.
+* `cd backend/webshop/`
 * Run `python manage.py runserver`
 
 For debugging, the SQLite database is used.
