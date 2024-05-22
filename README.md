@@ -38,9 +38,9 @@ To load sample data into a Docker container:
 * Ensure you've done steps from the [Quick start](#-quick-start) section except building and running a Docker container.
 * `cd <this_project_root>`
 * You may need to install poetry: `pip install poetry`
-* `poetry shell`
-* `export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring` (optional)
+* Turn off keyring (optional): `export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring`
 * Install dependencies: `poetry install --no-root`
+* `source .venv/<venv_path>/bin/activate`
 * Set `DJANGO_DEBUG` to `true` in the `.env` file.
 * To debug, you may also need to uncomment some of these lines in the settings.py:
     * `debug_toolbar` in the `INSTALLED_APPS` list.
