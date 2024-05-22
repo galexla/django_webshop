@@ -450,9 +450,15 @@ class Order(models.Model):
     )
 
     user = models.ForeignKey(
-        User, null=True, related_name='orders', on_delete=models.CASCADE
+        User,
+        blank=True,
+        null=True,
+        related_name='orders',
+        on_delete=models.CASCADE,
     )
-    basket = models.ForeignKey(Basket, null=True, on_delete=models.CASCADE)
+    basket = models.ForeignKey(
+        Basket, blank=True, null=True, on_delete=models.CASCADE
+    )
     products = models.ManyToManyField(
         Product, through=OrderProduct, related_name='orders'
     )

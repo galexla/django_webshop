@@ -568,8 +568,8 @@ class TestOrder(AbstractModelTest):
     @pytest.mark.parametrize(
         'should_be_ok, field, values',
         [
-            (False, 'user_id', [None, 20, -1, '', 'abc']),
-            (True, 'user_id', [1, 2]),
+            (False, 'user_id', [20, -1, '', 'abc']),
+            (True, 'user_id', [None, 1, 2]),
             (False, 'created_at', ['', 'abc', 1]),
             (False, 'full_name', ['a' * 121]),
             (True, 'full_name', [None, '', 'a' * 120]),
