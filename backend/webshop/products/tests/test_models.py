@@ -570,6 +570,12 @@ class TestOrder(AbstractModelTest):
         [
             (False, 'user_id', [20, -1, '', 'abc']),
             (True, 'user_id', [None, 1, 2]),
+            (False, 'basket_id', ['abc']),
+            (
+                True,
+                'basket_id',
+                [None, UUID('60ac1520a1104db49090d934a0b9f8f9')],
+            ),
             (False, 'created_at', ['', 'abc', 1]),
             (False, 'full_name', ['a' * 121]),
             (True, 'full_name', [None, '', 'a' * 120]),

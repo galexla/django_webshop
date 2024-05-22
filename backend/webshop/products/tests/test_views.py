@@ -701,7 +701,7 @@ class OrdersViewTest(APITestCase):
         url = reverse('products:orders')
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         admin = User.objects.get(username='admin')
         self.client.force_login(admin)
@@ -749,7 +749,7 @@ class OrdersViewTest(APITestCase):
         url = reverse('products:orders')
 
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         user = User.objects.create(username='test', password='test')
         self.client.force_login(user)
@@ -783,7 +783,7 @@ class OrdersViewTest(APITestCase):
             self.NEW_ORDER_TPL, user_id=user.id, total_cost=Decimal('2578.00')
         )
         assert_dict_equal_exclude(
-            order[0], expected_order, ['id', 'created_at']
+            order[0], expected_order, ['id', 'basket_id', 'created_at']
         )
         product_counts = list(
             OrderProduct.objects.filter(order_id=order_id).values(
@@ -849,10 +849,12 @@ class OrdersViewTest(APITestCase):
             email=user.email,
             phone=user.profile.phone,
         )
+        print('###', order.__dict__)
+        print('###', expected_order)
         assert_dict_equal_exclude(
             order.__dict__,
             expected_order,
-            ['id', 'created_at', '_state'],
+            ['id', 'basket_id', 'created_at', '_state'],
         )
         product_counts = list(
             order.orderproduct_set.values('product_id', 'count')

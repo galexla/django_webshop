@@ -26,7 +26,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
-from .common import delete_unused_baskets, get_basket
+from .common import (
+    delete_unused_baskets,
+    fill_order_fields_if_needed,
+    get_basket,
+    get_basket_id_cookie,
+)
 from .models import (
     Basket,
     BasketProduct,
@@ -697,27 +702,6 @@ class BasketView(DestroyModelMixin, ListCreateAPIView):
         return self._get_response(products, basket_id)
 
 
-def fill_order_fields_if_needed(order: Order, user: User) -> None:
-    """
-    Fill some empty order fields from a user instance
-
-    :param order: request
-    :type order: Order
-    :param user: user to get fields from
-    :type order: User
-    :return: None
-    """
-    if order.status != Order.STATUS_NEW:
-        return
-
-    if order.full_name or order.phone or order.email:
-        return
-
-    order.full_name = user.get_full_name()
-    order.phone = user.profile.phone or ''
-    order.email = user.email or ''
-
-
 class OrdersView(APIView):
     """View for orders"""
 
@@ -731,12 +715,21 @@ class OrdersView(APIView):
         :rtype: Response
         """
         user = request.user
-        orders = (
-            Order.objects.prefetch_related('products')
-            .filter(user=user)
-            .order_by('-created_at')
-            .all()
-        )
+        if user.is_anonymous:
+            basket_id = get_basket_id_cookie(request)
+            orders = (
+                Order.objects.prefetch_related('products')
+                .filter(basket_id=basket_id)
+                .order_by('-created_at')
+                .all()
+            )
+        else:
+            orders = (
+                Order.objects.prefetch_related('products')
+                .filter(user=user)
+                .order_by('-created_at')
+                .all()
+            )
         serializer = OrderSerializer(orders, many=True)
         log.debug('Got %s orders of user %s', len(serializer.data), user.id)
 
@@ -808,7 +801,10 @@ class OrdersView(APIView):
         return True
 
     def _create_order(
-        self, product_counts: dict[str, int], user: User, basket: Basket | None
+        self,
+        product_counts: dict[str, int],
+        user: User,
+        basket: Basket | None = None,
     ) -> Order:
         """
         Create an order with products. Needs to be always called from within a
@@ -898,7 +894,6 @@ class OrderView(APIView):
         order = get_object_or_404(
             Order, pk=pk, user=request.user, archived=False
         )
-        fill_order_fields_if_needed(order, request.user)
         order.save()
         serializer = OrderSerializer(order)
         return Response(serializer.data)

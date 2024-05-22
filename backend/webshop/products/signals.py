@@ -7,6 +7,7 @@ from django.dispatch import Signal, receiver
 from rest_framework.request import Request
 
 from .common import (
+    fill_order_fields_if_needed,
     get_basket_by_cookie,
     get_basket_by_user,
     get_basket_id_cookie,
@@ -36,6 +37,8 @@ def set_order_owner_by_basket_id(
         basket_id=basket_id, user=None, status=Order.STATUS_NEW
     )
     orders.update(user=user, basket_id=None)
+    for order in orders:
+        fill_order_fields_if_needed(order, user)
 
 
 @receiver(user_logged_in)

@@ -5,7 +5,7 @@ from account.models import User
 from django.utils import timezone
 from rest_framework.request import Request
 
-from .models import Basket
+from .models import Basket, Order
 from .serializers import BasketIdSerializer
 
 log = logging.getLogger(__name__)
@@ -146,3 +146,26 @@ def delete_unused_baskets(max_age: int) -> None:
         last_accessed__lt=timezone.now() - timedelta(seconds=max_age),
         user__isnull=True,
     )
+
+
+def fill_order_fields_if_needed(order: Order, user: User) -> None:
+    """
+    Fill some empty order fields from a user instance if order is new
+
+    :param order: request
+    :type order: Order
+    :param user: user to get fields from
+    :type order: User
+    :return: None
+    """
+    if order.status != Order.STATUS_NEW:
+        return
+
+    if order.full_name == '':
+        order.full_name = user.get_full_name()
+
+    if order.phone == '':
+        order.phone = user.profile.phone or ''
+
+    if order.email == '':
+        order.email = user.email or ''
