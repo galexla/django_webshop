@@ -1,7 +1,9 @@
-# Webshop
+# Electronics online shop
+
+Backend and frontend of an online shop with the ability to view the product catalog, place orders and administer. The frontend was created by the frontend developers and is included in the repository. The project uses Django REST Framework and is configured to be easily deployed in a Docker container.
 
 ## Quick start
-Here is a minimal configuration to start with.
+Here is a minimal configuration to run the online shop.
 
 Clone the repository.
 
@@ -11,9 +13,9 @@ Create a `.env` file from a template:
 Change the following variables there:
 * `DJANGO_DB_PASSWORD` - create a strong root password.
 * `DJANGO_SECRET_KEY` - be sure to generate a random unique key! For this, you can run `openssl rand -hex 32`
-* `DJANGO_ALLOWED_HOSTS` - IP addresses and/or domain names which the webshop needs to be accessible from.
+* `DJANGO_ALLOWED_HOSTS` - IP addresses and/or domain names which the online shop needs to be accessible from.
 
-After configuring, run the webshop in a Docker container:
+After configuring, run the online shop in a Docker container:
 * `docker compose build`
 * `docker compose up`
 
@@ -25,12 +27,12 @@ Please note that the real payment system is not connected. The stub expects the 
 In debug mode, sample data is loaded automatically from `db.sqlite3` file - see `DJANGO_DEBUG` in [Other .env variables](#-other-.env-variables).
 
 To load sample data into a Docker container:
-* Ensure you've done steps from the [Quick start](#-quick-start) section. When the `webshop_app` container has finished with database migrations and collecting static files, you can add sample data to your webshop by running `docker_add_sample_data.sh`
+* Ensure you've done steps from the [Quick start](#-quick-start) section. When the `webshop_app` container has finished with database migrations and collecting static files, you can add sample data to your online shop by running `docker_add_sample_data.sh`
 
 ## Other .env variables
 * `DJANGO_DEBUG` - debug mode (`true` or `false`).
 * `DJANGO_LOGLEVEL` - logging level. Possible values: debug, info, warning, error, and critical.
-* `DJANGO_DB_HOST` - the webshop database hostname defined in `docker-compose.yaml`. Usually, there is no need to change this variable. But if changed, it must be changed both in `.env` and `docker-compose.yaml`
+* `DJANGO_DB_HOST` - the online shop database hostname defined in `docker-compose.yaml`. Usually, there is no need to change this variable. But if changed, it must be changed both in `.env` and `docker-compose.yaml`
 * `DJANGO_DB_PORT` - database port number.
 * `DJANGO_DB_NAME` - database name.
 
@@ -50,7 +52,7 @@ To load sample data into a Docker container:
 
 For debugging, the SQLite database is used.
 
-## Running unit tests and flake8
+## Running unit tests and code style check
 Run unit tests:
 * `cd backend/webshop/`
 * `pytest`
