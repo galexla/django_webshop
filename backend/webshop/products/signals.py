@@ -33,12 +33,14 @@ def set_order_owner_by_basket_id(
     :return: None
     """
     basket_id = get_basket_id_cookie(request)
-    orders = Order.objects.filter(
-        basket_id=basket_id, user=None, status=Order.STATUS_NEW
-    )
-    orders.update(user=user, basket_id=None)
-    for order in orders:
-        fill_order_fields_if_needed(order, user)
+    with transaction.atomic():
+        orders = Order.objects.filter(
+            basket_id=basket_id, user=None, status=Order.STATUS_NEW
+        )
+        for order in orders:
+            fill_order_fields_if_needed(order, user)
+            order.save()
+        orders.update(user=user, basket_id=None)
 
 
 @receiver(user_logged_in)

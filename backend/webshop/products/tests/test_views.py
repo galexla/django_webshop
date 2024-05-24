@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 
 from account.models import User
@@ -6,6 +7,10 @@ from django.db import transaction
 from django.test import TestCase
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
+from products.signals import (
+    set_order_owner_by_basket_id,
+    switch_user_basket_if_needed,
+)
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
@@ -35,6 +40,8 @@ from ..models import (
 )
 from ..serializers import OrderSerializer
 from ..views import BasketView, OrdersView, OrderView, basket_remove_products
+
+log = logging.getLogger(__name__)
 
 
 class TopLevelCategoryListViewTest(TestCase):
@@ -812,6 +819,53 @@ class OrdersViewTest(APITestCase):
 
         user.delete()
 
+    def test_post_anonymous(self):
+        response = self.client.post(
+            reverse('products:basket'), {'id': 3, 'count': 1}
+        )
+        response = self.client.post(
+            reverse('products:basket'), {'id': 4, 'count': 1}
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        product_counts = [{'id': 3, 'count': 1}, {'id': 4, 'count': 1}]
+        response: Response = self.client.post(
+            reverse('products:orders'), product_counts
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order = Order.objects.get(id=response.data['orderId'])
+        expected = [
+            {'product_id': 3, 'count': 1},
+            {'product_id': 4, 'count': 1},
+        ]
+        assert expected == list(
+            order.orderproduct_set.values('product_id', 'count')
+        )
+
+        assert order.basket_id is not None
+        assert len(order.basket_id.hex) >= 32
+        assert order.full_name == ''
+        assert order.phone == ''
+        assert order.email == ''
+        assert order.user is None
+
+        class Fake:
+            pass
+
+        fake_request = Fake()
+        fake_request.COOKIES = {'basket_id': order.basket_id.hex}
+        user = User.objects.get(username='admin')
+        set_order_owner_by_basket_id(user, None, fake_request)
+        switch_user_basket_if_needed(user, None, fake_request)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        assert order.basket_id is None
+        assert order.full_name == order.user.get_full_name()
+        assert order.phone == order.user.profile.phone
+        assert order.email == order.user.email
+        assert order.user == user
+
     def test_are_available(self):
         view = OrdersView()
 
@@ -849,8 +903,6 @@ class OrdersViewTest(APITestCase):
             email=user.email,
             phone=user.profile.phone,
         )
-        print('###', order.__dict__)
-        print('###', expected_order)
         assert_dict_equal_exclude(
             order.__dict__,
             expected_order,

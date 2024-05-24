@@ -822,7 +822,9 @@ class OrdersView(APIView):
         order = Order()
         if not user.is_anonymous:
             order.user = user
-            fill_order_fields_if_needed(order, user)
+            order.full_name = user.get_full_name()
+            order.phone = user.profile.phone or ''
+            order.email = user.email or ''
         elif basket:
             order.basket = basket
         order.status = order.STATUS_NEW

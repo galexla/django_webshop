@@ -26,7 +26,7 @@ def get_basket(request: Request) -> Basket | None:
         basket = get_basket_by_cookie(request)
         if not basket:
             return None
-        elif not check_basket_permissions(basket, user):
+        elif not can_access_basket(basket, user):
             log.warning(
                 'User %s [%s] attempts to retrieve basket of user %s',
                 getattr(user, 'id', None),
@@ -104,7 +104,7 @@ def get_client_ip(request: Request) -> str:
     return ip
 
 
-def check_basket_permissions(basket: Basket, user: User) -> bool:
+def can_access_basket(basket: Basket, user: User) -> bool:
     """
     Check if user has permissions to access basket
 
@@ -136,7 +136,7 @@ def update_basket_access_time(basket: Basket) -> None:
 
 def delete_unused_baskets(max_age: int) -> None:
     """
-    Delete too old baskets with no user
+    Delete too old baskets with no user assigned
 
     :param max_age: Max age in seconds
     :type max_age: int
@@ -145,12 +145,12 @@ def delete_unused_baskets(max_age: int) -> None:
     Basket.objects.filter(
         last_accessed__lt=timezone.now() - timedelta(seconds=max_age),
         user__isnull=True,
-    )
+    ).delete()
 
 
 def fill_order_fields_if_needed(order: Order, user: User) -> None:
     """
-    Fill some empty order fields from a user instance if order is new
+    Fill some empty order fields from a user instance
 
     :param order: request
     :type order: Order
@@ -158,9 +158,6 @@ def fill_order_fields_if_needed(order: Order, user: User) -> None:
     :type order: User
     :return: None
     """
-    if order.status != Order.STATUS_NEW:
-        return
-
     if order.full_name == '':
         order.full_name = user.get_full_name()
 
