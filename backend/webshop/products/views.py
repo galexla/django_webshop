@@ -5,6 +5,7 @@ from uuid import UUID
 import django_filters
 from account.models import User
 from configurations.models import get_all_shop_configurations
+from django.contrib.auth.models import AbstractUser
 from django.db import transaction
 from django.db.models import Case, IntegerField, Q, Value, When
 from django.db.models.query import QuerySet
@@ -503,7 +504,7 @@ class BasketView(DestroyModelMixin, ListCreateAPIView):
         if basket:
             log.debug('Got basket: %s', basket.id)
             products = self._get_products(basket)
-            return self._get_response(products, basket.id)
+            return self._get_response(request, products, basket.id)
         else:
             return Response([])
 
@@ -535,25 +536,32 @@ class BasketView(DestroyModelMixin, ListCreateAPIView):
 
         return products
 
-    def _set_cookie(self, response: Response, basket_id: str) -> None:
+    def _manage_cookie(
+        self, response: Response, user: AbstractUser, basket_id: str
+    ) -> None:
         """
-        Set basket id to cookie
+        Set basket id cookie or delete it if user is logged in
 
+        :param user: Current user
+        :type user: AbstractUser
         :param response: response
         :type response: Response
         :param basket_id: basket id
         :type basket_id: str
         :return: None
         """
-        response.set_cookie(
-            'basket_id', basket_id, max_age=self.COOKIE_MAX_AGE
-        )
+        if user.is_anonymous:
+            response.set_cookie(
+                'basket_id', basket_id, max_age=self.COOKIE_MAX_AGE
+            )
+        else:
+            response.delete_cookie('basket_id')
 
     def _get_response(
-        self, products: list[Product], basket_id: str
+        self, request: Request, products: list[Product], basket_id: str
     ) -> Response:
         """
-        Get response with products and set cookie
+        Get response with products and set or delete a cookie
 
         :param products: products
         :type products: list[Product]
@@ -564,7 +572,7 @@ class BasketView(DestroyModelMixin, ListCreateAPIView):
         """
         serializer = ProductShortSerializer(products, many=True)
         response = Response(serializer.data)
-        self._set_cookie(response, basket_id)
+        self._manage_cookie(response, request.user, basket_id)
 
         return response
 
@@ -605,11 +613,11 @@ class BasketView(DestroyModelMixin, ListCreateAPIView):
                 {'count': ['Product quantity is not available.']},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-            self._set_cookie(response, basket_id)
+            self._manage_cookie(response, request.user, basket_id)
             return response
 
         products = self._get_products(basket)
-        return self._get_response(products, basket_id)
+        return self._get_response(request, products, basket_id)
 
     def _add_products(
         self, basket_id: str | UUID, product: Product, product_count: int
@@ -698,7 +706,7 @@ class BasketView(DestroyModelMixin, ListCreateAPIView):
             )
 
         products = self._get_products(basket)
-        return self._get_response(products, basket_id)
+        return self._get_response(request, products, basket_id)
 
 
 class OrdersView(APIView):

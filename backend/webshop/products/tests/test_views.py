@@ -1,6 +1,7 @@
 import logging
 from datetime import timedelta
 from decimal import Decimal
+from unittest.mock import Mock
 
 from account.models import User
 from configurations.models import get_all_shop_configurations
@@ -9,38 +10,19 @@ from django.db import transaction
 from django.test import TestCase
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from products.signals import (
-    set_order_owner_by_basket_id,
-    switch_user_basket_if_needed,
-)
+from products.signals import (set_order_owner_by_basket_id,
+                              switch_user_basket_if_needed)
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
-from tests.common import (
-    assert_dict_equal_exclude,
-    get_attrs,
-    get_ids,
-    get_keys,
-    is_date_almost_equal,
-    product_img_path,
-)
-from tests.fixtures.products import (
-    CATEGORIES_SRLZD,
-    MONITOR_DETAIL_SRLZD,
-    MONITOR_SHORT_DB_TPL,
-    MONITOR_SHORT_SRLZD,
-    MONITOR_SHORT_SRLZD_TPL,
-)
+from tests.common import (assert_dict_equal_exclude, get_attrs, get_ids,
+                          get_keys, is_date_almost_equal, product_img_path)
+from tests.fixtures.products import (CATEGORIES_SRLZD, MONITOR_DETAIL_SRLZD,
+                                     MONITOR_SHORT_DB_TPL, MONITOR_SHORT_SRLZD,
+                                     MONITOR_SHORT_SRLZD_TPL)
 
-from ..models import (
-    Basket,
-    BasketProduct,
-    Order,
-    OrderProduct,
-    Product,
-    Review,
-    Sale,
-)
+from ..models import (Basket, BasketProduct, Order, OrderProduct, Product,
+                      Review, Sale)
 from ..serializers import OrderSerializer
 from ..views import BasketView, OrdersView, OrderView, basket_remove_products
 
@@ -571,24 +553,30 @@ class BasketViewTest(APITestCase):
     def test_get_response(self):
         basket = Basket.objects.get(user__username='admin')
         view = BasketView()
+        mock_request = Mock()
+        mock_request.user = AnonymousUser
         products = view._get_products(basket)
-        response = view._get_response(products, basket.id.hex)
+
+        response = view._get_response(mock_request, products, basket.id.hex)
         self.assertEqual(response.cookies['basket_id'].value, basket.id.hex)
         self.assertEqual(response.data[1], MONITOR_SHORT_SRLZD)
 
-        response = view._get_response([], basket.id.hex)
+        response = view._get_response(mock_request, [], basket.id.hex)
         self.assertEqual(response.data, [])
 
-        response = view._get_response([], '')
+        response = view._get_response(mock_request, [], '')
         self.assertEqual(response.data, [])
 
-    def test_set_cookie(self):
+    def test_manage_cookie(self):
         view = BasketView()
         response = Response()
-        view._set_cookie(response, '123')
+        view._manage_cookie(response, AnonymousUser, '123')
         self.assertEqual(response.cookies['basket_id'].value, '123')
-        view._set_cookie(response, 'abc')
+        view._manage_cookie(response, AnonymousUser, 'abc')
         self.assertEqual(response.cookies['basket_id'].value, 'abc')
+
+        view._manage_cookie(response, User(), '123')
+        self.assertEqual(response.cookies['basket_id'].value, '')
 
     def test_add_products(self):
         basket = Basket.objects.create()
@@ -904,14 +892,11 @@ class OrdersViewTest(APITestCase):
         assert order.email == ''
         assert order.user is None
 
-        class Fake:
-            pass
-
-        fake_request = Fake()
-        fake_request.COOKIES = {'basket_id': order.basket_id.hex}
+        mock_request = Mock()
+        mock_request.COOKIES = {'basket_id': order.basket_id.hex}
         user = User.objects.get(username='admin')
-        set_order_owner_by_basket_id(user, None, fake_request)
-        switch_user_basket_if_needed(user, None, fake_request)
+        set_order_owner_by_basket_id(user, None, mock_request)
+        switch_user_basket_if_needed(user, None, mock_request)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         order.refresh_from_db()
