@@ -2,10 +2,11 @@ import logging
 from datetime import timedelta
 
 from account.models import User
+from django.db import transaction
 from django.utils import timezone
 from rest_framework.request import Request
 
-from .models import Basket, Order
+from .models import Basket, Order, Product
 from .serializers import BasketIdSerializer
 
 log = logging.getLogger(__name__)
@@ -166,3 +167,48 @@ def fill_order_fields_if_needed(order: Order, user: User) -> None:
 
     if order.email == '':
         order.email = user.email or ''
+
+
+def delete_old_orders(max_age: int = 1800) -> None:
+    """
+    Delete too old orders with no user assigned
+
+    :param max_age: Max age in seconds
+    :type max_age: int
+    :return: None
+    """
+    MAX_ORDERPRODUCTS = 200
+    orders = Order.objects.filter(
+        created_at__lt=timezone.now() - timedelta(seconds=max_age),
+        user__isnull=True,
+        status=Order.STATUS_NEW,
+    )
+
+    n_orderproducts = 0
+    for order in orders:
+        n_orderproducts += delete_order(order)
+        if n_orderproducts >= MAX_ORDERPRODUCTS:
+            break
+
+
+@transaction.atomic
+def delete_order(order: Order) -> int:
+    """
+    Delete an order
+
+    :param order: Order
+    :type order: Order
+    :return: Number of distinct products in the order
+    :rtype: int
+    """
+    n_orderproducts = order.orderproduct_set.count()
+    products = []
+    for op in order.orderproduct_set.all():
+        product: Product = op.product
+        product.sold_count -= op.count
+        product.count += op.count
+        products.append(product)
+    Product.objects.bulk_update(products, fields=['count', 'sold_count'])
+    order.delete()
+
+    return n_orderproducts

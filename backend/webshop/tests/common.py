@@ -378,9 +378,11 @@ class AbstractModelTest:
         keys = set(data.keys())
         keys.remove(date_field)
         almost_equal = all(data[k] == getattr(instance, k) for k in keys)
-        dates_almost_equal = getattr(
-            instance, date_field
-        ) - timezone.now() <= timedelta(seconds=self.datetime_max_diff)
+        dates_almost_equal = is_date_almost_equal(
+            getattr(instance, date_field),
+            timezone.now(),
+            self.datetime_max_diff,
+        )
         return almost_equal and dates_almost_equal
 
 
@@ -574,7 +576,7 @@ def is_date_almost_equal(
     :rtype: bool
     """
     delta: timedelta = date1 - date2
-    return delta.seconds <= max_delta
+    return abs(delta.total_seconds()) <= max_delta
 
 
 def get_not_equal_values(

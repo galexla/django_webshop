@@ -27,8 +27,8 @@ from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet
 
 from .common import (
+    delete_old_orders,
     delete_unused_baskets,
-    fill_order_fields_if_needed,
     get_basket,
     get_basket_id_cookie,
 )
@@ -516,9 +516,8 @@ class BasketView(DestroyModelMixin, ListCreateAPIView):
         :return: products
         :rtype: list[Product]
         """
-        basketproduct_set = basket.basketproduct_set.all()
         product_counts = {}
-        for basket_product in basketproduct_set:
+        for basket_product in basket.basketproduct_set.all():
             product_counts[basket_product.product_id] = basket_product.count
 
         if not product_counts:
@@ -744,6 +743,8 @@ class OrdersView(APIView):
         :return: response
         :rtype: Response
         """
+        delete_old_orders()
+
         if request.data == []:
             return Response(
                 {'non_field_errors': ['Zero products provided']},
@@ -802,7 +803,7 @@ class OrdersView(APIView):
 
     def _create_order(
         self,
-        product_counts: dict[str, int],
+        product_counts: dict[int, int],
         user: User,
         basket: Basket | None = None,
     ) -> Order:
@@ -811,7 +812,7 @@ class OrdersView(APIView):
         transaction.atomic block.
 
         :param product_counts: product id and its count
-        :type product_counts: dict[str, int]
+        :type product_counts: dict[int, int]
         :param user: order owner
         :type user: User
         :param basket: user's basket

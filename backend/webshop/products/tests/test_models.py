@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -7,7 +7,7 @@ from django.core.files.images import ImageFile
 from django.core.files.storage import default_storage
 from django.forms import ValidationError
 from django.utils import timezone
-from tests.common import AbstractModelTest, RandomImage
+from tests.common import AbstractModelTest, RandomImage, is_date_almost_equal
 from tests.fixtures.products import (
     INVALID_EMAILS,
     INVALID_PHONES,
@@ -228,7 +228,7 @@ class TestProduct(AbstractModelTest):
                 'created_at', value
             )
             assert valid_and_saved
-            assert instance.created_at - timezone.now() <= timedelta(seconds=3)
+            assert is_date_almost_equal(instance.created_at, timezone.now(), 3)
 
     @pytest.mark.django_db(transaction=True)
     def test_tags(self, db_data):

@@ -1,8 +1,10 @@
 import logging
+from datetime import timedelta
 from decimal import Decimal
 
 from account.models import User
 from configurations.models import get_all_shop_configurations
+from django.contrib.auth.models import AnonymousUser
 from django.db import transaction
 from django.test import TestCase
 from django.urls import reverse, reverse_lazy
@@ -19,6 +21,7 @@ from tests.common import (
     get_attrs,
     get_ids,
     get_keys,
+    is_date_almost_equal,
     product_img_path,
 )
 from tests.fixtures.products import (
@@ -818,6 +821,58 @@ class OrdersViewTest(APITestCase):
         self.assertListEqual(product_counts, [{'product_id': 4, 'count': 1}])
 
         user.delete()
+
+    def test_old_orders_deletion(self):
+        products = list(Product.objects.all())
+        initial_counts = {}
+        for product in products:
+            product.count += 100
+            initial_counts[product.id] = product.count
+        Product.objects.bulk_update(products, fields=['count'])
+
+        view = OrdersView()
+        product_counts = {1: 2, 2: 3, 3: 1, 4: 2}
+        basket = Basket.objects.create()
+        for _ in range(10):
+            view._create_order(product_counts, AnonymousUser, basket)
+
+        orders = list(basket.order_set.all())
+        assert len(orders) == 10
+        assert all(
+            is_date_almost_equal(order.created_at, timezone.now(), 3)
+            for order in orders
+        )
+
+        orders = Order.objects.filter(basket=basket)
+        new_created_at = timezone.now() - timedelta(seconds=2000)
+        for order in orders:
+            order.created_at = new_created_at
+        Order.objects.bulk_update(orders, fields=['created_at'])
+
+        orders = Order.objects.filter(basket=basket)
+        assert all(
+            is_date_almost_equal(order.created_at, new_created_at, 3)
+            for order in orders
+        )
+
+        response = self.client.post(
+            reverse('products:orders'),
+            [{'id': 3, 'count': 1}, {'id': 4, 'count': 1}],
+        )
+        assert response.status_code == status.HTTP_200_OK
+
+        n_orders = Order.objects.filter(basket=basket).count()
+        assert n_orders == 0
+
+        products = list(Product.objects.all())
+        initial_counts2 = {}
+        for product in products:
+            initial_counts2[product.id] = product.count
+        initial_counts2[3] += 1
+        initial_counts2[4] += 1
+        assert initial_counts2 == initial_counts
+
+        basket.delete()
 
     def test_post_anonymous(self):
         response = self.client.post(
