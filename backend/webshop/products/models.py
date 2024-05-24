@@ -454,10 +454,10 @@ class Order(models.Model):
         blank=True,
         null=True,
         related_name='orders',
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
     )
     basket = models.ForeignKey(
-        Basket, blank=True, null=True, on_delete=models.CASCADE
+        Basket, blank=True, null=True, on_delete=models.SET_NULL
     )
     products = models.ManyToManyField(
         Product, through=OrderProduct, related_name='orders'
