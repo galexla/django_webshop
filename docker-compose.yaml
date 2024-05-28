@@ -10,6 +10,7 @@ services:
       - .env
     ports:
       - "${DJANGO_DB_PORT}:${DJANGO_DB_PORT}"
+    restart: always
 
   app:
     build:
@@ -52,6 +53,7 @@ services:
       - media_volume:/app/backend/webshop/uploads
     ports:
       - "80:80"
+    restart: always
 
 volumes:
   static_volume:
