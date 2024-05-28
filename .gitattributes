@@ -1,3 +1,1 @@
-*.css linguist-detectable=false
-*.js linguist-detectable=false
-*.py linguist-detectable=true
+frontend/frontend/static/frontend/assets/plg/* linguist-vendored
