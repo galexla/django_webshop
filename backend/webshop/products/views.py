@@ -31,7 +31,7 @@ from .common import (
     delete_old_orders,
     delete_unused_baskets,
     get_basket,
-    get_basket_id_cookie,
+    get_basket_id,
 )
 from .models import (
     Basket,
@@ -723,7 +723,7 @@ class OrdersView(APIView):
         """
         user = request.user
         if user.is_anonymous:
-            basket_id = get_basket_id_cookie(request)
+            basket_id = get_basket_id(request)
             orders = (
                 Order.objects.prefetch_related('products')
                 .filter(basket_id=basket_id)

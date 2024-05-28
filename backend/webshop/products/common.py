@@ -57,18 +57,6 @@ def get_basket_by_user(user: User | None) -> Basket | None:
     return Basket.objects.filter(user=user).first()
 
 
-def get_basket_id_cookie(request: Request) -> str:
-    """
-    Get basket id saved in cookie
-
-    :param request: Request
-    :type request: Request
-    :return: basket id
-    :rtype: str
-    """
-    return request.COOKIES.get('basket_id')
-
-
 def get_basket_by_cookie(request: Request) -> Basket | None:
     """
     Get basket by cookie
@@ -78,7 +66,7 @@ def get_basket_by_cookie(request: Request) -> Basket | None:
     :return: Basket
     :rtype: Basket | None
     """
-    basket_id = get_basket_id_cookie(request)
+    basket_id = get_basket_id(request)
     serializer = BasketIdSerializer(data={'basket_id': basket_id})
     if not serializer.is_valid():
         return None
@@ -86,6 +74,18 @@ def get_basket_by_cookie(request: Request) -> Basket | None:
     return Basket.objects.filter(
         id=serializer.validated_data['basket_id']
     ).first()
+
+
+def get_basket_id(request: Request) -> str:
+    """
+    Get basket id saved in cookie
+
+    :param request: Request
+    :type request: Request
+    :return: basket id
+    :rtype: str
+    """
+    return request.COOKIES.get('basket_id')
 
 
 def get_client_ip(request: Request) -> str:
@@ -121,17 +121,18 @@ def can_access_basket(basket: Basket, user: User) -> bool:
     return True
 
 
-def update_basket_access_time(basket: Basket) -> None:
+def update_basket_access_time(basket: Basket, after: int = 120) -> None:
     """
     Update basket last access time
 
     :param basket: Basket
     :type basket: Basket
+    :param after: Seconds to wait after previous update
+    :type after: int
     :return: None
     """
-    update_after = timedelta(seconds=120)
-    now = timezone.now()
-    if now - update_after > basket.last_accessed:
+    update_time = basket.last_accessed + timedelta(seconds=after)
+    if timezone.now() > update_time:
         basket.save()  # update basket.last_accessed
 
 

@@ -10,7 +10,7 @@ from .common import (
     fill_order_fields_if_needed,
     get_basket_by_cookie,
     get_basket_by_user,
-    get_basket_id_cookie,
+    get_basket_id,
 )
 from .models import Basket, Order
 
@@ -32,7 +32,7 @@ def set_order_owner_by_basket_id(
     :type request: Request
     :return: None
     """
-    basket_id = get_basket_id_cookie(request)
+    basket_id = get_basket_id(request)
     with transaction.atomic():
         orders = Order.objects.filter(
             basket_id=basket_id, user=None, status=Order.STATUS_NEW
