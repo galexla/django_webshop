@@ -10,19 +10,38 @@ from django.db import transaction
 from django.test import TestCase
 from django.urls import reverse, reverse_lazy
 from django.utils import timezone
-from products.signals import (set_order_owner_by_basket_id,
-                              switch_user_basket_if_needed)
+from products.signals import (
+    set_order_owner_by_basket_id,
+    switch_user_basket_if_needed,
+)
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
-from tests.common import (assert_dict_equal_exclude, get_attrs, get_ids,
-                          get_keys, is_date_almost_equal, product_img_path)
-from tests.fixtures.products import (CATEGORIES_SRLZD, MONITOR_DETAIL_SRLZD,
-                                     MONITOR_SHORT_DB_TPL, MONITOR_SHORT_SRLZD,
-                                     MONITOR_SHORT_SRLZD_TPL)
+from tests.common import (
+    assert_dict_equal_exclude,
+    get_attrs,
+    get_ids,
+    get_keys,
+    is_date_almost_equal,
+    product_img_path,
+)
+from tests.fixtures.products import (
+    CATEGORIES_SRLZD,
+    MONITOR_DETAIL_SRLZD,
+    MONITOR_SHORT_DB_TPL,
+    MONITOR_SHORT_SRLZD,
+    MONITOR_SHORT_SRLZD_TPL,
+)
 
-from ..models import (Basket, BasketProduct, Order, OrderProduct, Product,
-                      Review, Sale)
+from ..models import (
+    Basket,
+    BasketProduct,
+    Order,
+    OrderProduct,
+    Product,
+    Review,
+    Sale,
+)
 from ..serializers import OrderSerializer
 from ..views import BasketView, OrdersView, OrderView, basket_remove_products
 
@@ -889,7 +908,7 @@ class OrdersViewTest(APITestCase):
         assert len(order.basket_id.hex) >= 32
         assert order.full_name == ''
         assert order.phone == ''
-        assert order.email == ''
+        assert not order.email
         assert order.user is None
 
         mock_request = Mock()

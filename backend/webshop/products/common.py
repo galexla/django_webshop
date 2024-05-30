@@ -160,13 +160,13 @@ def fill_order_fields_if_needed(order: Order, user: User) -> None:
     :type order: User
     :return: None
     """
-    if order.full_name == '':
+    if not order.full_name:
         order.full_name = user.get_full_name()
 
-    if order.phone == '':
+    if not order.phone:
         order.phone = user.profile.phone or ''
 
-    if order.email == '':
+    if not order.email:
         order.email = user.email or ''
 
 

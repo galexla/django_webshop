@@ -464,7 +464,7 @@ class Order(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     full_name = models.CharField(blank=True, max_length=120)
-    email = models.EmailField(blank=True)
+    email = models.EmailField(blank=True, null=True)
     phone = models.CharField(
         blank=True,
         max_length=32,
